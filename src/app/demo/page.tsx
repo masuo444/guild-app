@@ -2,29 +2,26 @@
 
 import { useState } from 'react'
 import { MembershipCard } from '@/components/membership/MembershipCard'
-import { Navigation } from '@/components/ui/Navigation'
+import type { Profile } from '@/types/database'
 
 // デモ用のモックデータ
-const mockProfile = {
+const mockProfile: Profile = {
   id: 'demo-user-id',
   membership_id: 'FOMUS-DEMO-001',
   display_name: 'Demo User',
-  avatar_url: null,
-  country: 'Japan',
-  city: 'Tokyo',
   home_country: 'Japan',
   home_city: 'Tokyo',
   lat: 35.6762,
   lng: 139.6503,
-  total_points: 450,
-  current_rank: 'C' as const,
-  member_since: '2024-01-01',
-  membership_status: 'active' as const,
-  subscription_status: 'active' as const,
+  membership_status: 'active',
+  subscription_status: 'active',
   stripe_customer_id: null,
   stripe_subscription_id: null,
-  role: 'admin' as const,
+  role: 'admin',
+  created_at: '2024-01-01T00:00:00Z',
 }
+
+const mockPoints = 450
 
 export default function DemoPage() {
   const [activeTab, setActiveTab] = useState<'card' | 'map' | 'offers' | 'profile' | 'admin'>('card')
@@ -50,7 +47,7 @@ export default function DemoPage() {
       <main className="pb-20">
         {activeTab === 'card' && (
           <div className="p-4">
-            <MembershipCard profile={mockProfile} />
+            <MembershipCard profile={mockProfile} points={mockPoints} />
 
             {/* ポイント履歴 */}
             <div className="mt-6 bg-white rounded-xl p-4 shadow-sm">
@@ -119,7 +116,7 @@ export default function DemoPage() {
                     <p className="text-sm text-zinc-500 mt-1">{offer.description}</p>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    offer.minRank <= mockProfile.current_rank
+                    ['D', 'C'].includes(offer.minRank)
                       ? 'bg-green-100 text-green-800'
                       : 'bg-zinc-100 text-zinc-500'
                   }`}>
@@ -139,8 +136,8 @@ export default function DemoPage() {
                 <span className="text-2xl font-bold text-white">D</span>
               </div>
               <h2 className="font-semibold text-zinc-900">{mockProfile.display_name}</h2>
-              <p className="text-sm text-zinc-500">{mockProfile.city}, {mockProfile.country}</p>
-              <p className="text-xs text-zinc-400 mt-2">Member since {mockProfile.member_since}</p>
+              <p className="text-sm text-zinc-500">{mockProfile.home_city}, {mockProfile.home_country}</p>
+              <p className="text-xs text-zinc-400 mt-2">Member since Jan 2024</p>
             </div>
 
             {/* ランク進捗 */}
