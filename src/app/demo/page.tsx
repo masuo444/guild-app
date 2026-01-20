@@ -34,10 +34,10 @@ export default function DemoPage() {
           <h1 className="text-lg font-bold text-zinc-900">FOMUS GUILD</h1>
           <div className="flex items-center gap-2">
             <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
-              Rank {mockProfile.current_rank}
+              Rank C
             </span>
             <span className="text-xs text-zinc-500">
-              {mockProfile.total_points} pts
+              {mockPoints} pts
             </span>
           </div>
         </div>
