@@ -1,8 +1,134 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MembershipCard } from '@/components/membership/MembershipCard'
 import type { Profile } from '@/types/database'
+
+// デモ用マップコンポーネント
+function DemoMap() {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const [mapLoaded, setMapLoaded] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !mapRef.current) return
+
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (!apiKey) {
+      console.error('Google Maps API key not found')
+      return
+    }
+
+    // Google Maps スクリプトが既に読み込まれているか確認
+    if (window.google?.maps) {
+      initMap()
+      return
+    }
+
+    // スクリプトを動的に読み込み
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`
+    script.async = true
+    script.onload = initMap
+    document.head.appendChild(script)
+
+    function initMap() {
+      if (!mapRef.current || !window.google?.maps) return
+
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: { lat: 35.6762, lng: 139.6503 },
+        zoom: 3,
+        styles: [
+          { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
+          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
+        ],
+        disableDefaultUI: true,
+        zoomControl: true,
+      })
+
+      // デモ用のマーカー（メンバー）
+      const members = [
+        { lat: 35.6762, lng: 139.6503, name: 'Tokyo' },
+        { lat: 34.6937, lng: 135.5023, name: 'Osaka' },
+        { lat: 40.7128, lng: -74.0060, name: 'New York' },
+        { lat: 51.5074, lng: -0.1278, name: 'London' },
+        { lat: -33.8688, lng: 151.2093, name: 'Sydney' },
+        { lat: 48.8566, lng: 2.3522, name: 'Paris' },
+      ]
+
+      members.forEach((member) => {
+        new window.google.maps.Marker({
+          position: { lat: member.lat, lng: member.lng },
+          map,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#18181b',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+          },
+          title: member.name,
+        })
+      })
+
+      // デモ用のマーカー（Hub）
+      const hubs = [
+        { lat: 35.6812, lng: 139.7671, name: 'MASU Hub Tokyo' },
+        { lat: 13.7563, lng: 100.5018, name: 'MASU Hub Bangkok' },
+      ]
+
+      hubs.forEach((hub) => {
+        new window.google.maps.Marker({
+          position: { lat: hub.lat, lng: hub.lng },
+          map,
+          icon: {
+            path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
+            scale: 1.5,
+            fillColor: '#f59e0b',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 1,
+            anchor: new window.google.maps.Point(12, 24),
+          },
+          title: hub.name,
+        })
+      })
+
+      setMapLoaded(true)
+    }
+  }, [])
+
+  return (
+    <div className="relative">
+      <div ref={mapRef} className="h-[60vh] w-full" />
+      {!mapLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-zinc-100">
+          <div className="animate-spin w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full" />
+        </div>
+      )}
+      {/* 凡例 */}
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur rounded-lg p-3 shadow-lg">
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 bg-zinc-900 rounded-full border-2 border-white" />
+            <span>Members</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 bg-amber-500 rounded-sm" />
+            <span>Hubs</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+declare global {
+  interface Window {
+    google: typeof google
+  }
+}
 
 // デモ用のモックデータ
 const mockProfile: Profile = {
@@ -74,15 +200,7 @@ export default function DemoPage() {
         {activeTab === 'map' && (
           <div className="p-4">
             <div className="bg-white rounded-xl overflow-hidden shadow-sm">
-              <div className="h-[60vh] bg-zinc-200 flex items-center justify-center">
-                <div className="text-center">
-                  <svg className="w-16 h-16 text-zinc-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                  <p className="text-zinc-500">Global Member Map</p>
-                  <p className="text-xs text-zinc-400 mt-1">Google Maps API Required</p>
-                </div>
-              </div>
+              <DemoMap />
             </div>
 
             {/* 統計 */}
