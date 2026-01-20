@@ -18,16 +18,14 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // /app 以下は認証のみ必要（Stripe決済は一時的にスキップ）
-  if (pathname.startsWith('/app')) {
-    // 未ログインの場合はログインページへ
-    if (!user) {
-      const redirectUrl = new URL('/auth/login', request.url)
-      redirectUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(redirectUrl)
-    }
-    // 認証済みならそのまま通す
-  }
+  // /app 以下は一時的に認証不要（開発中）
+  // if (pathname.startsWith('/app')) {
+  //   if (!user) {
+  //     const redirectUrl = new URL('/auth/login', request.url)
+  //     redirectUrl.searchParams.set('redirect', pathname)
+  //     return NextResponse.redirect(redirectUrl)
+  //   }
+  // }
 
   return supabaseResponse
 }
