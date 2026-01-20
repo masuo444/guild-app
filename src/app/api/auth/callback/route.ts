@@ -6,6 +6,13 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type')
+  const error_description = searchParams.get('error_description')
+
+  // OAuth エラーの場合
+  if (error_description) {
+    console.error('OAuth error:', error_description)
+    return NextResponse.redirect(`${origin}/auth/login?error=oauth&message=${encodeURIComponent(error_description)}`)
+  }
 
   const supabase = await createClient()
 
@@ -19,16 +26,23 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}/app`)
     }
+    console.error('OTP verification error:', error)
   }
 
   // OAuth (Google) または Magic Link のコード交換
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error) {
+    if (!error && data.session) {
       // 認証成功 → 直接 /app へ（Stripe決済は一時的にスキップ）
       return NextResponse.redirect(`${origin}/app`)
     }
+    console.error('Code exchange error:', error)
+  }
+
+  // コードがない場合（直接アクセス）
+  if (!code && !tokenHash) {
+    return NextResponse.redirect(`${origin}/auth/login`)
   }
 
   // エラー時はログインページへ

@@ -9,6 +9,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/app'
   const hasError = searchParams.get('error')
+  const errorMessage = searchParams.get('message')
   const [loading, setLoading] = useState(false)
 
   const handleGoogleLogin = async () => {
@@ -43,7 +44,7 @@ function LoginForm() {
 
           {hasError && (
             <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-sm">
-              Authentication failed. Please try again.
+              {errorMessage ? decodeURIComponent(errorMessage) : 'Authentication failed. Please try again.'}
             </div>
           )}
 
