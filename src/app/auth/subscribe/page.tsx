@@ -25,32 +25,47 @@ function SubscribeForm() {
     setIsJapan(detectJapan())
 
     async function checkStatus() {
-      const { data: { user } } = await supabase.auth.getUser()
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      if (!user) {
-        router.push('/auth/login')
-        return
+        if (userError || !user) {
+          router.push('/auth/login')
+          return
+        }
+
+        // 管理者は直接 /app へ
+        if (user.email === 'keisukendo414@gmail.com') {
+          router.push('/app')
+          return
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('subscription_status, membership_status')
+          .eq('id', user.id)
+          .single()
+
+        // プロフィールエラーの場合もフォームを表示
+        if (profileError) {
+          console.error('Profile fetch error:', profileError)
+          setChecking(false)
+          return
+        }
+
+        // 既にアクティブまたは無料なら /app へ
+        if (
+          (profile?.subscription_status === 'active' || profile?.subscription_status === 'free') &&
+          profile?.membership_status === 'active'
+        ) {
+          router.push('/app')
+          return
+        }
+
+        setChecking(false)
+      } catch (error) {
+        console.error('Check status error:', error)
+        setChecking(false)
       }
-
-      // デバッグユーザーは直接 /app へ
-      if (user.email === 'keisukendo414@gmail.com') {
-        router.push('/app')
-        return
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('subscription_status, membership_status')
-        .eq('id', user.id)
-        .single()
-
-      // 既にアクティブなら /app へ
-      if (profile?.subscription_status === 'active' && profile?.membership_status === 'active') {
-        router.push('/app')
-        return
-      }
-
-      setChecking(false)
     }
 
     checkStatus()
