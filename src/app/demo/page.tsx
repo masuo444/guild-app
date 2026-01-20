@@ -7,15 +7,22 @@ import { Navigation } from '@/components/ui/Navigation'
 // デモ用のモックデータ
 const mockProfile = {
   id: 'demo-user-id',
+  membership_id: 'FOMUS-DEMO-001',
   display_name: 'Demo User',
   avatar_url: null,
   country: 'Japan',
   city: 'Tokyo',
+  home_country: 'Japan',
+  home_city: 'Tokyo',
+  lat: 35.6762,
+  lng: 139.6503,
   total_points: 450,
   current_rank: 'C' as const,
   member_since: '2024-01-01',
   membership_status: 'active' as const,
   subscription_status: 'active' as const,
+  stripe_customer_id: null,
+  stripe_subscription_id: null,
   role: 'admin' as const,
 }
 
