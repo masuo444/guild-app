@@ -109,7 +109,7 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              type="email"
+              type="text"
               label="Email Address"
               placeholder="your@email.com"
               value={email}
