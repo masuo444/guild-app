@@ -1,7 +1,24 @@
 export type MembershipStatus = 'inactive' | 'active' | 'suspended'
-export type SubscriptionStatus = 'inactive' | 'active' | 'past_due' | 'canceled'
+export type SubscriptionStatus = 'inactive' | 'active' | 'past_due' | 'canceled' | 'free'
+export type MembershipType = 'standard' | 'model' | 'ambassador' | 'staff' | 'partner'
 export type UserRole = 'admin' | 'member'
 export type Rank = 'D' | 'C' | 'B' | 'A'
+
+// 無料メンバータイプかどうかを判定
+export const FREE_MEMBERSHIP_TYPES: MembershipType[] = ['model', 'ambassador', 'staff', 'partner']
+
+export function isFreeMembershipType(type: MembershipType): boolean {
+  return FREE_MEMBERSHIP_TYPES.includes(type)
+}
+
+// メンバータイプのラベル
+export const MEMBERSHIP_TYPE_LABELS: Record<MembershipType, string> = {
+  standard: 'Standard',
+  model: 'Model',
+  ambassador: 'Ambassador',
+  staff: 'Staff',
+  partner: 'Partner',
+}
 
 export interface Invite {
   id: string
@@ -9,6 +26,7 @@ export interface Invite {
   invited_by: string
   used: boolean
   used_by: string | null
+  membership_type: MembershipType
   created_at: string
 }
 
@@ -17,6 +35,7 @@ export interface Profile {
   display_name: string | null
   role: UserRole
   membership_status: MembershipStatus
+  membership_type: MembershipType
   membership_id: string | null
   subscription_status: SubscriptionStatus
   stripe_customer_id: string | null

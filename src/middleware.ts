@@ -39,8 +39,8 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // サブスクリプションがアクティブでない場合
-    if (!profile || profile.subscription_status !== 'active') {
+    // サブスクリプションがアクティブまたは無料でない場合
+    if (!profile || (profile.subscription_status !== 'active' && profile.subscription_status !== 'free')) {
       return NextResponse.redirect(new URL('/auth/subscribe', request.url))
     }
 

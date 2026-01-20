@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { MembershipType, isFreeMembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
 
 type InviteStatus = 'loading' | 'valid' | 'invalid' | 'used' | 'submitting' | 'sent'
 
@@ -15,6 +16,8 @@ export default function InvitePage() {
   const [status, setStatus] = useState<InviteStatus>('loading')
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
+  const [membershipType, setMembershipType] = useState<MembershipType>('standard')
+  const [isFree, setIsFree] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -22,7 +25,7 @@ export default function InvitePage() {
     async function checkInvite() {
       const { data, error } = await supabase
         .from('invites')
-        .select('used')
+        .select('used, membership_type')
         .eq('code', code)
         .single()
 
@@ -36,6 +39,9 @@ export default function InvitePage() {
         return
       }
 
+      const type = (data.membership_type || 'standard') as MembershipType
+      setMembershipType(type)
+      setIsFree(isFreeMembershipType(type))
       setStatus('valid')
     }
 
@@ -151,6 +157,11 @@ export default function InvitePage() {
             <p className="text-zinc-600">
               You&apos;ve been invited to join an exclusive community.
             </p>
+            {isFree && (
+              <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium">
+                {MEMBERSHIP_TYPE_LABELS[membershipType]} Invitation
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -175,8 +186,17 @@ export default function InvitePage() {
           </form>
 
           <p className="text-xs text-zinc-500 text-center mt-6">
-            After verification, you&apos;ll be asked to complete a $10/month subscription
-            to activate your membership.
+            {isFree ? (
+              <>
+                As a {MEMBERSHIP_TYPE_LABELS[membershipType]}, you&apos;ll get free access
+                to FOMUS GUILD. No payment required.
+              </>
+            ) : (
+              <>
+                After verification, you&apos;ll be asked to complete a $10/month subscription
+                to activate your membership.
+              </>
+            )}
           </p>
         </div>
       </div>

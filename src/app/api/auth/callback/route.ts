@@ -37,8 +37,11 @@ export async function GET(request: Request) {
           .eq('id', user.id)
           .single()
 
-        // サブスクリプションがアクティブなら /app へ
-        if (profile?.subscription_status === 'active' && profile?.membership_status === 'active') {
+        // サブスクリプションがアクティブまたは無料なら /app へ
+        if (
+          (profile?.subscription_status === 'active' || profile?.subscription_status === 'free') &&
+          profile?.membership_status === 'active'
+        ) {
           return NextResponse.redirect(`${origin}/app`)
         }
       }

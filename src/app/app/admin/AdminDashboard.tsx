@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Invite, Profile, MasuHub, Rank } from '@/types/database'
+import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType } from '@/types/database'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
@@ -52,6 +52,7 @@ export function AdminDashboard({ invites, members, hubs, adminId }: AdminDashboa
 function InvitesTab({ invites, adminId }: { invites: AdminDashboardProps['invites']; adminId: string }) {
   const router = useRouter()
   const [creating, setCreating] = useState(false)
+  const [selectedType, setSelectedType] = useState<MembershipType>('standard')
 
   const handleCreateInvite = async () => {
     setCreating(true)
@@ -62,6 +63,7 @@ function InvitesTab({ invites, adminId }: { invites: AdminDashboardProps['invite
       code,
       invited_by: adminId,
       used: false,
+      membership_type: selectedType,
     })
 
     router.refresh()
@@ -75,18 +77,55 @@ function InvitesTab({ invites, adminId }: { invites: AdminDashboardProps['invite
 
   const unusedCount = invites.filter((i) => !i.used).length
 
+  // メンバータイプに応じた背景色を取得
+  const getTypeBgColor = (type: MembershipType) => {
+    switch (type) {
+      case 'model':
+        return 'bg-pink-100 text-pink-700'
+      case 'ambassador':
+        return 'bg-purple-100 text-purple-700'
+      case 'staff':
+        return 'bg-blue-100 text-blue-700'
+      case 'partner':
+        return 'bg-amber-100 text-amber-700'
+      default:
+        return 'bg-zinc-100 text-zinc-700'
+    }
+  }
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <h2 className="font-semibold text-zinc-900">Invite Codes</h2>
-          <p className="text-sm text-zinc-500">
-            {unusedCount} unused / {invites.length} total
-          </p>
+      <CardHeader className="flex flex-col gap-4">
+        <div className="flex flex-row items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-zinc-900">Invite Codes</h2>
+            <p className="text-sm text-zinc-500">
+              {unusedCount} unused / {invites.length} total
+            </p>
+          </div>
         </div>
-        <Button onClick={handleCreateInvite} loading={creating} size="sm">
-          Generate New Code
-        </Button>
+        {/* 招待コード生成フォーム */}
+        <div className="flex flex-row items-end gap-3 p-4 bg-zinc-50 rounded-lg">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-zinc-700 mb-1">
+              Member Type
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm"
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value as MembershipType)}
+            >
+              <option value="standard">Standard (Paid)</option>
+              <option value="model">Model (Free)</option>
+              <option value="ambassador">Ambassador (Free)</option>
+              <option value="staff">Staff (Free)</option>
+              <option value="partner">Partner (Free)</option>
+            </select>
+          </div>
+          <Button onClick={handleCreateInvite} loading={creating} size="sm">
+            Generate Code
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
@@ -97,13 +136,22 @@ function InvitesTab({ invites, adminId }: { invites: AdminDashboardProps['invite
                 invite.used ? 'bg-zinc-50' : 'bg-green-50'
               }`}
             >
-              <div>
-                <p className="font-mono font-medium text-zinc-900">{invite.code}</p>
-                <p className="text-xs text-zinc-500">
-                  {invite.used
-                    ? `Used by ${invite.profiles?.display_name || 'Unknown'}`
-                    : 'Available'}
-                </p>
+              <div className="flex items-center gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono font-medium text-zinc-900">{invite.code}</p>
+                    {invite.membership_type && invite.membership_type !== 'standard' && (
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getTypeBgColor(invite.membership_type)}`}>
+                        {MEMBERSHIP_TYPE_LABELS[invite.membership_type]}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    {invite.used
+                      ? `Used by ${invite.profiles?.display_name || 'Unknown'}`
+                      : isFreeMembershipType(invite.membership_type) ? 'Free Invitation' : 'Available'}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-400">{formatDate(invite.created_at)}</span>
@@ -209,44 +257,60 @@ function MembersTab({ members }: { members: Profile[] }) {
                 <tr className="border-b border-zinc-200">
                   <th className="text-left py-2 font-medium text-zinc-600">Name</th>
                   <th className="text-left py-2 font-medium text-zinc-600">Membership ID</th>
+                  <th className="text-left py-2 font-medium text-zinc-600">Type</th>
                   <th className="text-left py-2 font-medium text-zinc-600">Status</th>
                   <th className="text-left py-2 font-medium text-zinc-600">Location</th>
                   <th className="text-left py-2 font-medium text-zinc-600">Joined</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map((member) => (
-                  <tr key={member.id} className="border-b border-zinc-100">
-                    <td className="py-2">
-                      <span className="font-medium text-zinc-900">
-                        {member.display_name || '-'}
-                      </span>
-                      {member.role === 'admin' && (
-                        <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
-                          Admin
+                {members.map((member) => {
+                  const memberType = member.membership_type || 'standard'
+                  const typeColors: Record<MembershipType, string> = {
+                    standard: 'bg-zinc-100 text-zinc-700',
+                    model: 'bg-pink-100 text-pink-700',
+                    ambassador: 'bg-purple-100 text-purple-700',
+                    staff: 'bg-blue-100 text-blue-700',
+                    partner: 'bg-amber-100 text-amber-700',
+                  }
+                  return (
+                    <tr key={member.id} className="border-b border-zinc-100">
+                      <td className="py-2">
+                        <span className="font-medium text-zinc-900">
+                          {member.display_name || '-'}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-2 font-mono text-zinc-600">{member.membership_id || '-'}</td>
-                    <td className="py-2">
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          member.subscription_status === 'active'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {member.subscription_status}
-                      </span>
-                    </td>
-                    <td className="py-2 text-zinc-600">
-                      {member.home_city && member.home_country
-                        ? `${member.home_city}, ${member.home_country}`
-                        : '-'}
-                    </td>
-                    <td className="py-2 text-zinc-500">{formatDate(member.created_at)}</td>
-                  </tr>
-                ))}
+                        {member.role === 'admin' && (
+                          <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                            Admin
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 font-mono text-zinc-600">{member.membership_id || '-'}</td>
+                      <td className="py-2">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColors[memberType]}`}>
+                          {MEMBERSHIP_TYPE_LABELS[memberType]}
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            member.subscription_status === 'active' || member.subscription_status === 'free'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {member.subscription_status === 'free' ? 'Free' : member.subscription_status}
+                        </span>
+                      </td>
+                      <td className="py-2 text-zinc-600">
+                        {member.home_city && member.home_country
+                          ? `${member.home_city}, ${member.home_country}`
+                          : '-'}
+                      </td>
+                      <td className="py-2 text-zinc-500">{formatDate(member.created_at)}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

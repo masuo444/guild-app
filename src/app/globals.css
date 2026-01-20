@@ -1,8 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Guild Theme Colors */
+  --guild-bg-dark: #1a1614;
+  --guild-bg-medium: #2a2420;
+  --guild-bg-light: #3a332e;
+
+  --guild-gold: #d4af37;
+  --guild-gold-light: #f4d03f;
+  --guild-gold-dark: #996515;
+  --guild-brass: #b8860b;
+
+  --guild-text-primary: #f5e6d3;
+  --guild-text-secondary: #a89984;
+  --guild-text-muted: #6b5b4f;
+
+  --background: #1a1614;
+  --foreground: #f5e6d3;
 }
 
 @theme inline {
@@ -12,15 +26,69 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Guild Animations */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    filter: blur(8px);
+  }
+  50% {
+    opacity: 0.6;
+    filter: blur(12px);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes border-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3), inset 0 0 10px rgba(212, 175, 55, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5), inset 0 0 15px rgba(212, 175, 55, 0.2);
+  }
+}
+
+/* Utility Classes */
+.guild-card {
+  background: linear-gradient(135deg, #2a2420 0%, #1a1614 100%);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.guild-border {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.guild-gold-text {
+  color: #d4af37;
+}
+
+.guild-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
