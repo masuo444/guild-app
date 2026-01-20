@@ -44,6 +44,7 @@ function DemoMap() {
         ],
         disableDefaultUI: true,
         zoomControl: true,
+        gestureHandling: 'greedy',
       })
 
       // デモ用のマーカー（メンバー）
