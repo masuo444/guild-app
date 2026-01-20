@@ -1,19 +1,23 @@
 import { DashboardClient } from './DashboardClient'
+import { Profile } from '@/types/database'
 
 export default async function DashboardPage() {
   // 一時的にモックデータを使用（開発中）
-  const profile = {
+  const profile: Profile = {
     id: 'dev-user-001',
-    email: 'keisukendo414@gmail.com',
     display_name: 'Admin User',
-    membership_id: 'FOMUS-001',
+    role: 'admin',
     membership_status: 'active',
-    subscription_status: 'free',
     membership_type: 'staff',
-    rank: 'gold',
-    avatar_url: null,
+    membership_id: 'FOMUS-001',
+    subscription_status: 'free',
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    home_country: 'Japan',
+    home_city: 'Tokyo',
+    lat: 35.6762,
+    lng: 139.6503,
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
   }
 
   const totalPoints = 1250
