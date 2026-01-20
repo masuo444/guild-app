@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps'
 import { MasuHub } from '@/types/database'
 
@@ -29,10 +29,52 @@ export function GuildMap({ members, hubs }: GuildMapProps) {
   const [showMembers, setShowMembers] = useState(true)
   const [showHubs, setShowHubs] = useState(true)
   const [selected, setSelected] = useState<SelectedItem | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState('')
 
   const handleMarkerClick = useCallback((type: MarkerType, data: MemberMapData | MasuHub) => {
     setSelected({ type, data })
   }, [])
+
+  // 国リストを生成（メンバーと拠点の両方から）
+  const countries = useMemo(() => {
+    const countrySet = new Set<string>()
+    members.forEach(m => {
+      if (m.home_country) countrySet.add(m.home_country)
+    })
+    hubs.forEach(h => {
+      if (h.country) countrySet.add(h.country)
+    })
+    return Array.from(countrySet).sort()
+  }, [members, hubs])
+
+  // フィルタリングされたメンバー
+  const filteredMembers = useMemo(() => {
+    return members.filter(m => {
+      if (!m.lat || !m.lng) return false
+      const query = searchQuery.toLowerCase()
+      const matchesSearch = !searchQuery ||
+        m.display_name?.toLowerCase().includes(query) ||
+        m.home_city?.toLowerCase().includes(query) ||
+        m.home_country?.toLowerCase().includes(query)
+      const matchesCountry = !selectedCountry || m.home_country === selectedCountry
+      return matchesSearch && matchesCountry
+    })
+  }, [members, searchQuery, selectedCountry])
+
+  // フィルタリングされた拠点
+  const filteredHubs = useMemo(() => {
+    return hubs.filter(h => {
+      if (!h.is_active) return false
+      const query = searchQuery.toLowerCase()
+      const matchesSearch = !searchQuery ||
+        h.name.toLowerCase().includes(query) ||
+        h.city.toLowerCase().includes(query) ||
+        h.country.toLowerCase().includes(query)
+      const matchesCountry = !selectedCountry || h.country === selectedCountry
+      return matchesSearch && matchesCountry
+    })
+  }, [hubs, searchQuery, selectedCountry])
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -46,29 +88,88 @@ export function GuildMap({ members, hubs }: GuildMapProps) {
 
   return (
     <div className="w-full">
-      {/* トグルボタン */}
-      <div className="flex gap-3 mb-4">
-        <button
-          onClick={() => setShowMembers(!showMembers)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            showMembers
-              ? 'bg-zinc-900 text-white'
-              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-          }`}
+      {/* 検索・フィルターバー */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        {/* 検索入力 */}
+        <div className="relative flex-1">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by name, city, country..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* 国フィルター */}
+        <select
+          value={selectedCountry}
+          onChange={(e) => setSelectedCountry(e.target.value)}
+          className="px-4 py-2 border border-zinc-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
         >
-          Members
-        </button>
-        <button
-          onClick={() => setShowHubs(!showHubs)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            showHubs
-              ? 'bg-amber-500 text-white'
-              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-          }`}
-        >
-          MASU Hubs
-        </button>
+          <option value="">All Countries</option>
+          {countries.map((country) => (
+            <option key={country} value={country}>
+              {country}
+            </option>
+          ))}
+        </select>
+
+        {/* トグルボタン */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowMembers(!showMembers)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showMembers
+                ? 'bg-zinc-900 text-white'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+            }`}
+          >
+            Members
+          </button>
+          <button
+            onClick={() => setShowHubs(!showHubs)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showHubs
+                ? 'bg-amber-500 text-white'
+                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+            }`}
+          >
+            MASU Hubs
+          </button>
+        </div>
       </div>
+
+      {/* フィルター結果の表示 */}
+      {(searchQuery || selectedCountry) && (
+        <div className="flex items-center gap-2 mb-3 text-sm text-zinc-600">
+          <span>
+            Showing: {filteredMembers.length} members, {filteredHubs.length} hubs
+          </span>
+          <button
+            onClick={() => {
+              setSearchQuery('')
+              setSelectedCountry('')
+            }}
+            className="text-zinc-500 hover:text-zinc-700 underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
 
       {/* マップ */}
       <div className="w-full h-[500px] rounded-xl overflow-hidden shadow-lg">
@@ -81,25 +182,21 @@ export function GuildMap({ members, hubs }: GuildMapProps) {
           >
             {/* メンバーマーカー */}
             {showMembers &&
-              members
-                .filter((m) => m.lat && m.lng)
-                .map((member) => (
-                  <AdvancedMarker
-                    key={member.id}
-                    position={{ lat: member.lat!, lng: member.lng! }}
-                    onClick={() => handleMarkerClick('member', member)}
-                  >
-                    <div className="w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white">
-                      {(member.display_name || 'M')[0].toUpperCase()}
-                    </div>
-                  </AdvancedMarker>
-                ))}
+              filteredMembers.map((member) => (
+                <AdvancedMarker
+                  key={member.id}
+                  position={{ lat: member.lat!, lng: member.lng! }}
+                  onClick={() => handleMarkerClick('member', member)}
+                >
+                  <div className="w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg border-2 border-white">
+                    {(member.display_name || 'M')[0].toUpperCase()}
+                  </div>
+                </AdvancedMarker>
+              ))}
 
             {/* 枡拠点マーカー */}
             {showHubs &&
-              hubs
-                .filter((h) => h.is_active)
-                .map((hub) => (
+              filteredHubs.map((hub) => (
                   <AdvancedMarker
                     key={hub.id}
                     position={{ lat: hub.lat, lng: hub.lng }}
