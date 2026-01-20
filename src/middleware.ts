@@ -18,7 +18,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // /app 以下は認証＆アクティブ会員のみ
+  // /app 以下は認証のみ必要（Stripe決済は一時的にスキップ）
   if (pathname.startsWith('/app')) {
     // 未ログインの場合はログインページへ
     if (!user) {
@@ -26,28 +26,7 @@ export async function middleware(request: NextRequest) {
       redirectUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(redirectUrl)
     }
-
-    // デバッグユーザーはスキップ（テスト用）
-    if (user.email === 'keisukendo414@gmail.com') {
-      return supabaseResponse
-    }
-
-    // プロファイルをチェック
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_status, membership_status')
-      .eq('id', user.id)
-      .single()
-
-    // サブスクリプションがアクティブまたは無料でない場合
-    if (!profile || (profile.subscription_status !== 'active' && profile.subscription_status !== 'free')) {
-      return NextResponse.redirect(new URL('/auth/subscribe', request.url))
-    }
-
-    // メンバーシップがアクティブでない場合
-    if (profile.membership_status !== 'active') {
-      return NextResponse.redirect(new URL('/auth/pending', request.url))
-    }
+    // 認証済みならそのまま通す
   }
 
   return supabaseResponse

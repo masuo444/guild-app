@@ -25,11 +25,7 @@ export default async function AppLayout({
     .eq('id', user.id)
     .single()
 
-  // 管理者メールはプロフィールなしでもOK
-  if (!isAdminEmail && (!profile || (profile.subscription_status !== 'active' && profile.subscription_status !== 'free'))) {
-    redirect('/auth/subscribe')
-  }
-
+  // Stripe決済は一時的にスキップ（認証済みなら全員OK）
   const isAdmin = isAdminEmail || profile?.role === 'admin'
 
   return (
