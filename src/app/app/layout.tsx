@@ -21,11 +21,10 @@ export default async function AppLayout({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, subscription_status, membership_status')
+    .select('role')
     .eq('id', user.id)
     .single()
 
-  // Stripe決済は一時的にスキップ（認証済みなら全員OK）
   const isAdmin = isAdminEmail || profile?.role === 'admin'
 
   return (
