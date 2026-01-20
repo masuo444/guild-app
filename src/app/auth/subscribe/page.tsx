@@ -11,9 +11,18 @@ function SubscribeForm() {
   const canceled = searchParams.get('canceled')
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(true)
+  const [isJapan, setIsJapan] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
+
+    // 日本かどうかを判定（ブラウザの言語設定とタイムゾーン）
+    const detectJapan = () => {
+      const language = navigator.language || ''
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+      return language.startsWith('ja') || timezone === 'Asia/Tokyo'
+    }
+    setIsJapan(detectJapan())
 
     async function checkStatus() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -47,6 +56,10 @@ function SubscribeForm() {
     try {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isJapan }),
       })
 
       const data = await response.json()
@@ -112,7 +125,9 @@ function SubscribeForm() {
                 <p className="text-sm text-zinc-500">Full membership access</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-zinc-900">$10</p>
+                <p className="text-2xl font-bold text-zinc-900">
+                  {isJapan ? '¥980' : '$10'}
+                </p>
                 <p className="text-xs text-zinc-500">/month</p>
               </div>
             </div>

@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -10,6 +10,15 @@ export async function POST() {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // リクエストボディから国情報を取得
+    const body = await request.json().catch(() => ({}))
+    const isJapan = body.isJapan === true
+
+    // 価格IDを選択（日本: JPY、その他: USD）
+    const priceId = isJapan
+      ? process.env.STRIPE_PRICE_ID_JPY!
+      : process.env.STRIPE_PRICE_ID_USD!
 
     // プロファイルを取得
     const { data: profile } = await supabase
@@ -44,7 +53,7 @@ export async function POST() {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID!,
+          price: priceId,
           quantity: 1,
         },
       ],
