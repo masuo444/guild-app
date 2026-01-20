@@ -20,6 +20,25 @@ function LoginForm() {
     setError('')
     setStatus('loading')
 
+    // デバッグログイン（AAAAA入力時）
+    if (email === 'AAAAA') {
+      try {
+        const response = await fetch('/api/auth/debug-login', { method: 'POST' })
+        const data = await response.json()
+        if (data.url) {
+          window.location.href = data.url
+          return
+        }
+        setError('Debug login failed')
+        setStatus('idle')
+        return
+      } catch {
+        setError('Debug login failed')
+        setStatus('idle')
+        return
+      }
+    }
+
     const supabase = createClient()
 
     const { error: authError } = await supabase.auth.signInWithOtp({

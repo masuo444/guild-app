@@ -4,10 +4,37 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const tokenHash = searchParams.get('token_hash')
+  const type = searchParams.get('type')
   const next = searchParams.get('next') ?? '/auth/subscribe'
 
+  const supabase = await createClient()
+
+  // token_hash による認証（デバッグログイン用）
+  if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: type as 'magiclink' | 'email',
+    })
+
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_status, membership_status')
+          .eq('id', user.id)
+          .single()
+
+        if (profile?.subscription_status === 'active' && profile?.membership_status === 'active') {
+          return NextResponse.redirect(`${origin}/app`)
+        }
+      }
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+  }
+
   if (code) {
-    const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
