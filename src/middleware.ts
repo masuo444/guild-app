@@ -11,6 +11,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/invite') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api') ||
+    pathname.startsWith('/demo') ||
     pathname.startsWith('/_next') ||
     pathname.includes('.')
   ) {
