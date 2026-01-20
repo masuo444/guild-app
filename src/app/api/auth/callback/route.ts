@@ -18,19 +18,8 @@ export async function GET(request: Request) {
     })
 
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('subscription_status, membership_status')
-          .eq('id', user.id)
-          .single()
-
-        if (profile?.subscription_status === 'active' && profile?.membership_status === 'active') {
-          return NextResponse.redirect(`${origin}/app`)
-        }
-      }
-      return NextResponse.redirect(`${origin}${next}`)
+      // デバッグログインの場合は直接 /app へ
+      return NextResponse.redirect(`${origin}/app`)
     }
   }
 

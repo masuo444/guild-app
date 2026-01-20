@@ -26,6 +26,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
+    // デバッグユーザーはスキップ（テスト用）
+    if (user.email === 'keisukendo414@gmail.com') {
+      return supabaseResponse
+    }
+
     // プロファイルをチェック
     const { data: profile } = await supabase
       .from('profiles')
