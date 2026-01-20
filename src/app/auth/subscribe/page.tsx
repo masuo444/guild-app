@@ -32,6 +32,12 @@ function SubscribeForm() {
         return
       }
 
+      // デバッグユーザーは直接 /app へ
+      if (user.email === 'keisukendo414@gmail.com') {
+        router.push('/app')
+        return
+      }
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('subscription_status, membership_status')
