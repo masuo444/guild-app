@@ -13,6 +13,22 @@ export async function POST() {
     // テストユーザーのメールアドレス
     const testEmail = 'keisukendo414@gmail.com'
 
+    // ユーザーを取得
+    const { data: userData } = await supabaseAdmin.auth.admin.listUsers()
+    const testUser = userData?.users?.find(u => u.email === testEmail)
+
+    if (testUser) {
+      // プロフィールを強制的にactiveに設定
+      await supabaseAdmin
+        .from('profiles')
+        .update({
+          subscription_status: 'active',
+          membership_status: 'active',
+          role: 'admin'
+        })
+        .eq('id', testUser.id)
+    }
+
     // Magic Link を生成（OTP）
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
