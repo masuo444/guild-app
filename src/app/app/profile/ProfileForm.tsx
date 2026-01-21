@@ -21,6 +21,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
   const [formData, setFormData] = useState({
     display_name: profile.display_name || '',
     instagram_id: profile.instagram_id || '',
+    avatar_url: profile.avatar_url || '',
     home_country: profile.home_country || '',
     home_city: profile.home_city || '',
     show_location_on_map: profile.show_location_on_map ?? true,
@@ -60,6 +61,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       .update({
         display_name: formData.display_name,
         instagram_id: formData.instagram_id || null,
+        avatar_url: formData.avatar_url || null,
         home_country: formData.home_country,
         home_city: formData.home_city,
         lat,
@@ -134,6 +136,34 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                 >
                   View profile →
                 </a>
+              )}
+            </div>
+
+            {/* Avatar URL */}
+            <div>
+              <label className="block text-sm text-zinc-300 mb-1">Profile Image URL</label>
+              <p className="text-xs text-zinc-400 mb-2">This image will be shown as your marker on the Guild Map</p>
+              <input
+                type="url"
+                value={formData.avatar_url}
+                onChange={(e) =>
+                  setFormData({ ...formData, avatar_url: e.target.value })
+                }
+                placeholder="https://example.com/your-photo.jpg"
+                className="w-full px-4 py-2 bg-white/10 backdrop-blur border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent"
+              />
+              {formData.avatar_url && (
+                <div className="mt-2 flex items-center gap-3">
+                  <img
+                    src={formData.avatar_url}
+                    alt="Preview"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-green-500"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                  <span className="text-xs text-zinc-400">Preview</span>
+                </div>
               )}
             </div>
 

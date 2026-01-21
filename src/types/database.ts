@@ -47,6 +47,7 @@ export interface Profile {
   lat: number | null
   lng: number | null
   instagram_id: string | null
+  avatar_url: string | null
   show_location_on_map: boolean
   created_at: string
 }

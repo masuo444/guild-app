@@ -185,6 +185,7 @@ const mockProfile: Profile = {
   stripe_subscription_id: null,
   role: 'admin',
   instagram_id: null,
+  avatar_url: null,
   show_location_on_map: true,
   created_at: '2024-01-01T00:00:00Z',
 }

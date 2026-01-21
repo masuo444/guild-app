@@ -45,29 +45,14 @@ export default async function HomePage() {
             >
               Enter App
             </Link>
+            <Link
+              href="/app?demo=true"
+              className="px-8 py-3 border border-zinc-500 text-white rounded-lg font-medium hover:bg-white/10 transition-colors"
+            >
+              Try Demo
+            </Link>
           </div>
 
-          <p className="mt-8 text-sm text-zinc-500">
-            Demo mode - Login temporarily disabled
-          </p>
-        </div>
-
-        {/* 特徴 */}
-        <div className="absolute bottom-0 left-0 right-0 p-8">
-          <div className="max-w-4xl mx-auto grid grid-cols-3 gap-8 text-center">
-            <div>
-              <p className="text-3xl font-bold text-amber-400">$10</p>
-              <p className="text-sm text-zinc-500">/ month</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-amber-400">Global</p>
-              <p className="text-sm text-zinc-500">Community</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-amber-400">Exclusive</p>
-              <p className="text-sm text-zinc-500">Benefits</p>
-            </div>
-          </div>
         </div>
       </main>
     </div>

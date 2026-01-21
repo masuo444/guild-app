@@ -19,6 +19,8 @@ interface MemberMapData {
   home_city: string | null
   lat: number | null
   lng: number | null
+  instagram_id: string | null
+  avatar_url?: string | null
   roles?: MemberRole[]
 }
 
@@ -42,6 +44,10 @@ interface HubFormData {
   description: string
   country: string
   city: string
+  address: string
+  phone: string
+  website_url: string
+  google_maps_url: string
   lat: number
   lng: number
 }
@@ -64,6 +70,10 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
     description: '',
     country: '',
     city: '',
+    address: '',
+    phone: '',
+    website_url: '',
+    google_maps_url: '',
     lat: 0,
     lng: 0,
   })
@@ -98,6 +108,10 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
         description: formData.description || null,
         country: formData.country,
         city: formData.city,
+        address: formData.address || null,
+        phone: formData.phone || null,
+        website_url: formData.website_url || null,
+        google_maps_url: formData.google_maps_url || null,
         lat: formData.lat,
         lng: formData.lng,
         owner_id: userId,
@@ -108,7 +122,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
 
     if (!error) {
       setShowAddModal(false)
-      setFormData({ name: '', description: '', country: '', city: '', lat: 0, lng: 0 })
+      setFormData({ name: '', description: '', country: '', city: '', address: '', phone: '', website_url: '', google_maps_url: '', lat: 0, lng: 0 })
       router.refresh()
     }
   }
@@ -287,7 +301,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
             style={{ width: '100%', height: '100%' }}
             onClick={handleMapClick}
           >
-            {/* メンバーマーカー - 緑色ピン */}
+            {/* メンバーマーカー - アバター画像または緑色ピン */}
             {showMembers &&
               filteredMembers.map((member) => (
                 <Marker
@@ -295,7 +309,26 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
                   position={{ lat: member.lat!, lng: member.lng! }}
                   onClick={() => handleMarkerClick('member', member)}
                   title={member.display_name || 'Member'}
-                  icon={{
+                  icon={member.avatar_url ? {
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="52" viewBox="0 0 44 52">
+                        <defs>
+                          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+                          </filter>
+                          <clipPath id="circle">
+                            <circle cx="22" cy="18" r="16"/>
+                          </clipPath>
+                        </defs>
+                        <circle cx="22" cy="18" r="20" fill="#22c55e" filter="url(#shadow)"/>
+                        <circle cx="22" cy="18" r="18" fill="white"/>
+                        <image href="${member.avatar_url}" x="6" y="2" width="32" height="32" clip-path="url(#circle)" preserveAspectRatio="xMidYMid slice"/>
+                        <polygon points="22,52 14,36 30,36" fill="#22c55e"/>
+                      </svg>
+                    `),
+                    scaledSize: { width: 44, height: 52, equals: () => false },
+                    anchor: { x: 22, y: 52, equals: () => false },
+                  } : {
                     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">
                         <defs>
@@ -432,7 +465,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
       {/* 拠点登録モーダル */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-500/30 rounded-xl p-6 w-full max-w-md">
+          <div className="bg-zinc-900 border border-zinc-500/30 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-white mb-4">Add My Shop</h3>
             <form onSubmit={handleSubmitHub} className="space-y-4">
               <div>
@@ -483,8 +516,56 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
                 </div>
               </div>
 
+              {/* 住所 */}
               <div>
-                <label className="block text-sm text-zinc-300 mb-1">Location *</label>
+                <label className="block text-sm text-zinc-300 mb-1">Address</label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  placeholder="1-2-3 Shibuya, Shibuya-ku"
+                />
+              </div>
+
+              {/* 電話番号 */}
+              <div>
+                <label className="block text-sm text-zinc-300 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  placeholder="+81-3-1234-5678"
+                />
+              </div>
+
+              {/* ウェブサイト */}
+              <div>
+                <label className="block text-sm text-zinc-300 mb-1">Website URL</label>
+                <input
+                  type="url"
+                  value={formData.website_url}
+                  onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  placeholder="https://example.com"
+                />
+              </div>
+
+              {/* Google Maps URL */}
+              <div>
+                <label className="block text-sm text-zinc-300 mb-1">Google Maps URL</label>
+                <input
+                  type="url"
+                  value={formData.google_maps_url}
+                  onChange={(e) => setFormData({ ...formData, google_maps_url: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  placeholder="https://maps.google.com/..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-zinc-300 mb-1">Pin Location *</label>
                 {formData.lat !== 0 && formData.lng !== 0 ? (
                   <div className="flex items-center gap-2">
                     <span className="text-white text-sm">
@@ -522,7 +603,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
                   type="button"
                   onClick={() => {
                     setShowAddModal(false)
-                    setFormData({ name: '', description: '', country: '', city: '', lat: 0, lng: 0 })
+                    setFormData({ name: '', description: '', country: '', city: '', address: '', phone: '', website_url: '', google_maps_url: '', lat: 0, lng: 0 })
                     setIsSelectingLocation(false)
                   }}
                   className="flex-1 px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white hover:bg-white/20 transition-colors"
@@ -553,12 +634,30 @@ function MemberInfoCard({ member }: { member: MemberMapData }) {
 
   return (
     <div className="p-2 min-w-[180px]">
-      <p className="font-semibold text-zinc-900">
-        {member.display_name || 'Member'}
-      </p>
-      <p className="text-sm text-zinc-500">
-        {member.home_city}, {member.home_country}
-      </p>
+      <div className="flex items-start gap-3">
+        {/* アバター画像 */}
+        {member.avatar_url ? (
+          <img
+            src={member.avatar_url}
+            alt={member.display_name || 'Member'}
+            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+          />
+        ) : member.instagram_id ? (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+            </svg>
+          </div>
+        ) : null}
+        <div className="flex-1">
+          <p className="font-semibold text-zinc-900">
+            {member.display_name || 'Member'}
+          </p>
+          <p className="text-sm text-zinc-500">
+            {member.home_city}, {member.home_country}
+          </p>
+        </div>
+      </div>
       {member.roles && member.roles.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {member.roles.map((mr) => (
@@ -570,6 +669,20 @@ function MemberInfoCard({ member }: { member: MemberMapData }) {
             </span>
           ))}
         </div>
+      )}
+      {/* Instagram リンク */}
+      {member.instagram_id && (
+        <a
+          href={`https://instagram.com/${member.instagram_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-xs text-pink-500 hover:text-pink-600"
+        >
+          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+          </svg>
+          @{member.instagram_id}
+        </a>
       )}
     </div>
   )

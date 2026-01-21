@@ -38,6 +38,8 @@ export default async function MapPage() {
     home_city: string | null
     lat: number | null
     lng: number | null
+    instagram_id: string | null
+    avatar_url?: string | null
     roles?: MemberRole[]
   }> = []
 
@@ -45,7 +47,7 @@ export default async function MapPage() {
     const { data } = await supabase
       .from('profiles')
       .select(`
-        id, display_name, home_country, home_city, lat, lng,
+        id, display_name, home_country, home_city, lat, lng, instagram_id, avatar_url,
         member_roles (
           role_id,
           role:custom_roles (id, name, color, description, created_at)
