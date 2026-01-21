@@ -213,6 +213,7 @@ function MembersTab({ members }: { members: Profile[] }) {
   const [points, setPoints] = useState('')
   const [note, setNote] = useState('')
   const [adding, setAdding] = useState(false)
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null)
 
   const handleAddPoints = async () => {
     if (!selectedMember || !points) return
@@ -231,6 +232,19 @@ function MembersTab({ members }: { members: Profile[] }) {
     setNote('')
     router.refresh()
     setAdding(false)
+  }
+
+  const handleRoleChange = async (memberId: string, newRole: 'member' | 'admin') => {
+    setUpdatingRole(memberId)
+    const supabase = createClient()
+
+    await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', memberId)
+
+    router.refresh()
+    setUpdatingRole(null)
   }
 
   return (
@@ -292,6 +306,7 @@ function MembersTab({ members }: { members: Profile[] }) {
                   <th className="text-left py-2 font-medium text-zinc-300">Name</th>
                   <th className="text-left py-2 font-medium text-zinc-300">Membership ID</th>
                   <th className="text-left py-2 font-medium text-zinc-300">Type</th>
+                  <th className="text-left py-2 font-medium text-zinc-300">Role</th>
                   <th className="text-left py-2 font-medium text-zinc-300">Status</th>
                   <th className="text-left py-2 font-medium text-zinc-300">Location</th>
                   <th className="text-left py-2 font-medium text-zinc-300">Joined</th>
@@ -313,17 +328,27 @@ function MembersTab({ members }: { members: Profile[] }) {
                         <span className="font-medium text-white">
                           {member.display_name || '-'}
                         </span>
-                        {member.role === 'admin' && (
-                          <span className="ml-2 px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs">
-                            Admin
-                          </span>
-                        )}
                       </td>
                       <td className="py-2 font-mono text-zinc-300">{member.membership_id || '-'}</td>
                       <td className="py-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColors[memberType]}`}>
                           {MEMBERSHIP_TYPE_LABELS[memberType]}
                         </span>
+                      </td>
+                      <td className="py-2">
+                        <select
+                          value={member.role || 'member'}
+                          onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'admin')}
+                          disabled={updatingRole === member.id}
+                          className={`px-2 py-1 rounded text-xs font-medium border-0 cursor-pointer ${
+                            member.role === 'admin'
+                              ? 'bg-purple-500/20 text-purple-300'
+                              : 'bg-zinc-500/20 text-zinc-300'
+                          } ${updatingRole === member.id ? 'opacity-50' : ''}`}
+                        >
+                          <option value="member" className="bg-zinc-900">Member</option>
+                          <option value="admin" className="bg-zinc-900">Admin</option>
+                        </select>
                       </td>
                       <td className="py-2">
                         <span
