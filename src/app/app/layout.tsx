@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { Navigation } from '@/components/ui/Navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { SUPER_ADMIN_EMAIL } from '@/config/admin'
+import { AppLayoutClient } from './AppLayoutClient'
 
 export default async function AppLayout({
   children,
@@ -27,13 +27,10 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
-      <Navigation isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
-      <main className="flex-1 pb-20 md:pb-0">
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
-      </main>
-    </div>
+    <AppLayoutClient isAdmin={isAdmin} isSuperAdmin={isSuperAdmin}>
+      <ErrorBoundary>
+        {children}
+      </ErrorBoundary>
+    </AppLayoutClient>
   )
 }
