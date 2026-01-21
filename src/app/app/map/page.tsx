@@ -27,18 +27,36 @@ export default async function MapPage(props: Props) {
   let subscriptionStatus: SubscriptionStatus = 'free_tier'
   let canSeeMembers = false
   let canAddHub = false
+  let canAddShop = false
 
   if (user) {
     // ユーザーのプロフィールを取得
     const { data: profile } = await supabase
       .from('profiles')
-      .select('subscription_status')
+      .select('subscription_status, role')
       .eq('id', user.id)
       .single()
 
     subscriptionStatus = (profile?.subscription_status || 'free_tier') as SubscriptionStatus
     canSeeMembers = canViewMembers(subscriptionStatus)
     canAddHub = canRegisterHub(subscriptionStatus)
+
+    // adminロールの場合はショップ追加可能
+    const isAdmin = profile?.role === 'admin'
+
+    // ambassadorロールをチェック
+    const { data: memberRoles } = await supabase
+      .from('member_roles')
+      .select('role:custom_roles(name)')
+      .eq('user_id', user.id)
+
+    const hasAmbassadorRole = memberRoles?.some((mr: { role: { name: string } | { name: string }[] | null }) => {
+      if (!mr.role) return false
+      const role = Array.isArray(mr.role) ? mr.role[0] : mr.role
+      return role?.name?.toLowerCase() === 'ambassador'
+    }) ?? false
+
+    canAddShop = isAdmin || hasAmbassadorRole
   }
 
   // メンバー情報は課金ユーザーのみ取得
@@ -171,111 +189,46 @@ export default async function MapPage(props: Props) {
         userId={user?.id ?? 'demo'}
         canViewMembers={canSeeMembers}
         canRegisterHub={canAddHub}
+        canAddShop={canAddShop}
       />
 
-      <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
-        {canSeeMembers && (
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-green-900" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-              </svg>
-            </div>
-            <span className="text-zinc-300">Members ({members.length})</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2">
+      {/* MASU Hubs 一覧セクション */}
+      <div className="mt-6">
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
             <svg className="w-3 h-3 text-orange-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <span className="text-zinc-300">MASU Hubs ({hubs?.length ?? 0})</span>
-        </div>
-      </div>
-
-      {/* MASU Hubs 一覧セクション */}
-      <div className="mt-10">
-        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-orange-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          MASU Hubs
+          MASU Hubs ({hubs?.length ?? 0})
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {(hubs ?? []).map((hub) => (
             <div
               key={hub.id}
-              className="bg-white/10 backdrop-blur rounded-xl border border-zinc-500/30 overflow-hidden hover:border-orange-500/50 transition-colors"
+              className="bg-white/10 backdrop-blur rounded-lg border border-zinc-500/30 overflow-hidden hover:border-orange-500/50 transition-colors"
             >
               {hub.image_url ? (
                 <img
                   src={hub.image_url}
                   alt={hub.name}
-                  className="w-full h-40 object-cover"
+                  className="w-full h-24 sm:h-32 object-cover"
                 />
               ) : (
-                <div className="w-full h-40 bg-zinc-800 flex items-center justify-center">
-                  <svg className="w-12 h-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-full h-24 sm:h-32 bg-zinc-800 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
               )}
-              <div className="p-4">
-                <h3 className="font-semibold text-white mb-1">{hub.name}</h3>
-                <p className="text-sm text-zinc-400 mb-2">
-                  {hub.city}, {hub.country}
+              <div className="p-2 sm:p-3">
+                <h3 className="font-semibold text-white text-sm sm:text-base line-clamp-1">{hub.name}</h3>
+                <p className="text-xs sm:text-sm text-zinc-400">
+                  {hub.country}, {hub.city}
                 </p>
                 {hub.description && (
-                  <p className="text-sm text-zinc-300 mb-3 line-clamp-2">{hub.description}</p>
+                  <p className="text-xs text-zinc-300 mt-1 line-clamp-1">{hub.description}</p>
                 )}
-                {hub.address && (
-                  <p className="text-xs text-zinc-400 mb-2 flex items-start gap-1">
-                    <span className="flex-shrink-0">📍</span>
-                    <span>{hub.address}</span>
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {hub.google_maps_url && (
-                    <a
-                      href={hub.google_maps_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded-full text-xs text-white transition-colors"
-                    >
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                      </svg>
-                      Map
-                    </a>
-                  )}
-                  {hub.website_url && (
-                    <a
-                      href={hub.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded-full text-xs text-white transition-colors"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
-                      </svg>
-                      Web
-                    </a>
-                  )}
-                  {hub.phone && (
-                    <a
-                      href={`tel:${hub.phone}`}
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded-full text-xs text-white transition-colors"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                      </svg>
-                      {hub.phone}
-                    </a>
-                  )}
-                </div>
               </div>
             </div>
           ))}

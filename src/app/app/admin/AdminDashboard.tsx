@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, GuildQuest, QuestSubmission } from '@/types/database'
@@ -16,8 +16,13 @@ interface QuestSubmissionWithRelations extends QuestSubmission {
   profiles: { display_name: string | null; membership_id: string | null } | null
 }
 
+// 招待者情報付きのInvite
+interface InviteWithRelations extends Invite {
+  profiles: { display_name: string } | null
+}
+
 interface AdminDashboardProps {
-  invites: (Invite & { profiles: { display_name: string } | null })[]
+  invites: InviteWithRelations[]
   members: Profile[]
   hubs: MasuHub[]
   questSubmissions: QuestSubmissionWithRelations[]
@@ -28,30 +33,88 @@ interface AdminDashboardProps {
 
 type Tab = 'invites' | 'members' | 'hubs' | 'offers' | 'quests'
 
+const TAB_LABELS: Record<Tab, string> = {
+  invites: '招待コード',
+  members: 'メンバー',
+  hubs: '拠点',
+  offers: 'オファー',
+  quests: 'クエスト',
+}
+
+const TAB_ICONS: Record<Tab, ReactNode> = {
+  invites: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  ),
+  members: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  ),
+  hubs: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+  ),
+  offers: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+    </svg>
+  ),
+  quests: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  ),
+}
+
 export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, adminId, adminEmail }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('invites')
 
   // 承認待ちの投稿数
   const pendingCount = questSubmissions.filter(s => s.status === 'pending').length
+  const unusedInviteCount = invites.filter(i => !i.used).length
 
   return (
     <div>
-      {/* タブ */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
+      {/* 統計サマリー */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
+          <p className="text-green-400 text-xs font-medium">メンバー数</p>
+          <p className="text-2xl font-bold text-white">{members.length}</p>
+        </div>
+        <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
+          <p className="text-orange-400 text-xs font-medium">拠点数</p>
+          <p className="text-2xl font-bold text-white">{hubs.length}</p>
+        </div>
+        <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
+          <p className="text-blue-400 text-xs font-medium">未使用招待</p>
+          <p className="text-2xl font-bold text-white">{unusedInviteCount}</p>
+        </div>
+        <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-xl p-4 border border-amber-500/20">
+          <p className="text-amber-400 text-xs font-medium">承認待ち</p>
+          <p className="text-2xl font-bold text-white">{pendingCount}</p>
+        </div>
+      </div>
+
+      {/* タブナビゲーション */}
+      <div className="flex gap-1 mb-6 p-1 bg-white/5 rounded-xl overflow-x-auto">
         {(['invites', 'members', 'hubs', 'offers', 'quests'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
+            className={`flex-1 min-w-0 px-3 py-3 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex items-center justify-center gap-2 ${
               activeTab === tab
-                ? 'bg-[#c0c0c0] text-zinc-900'
-                : 'bg-white/10 text-zinc-300 hover:bg-white/20'
+                ? 'bg-[#c0c0c0] text-zinc-900 shadow-lg'
+                : 'text-zinc-400 hover:text-white hover:bg-white/10'
             }`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {TAB_ICONS[tab]}
+            <span className="hidden sm:inline">{TAB_LABELS[tab]}</span>
             {tab === 'quests' && pendingCount > 0 && (
-              <span className={`px-1.5 py-0.5 rounded text-xs ${
-                activeTab === tab ? 'bg-zinc-900/20' : 'bg-amber-500/30 text-amber-300'
+              <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                activeTab === tab ? 'bg-zinc-900/30 text-zinc-900' : 'bg-amber-500 text-amber-900'
               }`}>
                 {pendingCount}
               </span>
@@ -74,6 +137,7 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
   const router = useRouter()
   const [creating, setCreating] = useState(false)
   const [selectedType, setSelectedType] = useState<MembershipType>('standard')
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   // 無料招待を発行できるか
   const canCreateFreeInvite = canIssueFreeInvite(adminEmail)
@@ -88,12 +152,19 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
     const supabase = createClient()
     const code = generateInviteCode()
 
-    await supabase.from('invites').insert({
+    const { error } = await supabase.from('invites').insert({
       code,
       invited_by: adminId,
       used: false,
       membership_type: selectedType,
     })
+
+    if (error) {
+      console.error('招待コード作成エラー:', error)
+      alert(`エラー: ${error.message}`)
+    } else {
+      alert(`招待コード ${code} を作成しました`)
+    }
 
     router.refresh()
     setCreating(false)
@@ -102,108 +173,151 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
   const copyToClipboard = (code: string) => {
     const url = `${window.location.origin}/invite/${code}`
     navigator.clipboard.writeText(url)
+    setCopiedCode(code)
+    setTimeout(() => setCopiedCode(null), 2000)
   }
 
-  const unusedCount = invites.filter((i) => !i.used).length
+  const unusedInvites = invites.filter((i) => !i.used)
+  const usedInvites = invites.filter((i) => i.used)
 
   // メンバータイプに応じた背景色を取得
   const getTypeBgColor = (type: MembershipType) => {
     switch (type) {
-      case 'model':
-        return 'bg-pink-500/20 text-pink-300'
-      case 'ambassador':
-        return 'bg-purple-500/20 text-purple-300'
-      case 'staff':
-        return 'bg-blue-500/20 text-blue-300'
-      case 'partner':
-        return 'bg-amber-500/20 text-amber-300'
-      default:
-        return 'bg-zinc-500/20 text-zinc-400'
+      case 'model': return 'bg-pink-500/20 text-pink-300 border-pink-500/30'
+      case 'ambassador': return 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+      case 'staff': return 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+      case 'partner': return 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+      default: return 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
     }
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-4">
-        <div className="flex flex-row items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-white">Invite Codes</h2>
-            <p className="text-sm text-zinc-300">
-              {unusedCount} unused / {invites.length} total
+    <div className="space-y-4">
+      {/* 新規作成カード */}
+      <Card>
+        <CardHeader>
+          <h2 className="font-semibold text-white text-lg">新しい招待コードを作成</h2>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">メンバータイプ</label>
+              <select
+                className="w-full px-4 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as MembershipType)}
+              >
+                {availableMembershipTypes.map((type) => (
+                  <option key={type} value={type} className="bg-zinc-900">
+                    {MEMBERSHIP_TYPE_LABELS[type]} {isFreeMembershipType(type) ? '(無料)' : '(有料)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <Button onClick={handleCreateInvite} loading={creating} className="w-full sm:w-auto px-6">
+                コード発行
+              </Button>
+            </div>
+          </div>
+          {!canCreateFreeInvite && (
+            <p className="text-xs text-zinc-500 mt-3">
+              ※ 無料招待コードはスーパー管理者のみ発行可能です
             </p>
-          </div>
-        </div>
-        {/* 招待コード生成フォーム */}
-        <div className="flex flex-row items-end gap-3 p-4 bg-white/5 rounded-lg">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-zinc-300 mb-1">
-              Member Type
-            </label>
-            <select
-              className="w-full px-3 py-2 border border-zinc-500/30 rounded-lg text-sm bg-white/10 text-white"
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value as MembershipType)}
-            >
-              {availableMembershipTypes.map((type) => (
-                <option key={type} value={type} className="bg-zinc-900">
-                  {MEMBERSHIP_TYPE_LABELS[type]} {isFreeMembershipType(type) ? '(Free)' : '(Paid)'}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button onClick={handleCreateInvite} loading={creating} size="sm">
-            Generate Code
-          </Button>
-        </div>
-        {!canCreateFreeInvite && (
-          <p className="text-xs text-zinc-400 mt-2">
-            Note: Only the super admin can issue free invitation codes.
-          </p>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {invites.map((invite) => (
-            <div
-              key={invite.id}
-              className={`flex items-center justify-between p-3 rounded-lg ${
-                invite.used ? 'bg-white/5' : 'bg-green-500/10'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono font-medium text-white">{invite.code}</p>
-                    {invite.membership_type && invite.membership_type !== 'standard' && (
-                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getTypeBgColor(invite.membership_type)}`}>
-                        {MEMBERSHIP_TYPE_LABELS[invite.membership_type]}
-                      </span>
-                    )}
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 未使用の招待コード */}
+      <Card>
+        <CardHeader>
+          <h2 className="font-semibold text-white">未使用の招待コード ({unusedInvites.length})</h2>
+        </CardHeader>
+        <CardContent>
+          {unusedInvites.length === 0 ? (
+            <p className="text-zinc-500 text-center py-6">未使用の招待コードはありません</p>
+          ) : (
+            <div className="space-y-2">
+              {unusedInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="flex items-center justify-between p-4 rounded-xl bg-green-500/10 border border-green-500/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono font-bold text-white text-lg">{invite.code}</p>
+                        {invite.membership_type && invite.membership_type !== 'standard' && (
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getTypeBgColor(invite.membership_type)}`}>
+                            {MEMBERSHIP_TYPE_LABELS[invite.membership_type]}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-400">
+                        {formatDate(invite.created_at)} 作成
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-zinc-300">
-                    {invite.used
-                      ? `Used by ${invite.profiles?.display_name || 'Unknown'}`
-                      : isFreeMembershipType(invite.membership_type) ? 'Free Invitation' : 'Available'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-300/50">{formatDate(invite.created_at)}</span>
-                {!invite.used && (
                   <Button
                     size="sm"
-                    variant="outline"
                     onClick={() => copyToClipboard(invite.code)}
+                    className="min-w-[100px]"
                   >
-                    Copy Link
+                    {copiedCode === invite.code ? 'コピー完了!' : 'URLをコピー'}
                   </Button>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 使用済みの招待コード */}
+      {usedInvites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold text-white">使用済み ({usedInvites.length})</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {usedInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-white/5"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono text-zinc-400">{invite.code}</p>
+                        {invite.membership_type && invite.membership_type !== 'standard' && (
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium opacity-60 ${getTypeBgColor(invite.membership_type)}`}>
+                            {MEMBERSHIP_TYPE_LABELS[invite.membership_type]}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-500">
+                        {invite.profiles?.display_name || '不明'} が使用
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-zinc-500">{formatDate(invite.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }
 
@@ -214,6 +328,7 @@ function MembersTab({ members }: { members: Profile[] }) {
   const [note, setNote] = useState('')
   const [adding, setAdding] = useState(false)
   const [updatingRole, setUpdatingRole] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleAddPoints = async () => {
     if (!selectedMember || !points) return
@@ -247,132 +362,168 @@ function MembersTab({ members }: { members: Profile[] }) {
     setUpdatingRole(null)
   }
 
+  // 検索フィルタ
+  const filteredMembers = members.filter((member) => {
+    const query = searchQuery.toLowerCase()
+    return (
+      member.display_name?.toLowerCase().includes(query) ||
+      member.membership_id?.toLowerCase().includes(query) ||
+      member.home_city?.toLowerCase().includes(query) ||
+      member.home_country?.toLowerCase().includes(query)
+    )
+  })
+
+  const typeColors: Record<MembershipType, string> = {
+    standard: 'bg-zinc-500/20 text-zinc-400',
+    model: 'bg-pink-500/20 text-pink-300',
+    ambassador: 'bg-purple-500/20 text-purple-300',
+    staff: 'bg-blue-500/20 text-blue-300',
+    partner: 'bg-amber-500/20 text-amber-300',
+  }
+
   return (
     <div className="space-y-4">
       {/* ポイント付与フォーム */}
       <Card>
         <CardHeader>
-          <h2 className="font-semibold text-white">Award Points</h2>
+          <h2 className="font-semibold text-white text-lg">ポイント付与</h2>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <select
-              className="px-3 py-2 border border-zinc-500/30 rounded-lg text-sm bg-white/10 text-white"
-              value={selectedMember?.id || ''}
-              onChange={(e) => {
-                const member = members.find((m) => m.id === e.target.value)
-                setSelectedMember(member || null)
-              }}
-            >
-              <option value="" className="bg-zinc-900">Select member...</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id} className="bg-zinc-900">
-                  {member.display_name || member.membership_id || 'Unknown'}
-                </option>
-              ))}
-            </select>
-            <Input
-              type="number"
-              placeholder="Points"
-              value={points}
-              onChange={(e) => setPoints(e.target.value)}
-            />
-            <Input
-              placeholder="Note (optional)"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-            <Button
-              onClick={handleAddPoints}
-              loading={adding}
-              disabled={!selectedMember || !points}
-            >
-              Add Points
-            </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">メンバー</label>
+              <select
+                className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                value={selectedMember?.id || ''}
+                onChange={(e) => {
+                  const member = members.find((m) => m.id === e.target.value)
+                  setSelectedMember(member || null)
+                }}
+              >
+                <option value="" className="bg-zinc-900">選択してください</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id} className="bg-zinc-900">
+                    {member.display_name || member.membership_id || '不明'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">ポイント数</label>
+              <input
+                type="number"
+                placeholder="例: 100"
+                value={points}
+                onChange={(e) => setPoints(e.target.value)}
+                className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">メモ (任意)</label>
+              <input
+                placeholder="例: イベント参加"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleAddPoints}
+                loading={adding}
+                disabled={!selectedMember || !points}
+                className="w-full"
+              >
+                ポイント付与
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* メンバー一覧 */}
       <Card>
-        <CardHeader>
-          <h2 className="font-semibold text-white">All Members ({members.length})</h2>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="font-semibold text-white">メンバー一覧 ({members.length}人)</h2>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="検索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full sm:w-64 pl-9 pr-3 py-2 border border-zinc-500/30 rounded-lg text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+            />
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-500/30">
-                  <th className="text-left py-2 font-medium text-zinc-300">Name</th>
-                  <th className="text-left py-2 font-medium text-zinc-300">Membership ID</th>
-                  <th className="text-left py-2 font-medium text-zinc-300">Type</th>
-                  <th className="text-left py-2 font-medium text-zinc-300">Role</th>
-                  <th className="text-left py-2 font-medium text-zinc-300">Status</th>
-                  <th className="text-left py-2 font-medium text-zinc-300">Location</th>
-                  <th className="text-left py-2 font-medium text-zinc-300">Joined</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => {
-                  const memberType = member.membership_type || 'standard'
-                  const typeColors: Record<MembershipType, string> = {
-                    standard: 'bg-zinc-500/20 text-zinc-400',
-                    model: 'bg-pink-500/20 text-pink-300',
-                    ambassador: 'bg-purple-500/20 text-purple-300',
-                    staff: 'bg-blue-500/20 text-blue-300',
-                    partner: 'bg-amber-500/20 text-amber-300',
-                  }
-                  return (
-                    <tr key={member.id} className="border-b border-zinc-500/20">
-                      <td className="py-2">
-                        <span className="font-medium text-white">
-                          {member.display_name || '-'}
+          <div className="space-y-2">
+            {filteredMembers.map((member) => {
+              const memberType = member.membership_type || 'standard'
+              return (
+                <div key={member.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {/* アバター */}
+                    <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {member.avatar_url ? (
+                        <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-zinc-400 font-bold text-sm">
+                          {(member.display_name || '?')[0].toUpperCase()}
                         </span>
-                      </td>
-                      <td className="py-2 font-mono text-zinc-300">{member.membership_id || '-'}</td>
-                      <td className="py-2">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeColors[memberType]}`}>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-white truncate">
+                          {member.display_name || '名前未設定'}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeColors[memberType]}`}>
                           {MEMBERSHIP_TYPE_LABELS[memberType]}
                         </span>
-                      </td>
-                      <td className="py-2">
-                        <select
-                          value={member.role || 'member'}
-                          onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'admin')}
-                          disabled={updatingRole === member.id}
-                          className={`px-2 py-1 rounded text-xs font-medium border-0 cursor-pointer ${
-                            member.role === 'admin'
-                              ? 'bg-purple-500/20 text-purple-300'
-                              : 'bg-zinc-500/20 text-zinc-300'
-                          } ${updatingRole === member.id ? 'opacity-50' : ''}`}
-                        >
-                          <option value="member" className="bg-zinc-900">Member</option>
-                          <option value="admin" className="bg-zinc-900">Admin</option>
-                        </select>
-                      </td>
-                      <td className="py-2">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            member.subscription_status === 'active' || member.subscription_status === 'free'
-                              ? 'bg-green-500/20 text-green-300'
-                              : 'bg-red-500/20 text-red-300'
-                          }`}
-                        >
-                          {member.subscription_status === 'free' ? 'Free' : member.subscription_status}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          member.subscription_status === 'active' || member.subscription_status === 'free'
+                            ? 'bg-green-500/20 text-green-300'
+                            : 'bg-red-500/20 text-red-300'
+                        }`}>
+                          {member.subscription_status === 'free' ? '無料' : member.subscription_status === 'active' ? '有効' : '無効'}
                         </span>
-                      </td>
-                      <td className="py-2 text-zinc-300">
-                        {member.home_city && member.home_country
-                          ? `${member.home_city}, ${member.home_country}`
-                          : '-'}
-                      </td>
-                      <td className="py-2 text-zinc-300/50">{formatDate(member.created_at)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5 flex-wrap">
+                        <span className="font-mono">{member.membership_id || '-'}</span>
+                        {member.home_city && member.home_country && (
+                          <>
+                            <span>•</span>
+                            <span>{member.home_city}, {member.home_country}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    <select
+                      value={member.role || 'member'}
+                      onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'admin')}
+                      disabled={updatingRole === member.id}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${
+                        member.role === 'admin'
+                          ? 'bg-purple-500/20 text-purple-300'
+                          : 'bg-zinc-700 text-zinc-300'
+                      } ${updatingRole === member.id ? 'opacity-50' : ''}`}
+                    >
+                      <option value="member" className="bg-zinc-900">メンバー</option>
+                      <option value="admin" className="bg-zinc-900">管理者</option>
+                    </select>
+                  </div>
+                </div>
+              )
+            })}
           </div>
+          {filteredMembers.length === 0 && (
+            <p className="text-zinc-500 text-center py-8">該当するメンバーが見つかりません</p>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -431,77 +582,118 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     setCreating(false)
   }
 
+  const activeHubs = hubs.filter(h => h.is_active)
+  const inactiveHubs = hubs.filter(h => !h.is_active)
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <h2 className="font-semibold text-white">MASU Hubs ({hubs.length})</h2>
+          <h2 className="font-semibold text-white text-lg">MASU Hub 管理 ({hubs.length})</h2>
           <Button size="sm" onClick={() => setShowForm(!showForm)}>
-            {showForm ? 'Cancel' : 'Add Hub'}
+            {showForm ? 'キャンセル' : '新規追加'}
           </Button>
         </CardHeader>
         <CardContent>
           {showForm && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-white/5 rounded-lg">
-              <Input
-                label="Name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Hub name"
-              />
-              <Input
-                label="Description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Optional description"
-              />
-              <Input
-                label="Country"
-                value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                placeholder="e.g., Japan"
-              />
-              <Input
-                label="City"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="e.g., Tokyo"
-              />
-              <div className="md:col-span-2">
-                <Button onClick={handleCreate} loading={creating}>
-                  Create Hub
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 p-4 bg-white/5 rounded-xl border border-zinc-500/20">
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">名前 *</label>
+                <input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="例: MASU Tokyo"
+                  className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">説明 (任意)</label>
+                <input
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="簡単な説明"
+                  className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">国 *</label>
+                <input
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  placeholder="例: Japan"
+                  className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">都市 *</label>
+                <input
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  placeholder="例: Tokyo"
+                  className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Button onClick={handleCreate} loading={creating} disabled={!formData.name || !formData.country || !formData.city}>
+                  拠点を作成
                 </Button>
               </div>
             </div>
           )}
 
+          {/* アクティブな拠点 */}
           <div className="space-y-2">
-            {hubs.map((hub) => (
+            {activeHubs.map((hub) => (
               <div
                 key={hub.id}
-                className={`p-3 rounded-lg ${hub.is_active ? 'bg-zinc-500/10' : 'bg-white/5'}`}
+                className="flex items-center gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20"
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-white">{hub.name}</p>
-                    <p className="text-sm text-zinc-300">
-                      {hub.city}, {hub.country}
-                    </p>
-                    {hub.description && (
-                      <p className="text-xs text-zinc-300/50 mt-1">{hub.description}</p>
-                    )}
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      hub.is_active ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-zinc-300'
-                    }`}
-                  >
-                    {hub.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-orange-500/20">
+                  {hub.image_url ? (
+                    <img src={hub.image_url} alt={hub.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-white">{hub.name}</p>
+                  <p className="text-sm text-zinc-400">{hub.city}, {hub.country}</p>
+                  {hub.description && (
+                    <p className="text-xs text-zinc-500 mt-0.5 truncate">{hub.description}</p>
+                  )}
+                </div>
+                <span className="px-2.5 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-medium flex-shrink-0">
+                  有効
+                </span>
               </div>
             ))}
           </div>
+
+          {/* 非アクティブな拠点 */}
+          {inactiveHubs.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-zinc-700">
+              <p className="text-xs text-zinc-500 mb-2">非アクティブ ({inactiveHubs.length})</p>
+              <div className="space-y-2">
+                {inactiveHubs.map((hub) => (
+                  <div key={hub.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 opacity-60">
+                    <div className="flex-1">
+                      <p className="font-medium text-zinc-400">{hub.name}</p>
+                      <p className="text-xs text-zinc-500">{hub.city}, {hub.country}</p>
+                    </div>
+                    <span className="px-2 py-0.5 bg-zinc-700 text-zinc-400 rounded text-xs">無効</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hubs.length === 0 && (
+            <p className="text-zinc-500 text-center py-8">拠点がまだありません</p>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -546,62 +738,73 @@ function OffersTab() {
     setCreating(false)
   }
 
+  const offerTypes = [
+    { value: 'Discount', label: '割引' },
+    { value: 'Access', label: 'アクセス権' },
+    { value: 'Service', label: 'サービス' },
+    { value: 'Product', label: '商品' },
+  ]
+
+  const ranks = [
+    { value: 'D', label: 'D (全メンバー)' },
+    { value: 'C', label: 'C (100pt以上)' },
+    { value: 'B', label: 'B (300pt以上)' },
+    { value: 'A', label: 'A (800pt以上)' },
+  ]
+
   return (
     <Card>
       <CardHeader>
-        <h2 className="font-semibold text-white">Create Offer</h2>
+        <h2 className="font-semibold text-white text-lg">新規オファーを作成</h2>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="Title"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder="Offer title"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Type</label>
-            <select
-              className="w-full px-3 py-2 border border-zinc-500/30 rounded-lg text-sm bg-white/10 text-white"
-              value={formData.offer_type}
-              onChange={(e) => setFormData({ ...formData, offer_type: e.target.value })}
-            >
-              <option value="Discount" className="bg-zinc-900">Discount</option>
-              <option value="Access" className="bg-zinc-900">Access</option>
-              <option value="Service" className="bg-zinc-900">Service</option>
-              <option value="Product" className="bg-zinc-900">Product</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Description</label>
-            <textarea
-              className="w-full px-3 py-2 border border-zinc-500/30 rounded-lg text-sm bg-white/10 text-white placeholder-zinc-300/50"
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe the offer..."
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">タイトル *</label>
+            <input
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="オファーのタイトル"
+              className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">
-              Minimum Rank Required
-            </label>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">タイプ</label>
             <select
-              className="w-full px-3 py-2 border border-zinc-500/30 rounded-lg text-sm bg-white/10 text-white"
-              value={formData.min_rank}
-              onChange={(e) =>
-                setFormData({ ...formData, min_rank: e.target.value as Rank })
-              }
+              className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+              value={formData.offer_type}
+              onChange={(e) => setFormData({ ...formData, offer_type: e.target.value })}
             >
-              <option value="D" className="bg-zinc-900">D (All members)</option>
-              <option value="C" className="bg-zinc-900">C (100+ points)</option>
-              <option value="B" className="bg-zinc-900">B (300+ points)</option>
-              <option value="A" className="bg-zinc-900">A (800+ points)</option>
+              {offerTypes.map((type) => (
+                <option key={type.value} value={type.value} className="bg-zinc-900">{type.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">説明 *</label>
+            <textarea
+              className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="オファーの詳細を入力..."
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">必要ランク</label>
+            <select
+              className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+              value={formData.min_rank}
+              onChange={(e) => setFormData({ ...formData, min_rank: e.target.value as Rank })}
+            >
+              {ranks.map((rank) => (
+                <option key={rank.value} value={rank.value} className="bg-zinc-900">{rank.label}</option>
+              ))}
             </select>
           </div>
           <div className="flex items-end">
-            <Button onClick={handleCreate} loading={creating}>
-              Create Offer
+            <Button onClick={handleCreate} loading={creating} disabled={!formData.title || !formData.description}>
+              オファーを作成
             </Button>
           </div>
         </div>
@@ -610,14 +813,66 @@ function OffersTab() {
   )
 }
 
+type QuestType = 'photo' | 'checkin' | 'action'
+
 function QuestsTab({ submissions, quests, adminId }: { submissions: QuestSubmissionWithRelations[]; quests: GuildQuest[]; adminId: string }) {
   const router = useRouter()
   const [processing, setProcessing] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [showQuestForm, setShowQuestForm] = useState(false)
+  const [creatingQuest, setCreatingQuest] = useState(false)
+  const [togglingQuest, setTogglingQuest] = useState<string | null>(null)
+  const [questFormData, setQuestFormData] = useState({
+    title: '',
+    description: '',
+    points_reward: 10,
+    quest_type: 'photo' as QuestType,
+    is_repeatable: false,
+  })
 
   // 承認待ち/それ以外で分ける
   const pendingSubmissions = submissions.filter(s => s.status === 'pending')
   const reviewedSubmissions = submissions.filter(s => s.status !== 'pending')
+
+  // クエスト作成
+  const handleCreateQuest = async () => {
+    if (!questFormData.title || !questFormData.description) return
+    setCreatingQuest(true)
+
+    const supabase = createClient()
+    await supabase.from('guild_quests').insert({
+      title: questFormData.title,
+      description: questFormData.description,
+      points_reward: questFormData.points_reward,
+      quest_type: questFormData.quest_type,
+      is_repeatable: questFormData.is_repeatable,
+      is_active: true,
+      image_url: null,
+    })
+
+    setQuestFormData({
+      title: '',
+      description: '',
+      points_reward: 10,
+      quest_type: 'photo',
+      is_repeatable: false,
+    })
+    setShowQuestForm(false)
+    setCreatingQuest(false)
+    router.refresh()
+  }
+
+  // クエストの有効/無効切り替え
+  const handleToggleQuest = async (questId: string, currentStatus: boolean) => {
+    setTogglingQuest(questId)
+    const supabase = createClient()
+    await supabase
+      .from('guild_quests')
+      .update({ is_active: !currentStatus })
+      .eq('id', questId)
+    setTogglingQuest(null)
+    router.refresh()
+  }
 
   const handleApprove = async (submission: QuestSubmissionWithRelations) => {
     if (!submission.guild_quests) return
@@ -667,100 +922,301 @@ function QuestsTab({ submissions, quests, adminId }: { submissions: QuestSubmiss
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <span className="px-2 py-0.5 bg-green-500/20 rounded text-xs font-medium text-green-300">Approved</span>
+        return <span className="px-2 py-0.5 bg-green-500/20 rounded-full text-xs font-medium text-green-300">承認済み</span>
       case 'rejected':
-        return <span className="px-2 py-0.5 bg-red-500/20 rounded text-xs font-medium text-red-300">Rejected</span>
+        return <span className="px-2 py-0.5 bg-red-500/20 rounded-full text-xs font-medium text-red-300">却下</span>
       default:
-        return <span className="px-2 py-0.5 bg-amber-500/20 rounded text-xs font-medium text-amber-300">Pending</span>
+        return <span className="px-2 py-0.5 bg-amber-500/20 rounded-full text-xs font-medium text-amber-300">審査待ち</span>
     }
   }
 
+  const questTypes = [
+    { value: 'photo', label: '写真投稿', description: '写真をアップロードして完了' },
+    { value: 'checkin', label: 'チェックイン', description: '場所にチェックインして完了' },
+    { value: 'action', label: 'アクション', description: '特定のアクションを実行して完了' },
+  ]
+
+  const activeQuests = quests.filter(q => q.is_active)
+  const inactiveQuests = quests.filter(q => !q.is_active)
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 画像プレビューモーダル */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => setSelectedImage(null)}
         >
-          <img
-            src={selectedImage}
-            alt="Preview"
-            className="max-w-full max-h-full object-contain rounded-lg"
-          />
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img
+              src={selectedImage}
+              alt="プレビュー"
+              className="max-w-full max-h-[90vh] object-contain rounded-xl"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 w-10 h-10 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
+
+      {/* クエスト管理 */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-white text-lg">クエスト管理</h2>
+            <p className="text-xs text-zinc-400 mt-1">有効: {activeQuests.length}件 / 無効: {inactiveQuests.length}件</p>
+          </div>
+          <Button size="sm" onClick={() => setShowQuestForm(!showQuestForm)}>
+            {showQuestForm ? 'キャンセル' : '新規作成'}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {/* クエスト作成フォーム */}
+          {showQuestForm && (
+            <div className="mb-6 p-4 bg-white/5 rounded-xl border border-zinc-500/20">
+              <h3 className="font-medium text-white mb-4">新しいクエストを作成</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">タイトル *</label>
+                  <input
+                    value={questFormData.title}
+                    onChange={(e) => setQuestFormData({ ...questFormData, title: e.target.value })}
+                    placeholder="例: MASUの商品を投稿しよう"
+                    className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">説明 *</label>
+                  <textarea
+                    value={questFormData.description}
+                    onChange={(e) => setQuestFormData({ ...questFormData, description: e.target.value })}
+                    placeholder="クエストの詳細な説明..."
+                    rows={2}
+                    className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">クエストタイプ</label>
+                  <select
+                    value={questFormData.quest_type}
+                    onChange={(e) => setQuestFormData({ ...questFormData, quest_type: e.target.value as QuestType })}
+                    className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  >
+                    {questTypes.map((type) => (
+                      <option key={type.value} value={type.value} className="bg-zinc-900">
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">報酬ポイント</label>
+                  <input
+                    type="number"
+                    value={questFormData.points_reward}
+                    onChange={(e) => setQuestFormData({ ...questFormData, points_reward: parseInt(e.target.value) || 0 })}
+                    min="1"
+                    className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={questFormData.is_repeatable}
+                      onChange={(e) => setQuestFormData({ ...questFormData, is_repeatable: e.target.checked })}
+                      className="w-5 h-5 rounded border-zinc-500/30 bg-white/10 text-[#c0c0c0] focus:ring-[#c0c0c0]"
+                    />
+                    <div>
+                      <span className="text-sm text-white">繰り返し可能</span>
+                      <p className="text-xs text-zinc-500">ユーザーが複数回達成できるようにする</p>
+                    </div>
+                  </label>
+                </div>
+                <div className="sm:col-span-2">
+                  <Button
+                    onClick={handleCreateQuest}
+                    loading={creatingQuest}
+                    disabled={!questFormData.title || !questFormData.description}
+                  >
+                    クエストを作成
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 有効なクエスト一覧 */}
+          {activeQuests.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <p className="text-xs text-zinc-400 font-medium mb-2">有効なクエスト</p>
+              {activeQuests.map((quest) => (
+                <div key={quest.id} className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                  <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-white">{quest.title}</span>
+                      <span className="px-2 py-0.5 bg-[#c0c0c0]/20 text-[#c0c0c0] rounded-full text-xs font-bold">
+                        +{quest.points_reward}pt
+                      </span>
+                      {quest.is_repeatable && (
+                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full text-xs">
+                          繰り返し可
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400 truncate">{quest.description}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleQuest(quest.id, quest.is_active)}
+                    disabled={togglingQuest === quest.id}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      togglingQuest === quest.id
+                        ? 'bg-zinc-700 text-zinc-400'
+                        : 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                    }`}
+                  >
+                    {togglingQuest === quest.id ? '...' : '無効化'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 無効なクエスト一覧 */}
+          {inactiveQuests.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-zinc-500 font-medium mb-2">無効なクエスト</p>
+              {inactiveQuests.map((quest) => (
+                <div key={quest.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 opacity-60">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-zinc-400">{quest.title}</span>
+                      <span className="px-2 py-0.5 bg-zinc-700 text-zinc-400 rounded-full text-xs">
+                        +{quest.points_reward}pt
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 truncate">{quest.description}</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleQuest(quest.id, quest.is_active)}
+                    disabled={togglingQuest === quest.id}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      togglingQuest === quest.id
+                        ? 'bg-zinc-700 text-zinc-400'
+                        : 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
+                    }`}
+                  >
+                    {togglingQuest === quest.id ? '...' : '有効化'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {quests.length === 0 && !showQuestForm && (
+            <div className="text-center py-8">
+              <p className="text-zinc-500">クエストがまだありません</p>
+              <button
+                onClick={() => setShowQuestForm(true)}
+                className="mt-2 text-[#c0c0c0] hover:text-white text-sm"
+              >
+                最初のクエストを作成する →
+              </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 承認待ち */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-white">Pending Submissions</h2>
+            <h2 className="font-semibold text-white text-lg">承認待ちの投稿</h2>
             {pendingSubmissions.length > 0 && (
-              <span className="px-2 py-0.5 bg-amber-500/20 rounded text-xs font-medium text-amber-300">
-                {pendingSubmissions.length}
+              <span className="px-2.5 py-1 bg-amber-500 rounded-full text-xs font-bold text-amber-900">
+                {pendingSubmissions.length}件
               </span>
             )}
           </div>
         </CardHeader>
         <CardContent>
           {pendingSubmissions.length === 0 ? (
-            <p className="text-zinc-400 text-center py-8">No pending submissions</p>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-zinc-500">承認待ちの投稿はありません</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {pendingSubmissions.map((submission) => (
-                <div key={submission.id} className="flex gap-4 p-4 bg-white/5 rounded-lg">
-                  {/* 画像サムネイル */}
-                  {submission.image_url && (
-                    <div
-                      className="w-24 h-24 rounded-lg overflow-hidden cursor-pointer flex-shrink-0"
-                      onClick={() => setSelectedImage(submission.image_url)}
-                    >
-                      <img
-                        src={submission.image_url}
-                        alt="Submission"
-                        className="w-full h-full object-cover hover:scale-105 transition-transform"
-                      />
-                    </div>
-                  )}
-
-                  {/* 詳細 */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-white">
-                        {submission.profiles?.display_name || 'Unknown'}
-                      </span>
-                      <span className="text-zinc-500 text-xs">
-                        {submission.profiles?.membership_id}
-                      </span>
-                    </div>
-                    <p className="text-sm text-[#c0c0c0] mb-1">
-                      {submission.guild_quests?.title}
-                    </p>
-                    {submission.comment && (
-                      <p className="text-sm text-zinc-400 mb-2">{submission.comment}</p>
+                <div key={submission.id} className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                  <div className="flex gap-4">
+                    {/* 画像サムネイル */}
+                    {submission.image_url && (
+                      <div
+                        className="w-28 h-28 rounded-xl overflow-hidden cursor-pointer flex-shrink-0 ring-2 ring-amber-500/30"
+                        onClick={() => setSelectedImage(submission.image_url)}
+                      >
+                        <img
+                          src={submission.image_url}
+                          alt="投稿画像"
+                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                        />
+                      </div>
                     )}
-                    <p className="text-xs text-zinc-500">{formatDate(submission.created_at)}</p>
+
+                    {/* 詳細 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-bold text-white text-lg">
+                          {submission.profiles?.display_name || '不明'}
+                        </span>
+                        <span className="text-zinc-500 text-xs font-mono">
+                          {submission.profiles?.membership_id}
+                        </span>
+                      </div>
+                      <p className="text-[#c0c0c0] font-medium mb-1">
+                        {submission.guild_quests?.title}
+                      </p>
+                      {submission.comment && (
+                        <p className="text-sm text-zinc-400 mb-2 bg-white/5 p-2 rounded-lg">{submission.comment}</p>
+                      )}
+                      <p className="text-xs text-zinc-500">{formatDate(submission.created_at)}</p>
+                    </div>
                   </div>
 
-                  {/* アクション */}
-                  <div className="flex flex-col gap-2">
+                  {/* アクションボタン */}
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-amber-500/20">
                     <Button
-                      size="sm"
                       onClick={() => handleApprove(submission)}
                       loading={processing === submission.id}
                       disabled={processing !== null}
+                      className="flex-1"
                     >
-                      Approve (+{submission.guild_quests?.points_reward}pt)
+                      承認 (+{submission.guild_quests?.points_reward}pt)
                     </Button>
                     <Button
-                      size="sm"
                       variant="outline"
                       onClick={() => handleReject(submission)}
                       loading={processing === submission.id}
                       disabled={processing !== null}
+                      className="flex-1"
                     >
-                      Reject
+                      却下
                     </Button>
                   </div>
                 </div>
@@ -774,49 +1230,36 @@ function QuestsTab({ submissions, quests, adminId }: { submissions: QuestSubmiss
       {reviewedSubmissions.length > 0 && (
         <Card>
           <CardHeader>
-            <h2 className="font-semibold text-white">Reviewed Submissions</h2>
+            <h2 className="font-semibold text-white">審査済み ({reviewedSubmissions.length}件)</h2>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-500/30">
-                    <th className="text-left py-2 font-medium text-zinc-300">User</th>
-                    <th className="text-left py-2 font-medium text-zinc-300">Quest</th>
-                    <th className="text-left py-2 font-medium text-zinc-300">Status</th>
-                    <th className="text-left py-2 font-medium text-zinc-300">Date</th>
-                    <th className="text-left py-2 font-medium text-zinc-300">Image</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reviewedSubmissions.map((submission) => (
-                    <tr key={submission.id} className="border-b border-zinc-500/20">
-                      <td className="py-2 text-white">
-                        {submission.profiles?.display_name || 'Unknown'}
-                      </td>
-                      <td className="py-2 text-zinc-300">
-                        {submission.guild_quests?.title}
-                      </td>
-                      <td className="py-2">
-                        {getStatusBadge(submission.status)}
-                      </td>
-                      <td className="py-2 text-zinc-400">
-                        {formatDate(submission.created_at)}
-                      </td>
-                      <td className="py-2">
-                        {submission.image_url && (
-                          <button
-                            onClick={() => setSelectedImage(submission.image_url)}
-                            className="text-blue-400 hover:text-blue-300 text-xs"
-                          >
-                            View
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {reviewedSubmissions.map((submission) => (
+                <div key={submission.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                  {submission.image_url && (
+                    <div
+                      className="w-10 h-10 rounded-lg overflow-hidden cursor-pointer flex-shrink-0"
+                      onClick={() => setSelectedImage(submission.image_url)}
+                    >
+                      <img src={submission.image_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-white truncate">
+                        {submission.profiles?.display_name || '不明'}
+                      </span>
+                      {getStatusBadge(submission.status)}
+                    </div>
+                    <p className="text-xs text-zinc-500 truncate">
+                      {submission.guild_quests?.title}
+                    </p>
+                  </div>
+                  <span className="text-xs text-zinc-600 flex-shrink-0">
+                    {formatDate(submission.created_at)}
+                  </span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

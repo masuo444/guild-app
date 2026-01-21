@@ -39,7 +39,7 @@ export default async function AdminPage(props: Props) {
 
   // デモモードの場合はギルドメンバー限定表示
   if (isDemo) {
-    return <GuildMemberOnlyPage title="Admin Panel" />
+    return <GuildMemberOnlyPage title="管理パネル" />
   }
 
   const supabase = await createClient()
@@ -72,7 +72,7 @@ export default async function AdminPage(props: Props) {
       .from('invites')
       .select('*, profiles:used_by(display_name)')
       .order('created_at', { ascending: false })
-      .limit(20),
+      .limit(50),
     supabase
       .from('profiles')
       .select('*')
@@ -95,7 +95,7 @@ export default async function AdminPage(props: Props) {
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-white mb-6">Admin Panel</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">管理パネル</h1>
 
       <AdminDashboard
         invites={invites ?? []}

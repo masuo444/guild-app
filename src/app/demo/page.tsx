@@ -187,6 +187,7 @@ const mockProfile: Profile = {
   instagram_id: null,
   avatar_url: null,
   show_location_on_map: true,
+  invited_by: null,
   created_at: '2024-01-01T00:00:00Z',
 }
 

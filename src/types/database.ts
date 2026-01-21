@@ -49,6 +49,7 @@ export interface Profile {
   instagram_id: string | null
   avatar_url: string | null
   show_location_on_map: boolean
+  invited_by: string | null
   created_at: string
 }
 

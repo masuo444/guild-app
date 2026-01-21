@@ -136,7 +136,7 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900/80 backdrop-blur border-t border-zinc-500/30 md:static md:border-t-0 md:border-r md:w-64 md:min-h-screen" aria-label="Main navigation">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-900/80 backdrop-blur border-t border-zinc-500/30 md:static md:border-t-0 md:border-r md:w-64 md:min-h-screen" aria-label="Main navigation">
       {/* ロゴ（デスクトップのみ） */}
       <div className="hidden md:block p-6 border-b border-zinc-500/30">
         <div className="flex items-center justify-between">

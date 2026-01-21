@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
+import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
 
 interface ProfileFormProps {
   profile: Profile
@@ -16,7 +17,9 @@ interface ProfileFormProps {
 export function ProfileForm({ profile, email }: ProfileFormProps) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState({
     display_name: profile.display_name || '',
@@ -26,6 +29,83 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     home_city: profile.home_city || '',
     show_location_on_map: profile.show_location_on_map ?? true,
   })
+
+  // 画像アップロード処理
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 500MB制限チェック
+    const maxSize = 500 * 1024 * 1024 // 500MB
+    if (file.size > maxSize) {
+      setMessage({ type: 'error', text: `ファイルサイズが大きすぎます（最大500MB）。現在: ${formatFileSize(file.size)}` })
+      return
+    }
+
+    // 画像ファイルかチェック
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: '画像ファイルを選択してください' })
+      return
+    }
+
+    setUploading(true)
+    setMessage(null)
+
+    try {
+      // 画像を圧縮・正方形にクロップ（最大800px、500KB以下に圧縮）
+      const compressedBlob = await compressAndCropImage(file, {
+        maxSize: 800,
+        quality: 0.85,
+        maxFileSize: 500 * 1024, // 500KB
+      })
+
+      const supabase = createClient()
+
+      // ファイル名を生成
+      const fileExt = 'jpg'
+      const fileName = `${profile.id}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+
+      // 古い画像を削除（もしあれば）
+      if (formData.avatar_url && formData.avatar_url.includes('supabase')) {
+        const oldPath = formData.avatar_url.split('/').pop()
+        if (oldPath) {
+          await supabase.storage.from('avatars').remove([`avatars/${oldPath}`])
+        }
+      }
+
+      // Supabase Storageにアップロード
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, compressedBlob, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      // 公開URLを取得
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // フォームを更新
+      setFormData({ ...formData, avatar_url: publicUrl })
+      setMessage({ type: 'success', text: `画像をアップロードしました（${formatFileSize(compressedBlob.size)}に圧縮）` })
+
+    } catch (error) {
+      console.error('Upload error:', error)
+      setMessage({ type: 'error', text: '画像のアップロードに失敗しました' })
+    } finally {
+      setUploading(false)
+      // ファイル入力をリセット
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,32 +219,79 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
               )}
             </div>
 
-            {/* Avatar URL */}
+            {/* Avatar Upload */}
             <div>
-              <label className="block text-sm text-zinc-300 mb-1">Profile Image URL</label>
-              <p className="text-xs text-zinc-400 mb-2">This image will be shown as your marker on the Guild Map</p>
-              <input
-                type="url"
-                value={formData.avatar_url}
-                onChange={(e) =>
-                  setFormData({ ...formData, avatar_url: e.target.value })
-                }
-                placeholder="https://example.com/your-photo.jpg"
-                className="w-full px-4 py-2 bg-white/10 backdrop-blur border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent"
-              />
-              {formData.avatar_url && (
-                <div className="mt-2 flex items-center gap-3">
-                  <img
-                    src={formData.avatar_url}
-                    alt="Preview"
-                    className="w-12 h-12 rounded-full object-cover border-2 border-green-500"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none'
-                    }}
-                  />
-                  <span className="text-xs text-zinc-400">Preview</span>
+              <label className="block text-sm text-zinc-300 mb-1">Profile Image</label>
+              <p className="text-xs text-zinc-400 mb-3">正方形にクロップされ、マップ上のアイコンとして表示されます（最大500MB、自動圧縮）</p>
+
+              <div className="flex items-start gap-4">
+                {/* プレビュー */}
+                <div className="flex-shrink-0">
+                  {formData.avatar_url ? (
+                    <img
+                      src={formData.avatar_url}
+                      alt="Preview"
+                      className="w-20 h-20 rounded-full object-cover border-2 border-green-500"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-zinc-700 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* アップロードボタン */}
+                <div className="flex-1">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="avatar-upload"
+                  />
+                  <label
+                    htmlFor="avatar-upload"
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+                      uploading
+                        ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
+                        : 'bg-[#c0c0c0] text-zinc-900 hover:bg-white'
+                    }`}
+                  >
+                    {uploading ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        圧縮中...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        画像を選択
+                      </>
+                    )}
+                  </label>
+                  {formData.avatar_url && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, avatar_url: '' })}
+                      className="ml-2 text-xs text-zinc-400 hover:text-red-400 transition-colors"
+                    >
+                      削除
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

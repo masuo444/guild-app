@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { UpgradeBanner } from '@/components/ui/UpgradeBanner'
-import { calculateRank } from '@/config/rank'
 import { SubscriptionStatus } from '@/types/database'
 import { canViewOffers } from '@/lib/access'
 import { OffersContent } from './OffersContent'
@@ -43,7 +42,7 @@ export default async function OffersPage(props: Props) {
 
   // デモモードの場合はギルドメンバー限定表示
   if (isDemo) {
-    return <GuildMemberOnlyPage title="Guild Offers & Quests" />
+    return <GuildMemberOnlyPage title="特典" />
   }
 
   const supabase = await createClient()
@@ -67,14 +66,14 @@ export default async function OffersPage(props: Props) {
   if (!canSeeOffers) {
     return (
       <div className="p-4 md:p-8 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-white mb-2">Guild Offers & Quests</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">特典</h1>
         <p className="text-zinc-300 mb-6">
-          Exclusive benefits and challenges for members
+          メンバー限定の特典とクエスト
         </p>
         <UpgradeBanner
-          title="Upgrade to Access Offers & Quests"
-          description="Guild offers and quests are exclusive to paid members. Upgrade your membership to access discounts, special challenges, and more benefits."
-          buttonText="Upgrade Membership"
+          title="特典へのアクセスにはアップグレードが必要です"
+          description="サービス特典とクエストは有料メンバー限定です。メンバーシップをアップグレードして、割引や特別チャレンジなどの特典をご利用ください。"
+          buttonText="アップグレード"
           fullScreen
         />
       </div>
@@ -83,20 +82,9 @@ export default async function OffersPage(props: Props) {
 
   // 全てのクエリを並列実行
   const [
-    { data: logs },
-    { data: offers },
     { data: quests },
     { data: submissions },
   ] = await Promise.all([
-    supabase
-      .from('activity_logs')
-      .select('points')
-      .eq('user_id', user.id),
-    supabase
-      .from('guild_offers')
-      .select('*, profiles:provider_id(display_name)')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false }),
     supabase
       .from('guild_quests')
       .select('*')
@@ -109,21 +97,16 @@ export default async function OffersPage(props: Props) {
       .order('created_at', { ascending: false }),
   ])
 
-  const totalPoints = logs?.reduce((sum, log) => sum + log.points, 0) ?? 0
-  const userRank = calculateRank(totalPoints)
-
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-white mb-2">Guild Offers & Quests</h1>
+      <h1 className="text-2xl font-bold text-white mb-2">特典</h1>
       <p className="text-zinc-300 mb-6">
-        Exclusive benefits and challenges for members (Your Rank: {userRank})
+        メンバー限定の特典とクエスト
       </p>
 
       <OffersContent
-        offers={offers || []}
         quests={quests || []}
         submissions={submissions || []}
-        userRank={userRank}
         userId={user.id}
       />
     </div>

@@ -30,6 +30,7 @@ interface GuildMapProps {
   userId?: string
   canViewMembers?: boolean
   canRegisterHub?: boolean
+  canAddShop?: boolean
 }
 
 type MarkerType = 'member' | 'hub'
@@ -52,14 +53,14 @@ interface HubFormData {
   lng: number
 }
 
-export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegisterHub = true }: GuildMapProps) {
+export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegisterHub = true, canAddShop = false }: GuildMapProps) {
   const router = useRouter()
   const { language, t } = useLanguage()
   const [showMembers, setShowMembers] = useState(canViewMembers)
   const [showHubs, setShowHubs] = useState(true)
   const [selected, setSelected] = useState<SelectedItem | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCountry, setSelectedCountry] = useState('')
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // 拠点登録モーダル
   const [showAddModal, setShowAddModal] = useState(false)
@@ -127,18 +128,6 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
     }
   }
 
-  // 国リストを生成（メンバーと拠点の両方から）
-  const countries = useMemo(() => {
-    const countrySet = new Set<string>()
-    members.forEach(m => {
-      if (m.home_country) countrySet.add(m.home_country)
-    })
-    hubs.forEach(h => {
-      if (h.country) countrySet.add(h.country)
-    })
-    return Array.from(countrySet).sort()
-  }, [members, hubs])
-
   // フィルタリングされたメンバー
   const filteredMembers = useMemo(() => {
     return members.filter(m => {
@@ -148,10 +137,9 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
         m.display_name?.toLowerCase().includes(query) ||
         m.home_city?.toLowerCase().includes(query) ||
         m.home_country?.toLowerCase().includes(query)
-      const matchesCountry = !selectedCountry || m.home_country === selectedCountry
-      return matchesSearch && matchesCountry
+      return matchesSearch
     })
-  }, [members, searchQuery, selectedCountry])
+  }, [members, searchQuery])
 
   // フィルタリングされた拠点
   const filteredHubs = useMemo(() => {
@@ -162,10 +150,9 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
         h.name.toLowerCase().includes(query) ||
         h.city.toLowerCase().includes(query) ||
         h.country.toLowerCase().includes(query)
-      const matchesCountry = !selectedCountry || h.country === selectedCountry
-      return matchesSearch && matchesCountry
+      return matchesSearch
     })
-  }, [hubs, searchQuery, selectedCountry])
+  }, [hubs, searchQuery])
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -178,7 +165,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
   }
 
   return (
-    <div className="w-full">
+    <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-zinc-900 p-4' : 'w-full'}`}>
       {/* 検索・フィルターバー */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         {/* 検索入力 */}
@@ -205,28 +192,14 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
           />
         </div>
 
-        {/* 国フィルター */}
-        <select
-          value={selectedCountry}
-          onChange={(e) => setSelectedCountry(e.target.value)}
-          className="px-4 py-2 bg-white/10 backdrop-blur border border-zinc-500/30 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent"
-        >
-          <option value="" className="bg-zinc-900">All Countries</option>
-          {countries.map((country) => (
-            <option key={country} value={country} className="bg-zinc-900">
-              {country}
-            </option>
-          ))}
-        </select>
-
         {/* トグルボタン */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {canViewMembers && (
             <button
               onClick={() => setShowMembers(!showMembers)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 showMembers
-                  ? 'bg-white/20 text-white'
+                  ? 'bg-green-500 text-white'
                   : 'bg-white/5 text-zinc-300 hover:bg-white/10'
               }`}
             >
@@ -237,13 +210,13 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
             onClick={() => setShowHubs(!showHubs)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               showHubs
-                ? 'bg-[#c0c0c0] text-zinc-900'
+                ? 'bg-orange-500 text-white'
                 : 'bg-white/5 text-zinc-300 hover:bg-white/10'
             }`}
           >
             MASU Hubs
           </button>
-          {userId && canRegisterHub && (
+          {userId && canAddShop && (
             <button
               onClick={() => setShowAddModal(true)}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-[#c0c0c0] text-zinc-900 hover:bg-white transition-colors flex items-center gap-2"
@@ -254,23 +227,41 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
               Add My Shop
             </button>
           )}
+          {/* 全画面ボタン */}
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center gap-2"
+          >
+            {isFullscreen ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Close
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+                Fullscreen
+              </>
+            )}
+          </button>
         </div>
       </div>
 
       {/* フィルター結果の表示 */}
-      {(searchQuery || selectedCountry) && (
+      {searchQuery && (
         <div className="flex items-center gap-2 mb-3 text-sm text-zinc-300">
           <span>
             Showing: {filteredMembers.length} members, {filteredHubs.length} hubs
           </span>
           <button
-            onClick={() => {
-              setSearchQuery('')
-              setSelectedCountry('')
-            }}
+            onClick={() => setSearchQuery('')}
             className="text-zinc-200 hover:text-white underline"
           >
-            Clear filters
+            Clear
           </button>
         </div>
       )}
@@ -293,7 +284,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
       )}
 
       {/* マップ */}
-      <div className={`w-full h-[500px] rounded-xl overflow-hidden shadow-lg border border-zinc-500/30 ${isSelectingLocation ? 'cursor-crosshair' : ''}`}>
+      <div className={`w-full ${isFullscreen ? 'h-[calc(100vh-140px)]' : 'h-[500px]'} rounded-xl overflow-hidden shadow-lg border border-zinc-500/30 ${isSelectingLocation ? 'cursor-crosshair' : ''}`}>
         <APIProvider apiKey={apiKey} language={language}>
           <Map
             defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
@@ -346,7 +337,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
                 />
               ))}
 
-            {/* 枡拠点マーカー - オレンジピン */}
+            {/* 枡拠点マーカー - オレンジ色ピン */}
             {showHubs &&
               filteredHubs.map((hub) => (
                 <Marker
@@ -404,63 +395,6 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
         </APIProvider>
       </div>
 
-      {/* MASU Hubs リスト */}
-      {showHubs && filteredHubs.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
-            MASU Hubs ({filteredHubs.length})
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredHubs.map((hub) => (
-              <div
-                key={hub.id}
-                onClick={() => setSelected({ type: 'hub', data: hub })}
-                className="bg-white/10 backdrop-blur border border-zinc-500/30 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-colors"
-              >
-                {hub.image_url && (
-                  <img
-                    src={hub.image_url}
-                    alt={hub.name}
-                    className="w-full h-32 object-cover rounded-lg mb-3"
-                  />
-                )}
-                <h4 className="font-semibold text-white mb-1">{hub.name}</h4>
-                <p className="text-sm text-zinc-400 mb-2">
-                  {hub.city}, {hub.country}
-                </p>
-                {hub.description && (
-                  <p className="text-xs text-zinc-500 line-clamp-2">{hub.description}</p>
-                )}
-                <div className="mt-3 flex gap-2">
-                  {hub.google_maps_url && (
-                    <a
-                      href={hub.google_maps_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-orange-400 hover:text-orange-300"
-                    >
-                      Maps →
-                    </a>
-                  )}
-                  {hub.website_url && (
-                    <a
-                      href={hub.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-orange-400 hover:text-orange-300"
-                    >
-                      Website →
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* 拠点登録モーダル */}
       {showAddModal && (
