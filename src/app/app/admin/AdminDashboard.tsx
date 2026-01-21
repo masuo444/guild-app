@@ -534,6 +534,9 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
   const router = useRouter()
   const [creating, setCreating] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [editingHub, setEditingHub] = useState<MasuHub | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [updating, setUpdating] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -541,17 +544,32 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     city: '',
   })
 
-  const handleCreate = async () => {
-    if (!formData.name || !formData.country || !formData.city) return
-    setCreating(true)
+  // 編集モードを開始
+  const startEdit = (hub: MasuHub) => {
+    setEditingHub(hub)
+    setFormData({
+      name: hub.name,
+      description: hub.description || '',
+      country: hub.country,
+      city: hub.city,
+    })
+    setShowForm(false)
+  }
 
-    // Geocoding
+  // 編集をキャンセル
+  const cancelEdit = () => {
+    setEditingHub(null)
+    setFormData({ name: '', description: '', country: '', city: '' })
+  }
+
+  // ジオコーディング処理
+  const geocodeAddress = async (city: string, country: string) => {
     let lat = 0
     let lng = 0
 
     try {
       const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        `${formData.city}, ${formData.country}`
+        `${city}, ${country}`
       )}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
 
       const response = await fetch(geocodeUrl)
@@ -564,6 +582,16 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     } catch {
       // Geocoding failed - continue with default coordinates
     }
+
+    return { lat, lng }
+  }
+
+  // 新規作成
+  const handleCreate = async () => {
+    if (!formData.name || !formData.country || !formData.city) return
+    setCreating(true)
+
+    const { lat, lng } = await geocodeAddress(formData.city, formData.country)
 
     const supabase = createClient()
     await supabase.from('masu_hubs').insert({
@@ -582,64 +610,139 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     setCreating(false)
   }
 
+  // 更新
+  const handleUpdate = async () => {
+    if (!editingHub || !formData.name || !formData.country || !formData.city) return
+    setUpdating(true)
+
+    // 都市か国が変わった場合のみ再ジオコーディング
+    let lat = editingHub.lat
+    let lng = editingHub.lng
+    if (formData.city !== editingHub.city || formData.country !== editingHub.country) {
+      const coords = await geocodeAddress(formData.city, formData.country)
+      lat = coords.lat
+      lng = coords.lng
+    }
+
+    const supabase = createClient()
+    await supabase
+      .from('masu_hubs')
+      .update({
+        name: formData.name,
+        description: formData.description || null,
+        country: formData.country,
+        city: formData.city,
+        lat,
+        lng,
+      })
+      .eq('id', editingHub.id)
+
+    setEditingHub(null)
+    setFormData({ name: '', description: '', country: '', city: '' })
+    router.refresh()
+    setUpdating(false)
+  }
+
+  // 削除
+  const handleDelete = async (hubId: string) => {
+    if (!confirm('この拠点を削除しますか？この操作は取り消せません。')) return
+    setDeleting(hubId)
+
+    const supabase = createClient()
+    await supabase.from('masu_hubs').delete().eq('id', hubId)
+
+    router.refresh()
+    setDeleting(null)
+  }
+
+  // 有効/無効切り替え
+  const handleToggleActive = async (hub: MasuHub) => {
+    const supabase = createClient()
+    await supabase
+      .from('masu_hubs')
+      .update({ is_active: !hub.is_active })
+      .eq('id', hub.id)
+    router.refresh()
+  }
+
   const activeHubs = hubs.filter(h => h.is_active)
   const inactiveHubs = hubs.filter(h => !h.is_active)
+
+  // 編集フォーム
+  const renderForm = (isEdit: boolean) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 p-4 bg-white/5 rounded-xl border border-zinc-500/20">
+      <div>
+        <label className="block text-xs font-medium text-zinc-400 mb-1.5">名前 *</label>
+        <input
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="例: MASU Tokyo"
+          className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-zinc-400 mb-1.5">説明 (任意)</label>
+        <input
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="簡単な説明"
+          className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-zinc-400 mb-1.5">国 *</label>
+        <input
+          value={formData.country}
+          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+          placeholder="例: Japan"
+          className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-zinc-400 mb-1.5">都市 *</label>
+        <input
+          value={formData.city}
+          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+          placeholder="例: Tokyo"
+          className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+        />
+      </div>
+      <div className="sm:col-span-2 flex gap-2">
+        {isEdit ? (
+          <>
+            <Button onClick={handleUpdate} loading={updating} disabled={!formData.name || !formData.country || !formData.city}>
+              更新
+            </Button>
+            <Button variant="outline" onClick={cancelEdit}>
+              キャンセル
+            </Button>
+          </>
+        ) : (
+          <Button onClick={handleCreate} loading={creating} disabled={!formData.name || !formData.country || !formData.city}>
+            拠点を作成
+          </Button>
+        )}
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <h2 className="font-semibold text-white text-lg">MASU Hub 管理 ({hubs.length})</h2>
-          <Button size="sm" onClick={() => setShowForm(!showForm)}>
-            {showForm ? 'キャンセル' : '新規追加'}
-          </Button>
+          {!editingHub && (
+            <Button size="sm" onClick={() => { setShowForm(!showForm); setEditingHub(null); }}>
+              {showForm ? 'キャンセル' : '新規追加'}
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
-          {showForm && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 p-4 bg-white/5 rounded-xl border border-zinc-500/20">
-              <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">名前 *</label>
-                <input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="例: MASU Tokyo"
-                  className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">説明 (任意)</label>
-                <input
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="簡単な説明"
-                  className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">国 *</label>
-                <input
-                  value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  placeholder="例: Japan"
-                  className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">都市 *</label>
-                <input
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="例: Tokyo"
-                  className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Button onClick={handleCreate} loading={creating} disabled={!formData.name || !formData.country || !formData.city}>
-                  拠点を作成
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* 新規作成フォーム */}
+          {showForm && !editingHub && renderForm(false)}
+
+          {/* 編集フォーム */}
+          {editingHub && renderForm(true)}
 
           {/* アクティブな拠点 */}
           <div className="space-y-2">
@@ -666,9 +769,43 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
                     <p className="text-xs text-zinc-500 mt-0.5 truncate">{hub.description}</p>
                   )}
                 </div>
-                <span className="px-2.5 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-medium flex-shrink-0">
-                  有効
-                </span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => startEdit(hub)}
+                    className="p-2 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                    title="編集"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleToggleActive(hub)}
+                    className="p-2 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors"
+                    title="無効化"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(hub.id)}
+                    disabled={deleting === hub.id}
+                    className="p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                    title="削除"
+                  >
+                    {deleting === hub.id ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -684,7 +821,36 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
                       <p className="font-medium text-zinc-400">{hub.name}</p>
                       <p className="text-xs text-zinc-500">{hub.city}, {hub.country}</p>
                     </div>
-                    <span className="px-2 py-0.5 bg-zinc-700 text-zinc-400 rounded text-xs">無効</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => startEdit(hub)}
+                        className="p-1.5 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                        title="編集"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(hub)}
+                        className="p-1.5 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors"
+                        title="有効化"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(hub.id)}
+                        disabled={deleting === hub.id}
+                        className="p-1.5 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                        title="削除"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
