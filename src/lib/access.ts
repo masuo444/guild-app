@@ -1,5 +1,8 @@
 import { SubscriptionStatus } from '@/types/database'
 
+// 管理者メールアドレス
+export const ADMIN_EMAILS = ['keisukendo414@gmail.com'] as const
+
 // 有料サブスクリプションのステータス
 const PAID_STATUSES: SubscriptionStatus[] = ['active']
 
@@ -47,4 +50,15 @@ export function canViewDashboardDetails(status: SubscriptionStatus): boolean {
 // フル機能にアクセスできるか
 export function hasFullAccess(status: SubscriptionStatus): boolean {
   return FULL_ACCESS_STATUSES.includes(status)
+}
+
+// 管理者メールアドレスかどうか
+export function isAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false
+  return ADMIN_EMAILS.includes(email as typeof ADMIN_EMAILS[number])
+}
+
+// 管理者ロールかどうか
+export function isAdmin(role: string | null | undefined): boolean {
+  return role === 'admin'
 }
