@@ -46,7 +46,7 @@ function DemoMap() {
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     if (!apiKey) {
-      console.error('Google Maps API key not found')
+      // Google Maps API key not configured - silently return
       return
     }
 
@@ -184,6 +184,8 @@ const mockProfile: Profile = {
   stripe_customer_id: null,
   stripe_subscription_id: null,
   role: 'admin',
+  instagram_id: null,
+  show_location_on_map: true,
   created_at: '2024-01-01T00:00:00Z',
 }
 

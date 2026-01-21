@@ -22,7 +22,7 @@ export function usePoints(userId: string | undefined) {
         .eq('user_id', userId)
 
       if (error) {
-        console.error('Failed to fetch points:', error)
+        // Failed to fetch points - silently fail
         setLoading(false)
         return
       }

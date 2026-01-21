@@ -21,34 +21,51 @@ export default async function AdminPage() {
     redirect('/app')
   }
 
-  // 招待コード一覧
-  const { data: invites } = await supabase
-    .from('invites')
-    .select('*, profiles:used_by(display_name)')
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  // メンバー一覧
-  const { data: members } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  // 枡拠点一覧
-  const { data: hubs } = await supabase
-    .from('masu_hubs')
-    .select('*')
-    .order('created_at', { ascending: false })
+  // 全てのクエリを並列実行
+  const [
+    { data: invites },
+    { data: members },
+    { data: hubs },
+    { data: questSubmissions },
+    { data: quests },
+  ] = await Promise.all([
+    supabase
+      .from('invites')
+      .select('*, profiles:used_by(display_name)')
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('masu_hubs')
+      .select('*')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('quest_submissions')
+      .select('*, guild_quests(title, points_reward), profiles:user_id(display_name, membership_id)')
+      .order('status', { ascending: true })
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('guild_quests')
+      .select('*')
+      .order('created_at', { ascending: false }),
+  ])
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-zinc-900 mb-6">Admin Panel</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">Admin Panel</h1>
 
       <AdminDashboard
         invites={invites ?? []}
         members={members ?? []}
         hubs={hubs ?? []}
+        questSubmissions={questSubmissions ?? []}
+        quests={quests ?? []}
         adminId={user.id}
+        adminEmail={user.email || ''}
       />
     </div>
   )

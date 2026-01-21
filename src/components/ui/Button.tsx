@@ -14,10 +14,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
 
     const variants = {
-      primary: 'bg-zinc-900 text-white hover:bg-zinc-800 focus:ring-zinc-500',
-      secondary: 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200 focus:ring-zinc-500',
-      outline: 'border border-zinc-300 text-zinc-700 hover:bg-zinc-50 focus:ring-zinc-500',
-      ghost: 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus:ring-zinc-500',
+      primary: 'bg-[#c0c0c0] text-zinc-900 hover:bg-white focus:ring-zinc-400',
+      secondary: 'bg-zinc-400 text-white hover:bg-zinc-300 focus:ring-zinc-400',
+      outline: 'border border-zinc-500/30 text-white hover:bg-white/10 focus:ring-zinc-400',
+      ghost: 'text-zinc-300 hover:bg-white/10 hover:text-white focus:ring-zinc-400',
       danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
     }
 

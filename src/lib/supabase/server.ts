@@ -15,7 +15,11 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, {
+                ...options,
+                // セッション延長: 30日間Cookieを保持
+                maxAge: 60 * 60 * 24 * 30, // 30日間
+              })
             )
           } catch {
             // Server Component からの呼び出し時は無視

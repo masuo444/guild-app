@@ -2,8 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  const { supabaseResponse, user, supabase } = await updateSession(request)
+  const { supabaseResponse, user } = await updateSession(request)
   const pathname = request.nextUrl.pathname
+
+  // ログイン済みユーザーが /auth/login にアクセスした場合、/app にリダイレクト
+  if (pathname === '/auth/login' && user) {
+    return NextResponse.redirect(new URL('/app', request.url))
+  }
 
   // 公開ページはスキップ
   if (
@@ -18,14 +23,14 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // /app 以下は一時的に認証不要（開発中）
-  // if (pathname.startsWith('/app')) {
-  //   if (!user) {
-  //     const redirectUrl = new URL('/auth/login', request.url)
-  //     redirectUrl.searchParams.set('redirect', pathname)
-  //     return NextResponse.redirect(redirectUrl)
-  //   }
-  // }
+  // /app 以下は認証必須
+  if (pathname.startsWith('/app')) {
+    if (!user) {
+      const redirectUrl = new URL('/auth/login', request.url)
+      redirectUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
+  }
 
   return supabaseResponse
 }

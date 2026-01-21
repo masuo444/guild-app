@@ -17,6 +17,8 @@ export default async function DashboardPage() {
     home_city: 'Tokyo',
     lat: 35.6762,
     lng: 139.6503,
+    instagram_id: null,
+    show_location_on_map: true,
     created_at: new Date().toISOString(),
   }
 

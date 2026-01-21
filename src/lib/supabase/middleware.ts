@@ -22,7 +22,12 @@ export async function updateSession(request: NextRequest) {
             request,
           })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              // セッション延長: 30日間Cookieを保持
+              // ブラウザを閉じてもセッションを維持
+              maxAge: 60 * 60 * 24 * 30, // 30日間
+            })
           )
         },
       },

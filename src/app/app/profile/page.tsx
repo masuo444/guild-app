@@ -22,7 +22,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-zinc-900 mb-6">Profile Settings</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">Profile Settings</h1>
 
       <ProfileForm profile={profile} email={user.email || ''} />
     </div>

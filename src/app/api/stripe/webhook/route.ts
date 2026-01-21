@@ -20,8 +20,8 @@ export async function POST(request: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err)
+  } catch {
+    // Webhook signature verification failed
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         const userId = subscription.metadata.supabase_user_id
 
         if (!userId) {
-          console.error('No user ID in subscription metadata')
+          // No user ID in subscription metadata
           break
         }
 
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
           })
           .eq('id', userId)
 
-        console.log(`User ${userId} activated with membership ${membershipId}`)
+        // User activated successfully
         break
       }
 
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
           })
           .eq('id', userId)
 
-        console.log(`User ${userId} subscription status: ${status}`)
+        // Subscription status updated
         break
       }
 
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
           })
           .eq('id', userId)
 
-        console.log(`User ${userId} subscription canceled`)
+        // Subscription canceled
         break
       }
 
@@ -117,14 +117,14 @@ export async function POST(request: Request) {
           })
           .eq('id', userId)
 
-        console.log(`User ${userId} payment failed`)
+        // Payment failed - user status updated
         break
       }
     }
 
     return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error('Webhook processing error:', error)
+  } catch {
+    // Webhook processing error
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
