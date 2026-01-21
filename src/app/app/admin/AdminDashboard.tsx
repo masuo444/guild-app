@@ -3,7 +3,7 @@
 import { useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, GuildQuest, QuestSubmission } from '@/types/database'
+import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, GuildQuest, QuestSubmission, CustomRole, MemberRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { calculateRank, RANK_THRESHOLDS } from '@/config/rank'
 import { canIssueFreeInvite } from '@/config/admin'
 import { Button } from '@/components/ui/Button'
@@ -29,17 +29,19 @@ interface AdminDashboardProps {
   questSubmissions: QuestSubmissionWithRelations[]
   quests: GuildQuest[]
   memberPoints: Record<string, number>
+  customRoles: CustomRole[]
+  memberRoles: MemberRole[]
   adminId: string
   adminEmail: string
 }
 
-type Tab = 'invites' | 'members' | 'hubs' | 'offers' | 'quests'
+type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'quests'
 
 const TAB_LABELS: Record<Tab, string> = {
   invites: '招待コード',
   members: 'メンバー',
+  roles: 'ロール',
   hubs: '拠点',
-  offers: 'オファー',
   quests: 'クエスト',
 }
 
@@ -54,14 +56,14 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
     </svg>
   ),
+  roles: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+    </svg>
+  ),
   hubs: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-    </svg>
-  ),
-  offers: (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
     </svg>
   ),
   quests: (
@@ -71,7 +73,7 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
   ),
 }
 
-export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, memberPoints, adminId, adminEmail }: AdminDashboardProps) {
+export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, memberPoints, customRoles, memberRoles, adminId, adminEmail }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('invites')
 
   // 承認待ちの投稿数
@@ -102,7 +104,7 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
 
       {/* タブナビゲーション */}
       <div className="flex gap-1 mb-6 p-1 bg-white/5 rounded-xl overflow-x-auto">
-        {(['invites', 'members', 'hubs', 'offers', 'quests'] as Tab[]).map((tab) => (
+        {(['invites', 'members', 'roles', 'hubs', 'quests'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -127,9 +129,9 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
 
       {/* コンテンツ */}
       {activeTab === 'invites' && <InvitesTab invites={invites} adminId={adminId} adminEmail={adminEmail} />}
-      {activeTab === 'members' && <MembersTab members={members} memberPoints={memberPoints} />}
+      {activeTab === 'members' && <MembersTab members={members} memberPoints={memberPoints} customRoles={customRoles} memberRoles={memberRoles} />}
+      {activeTab === 'roles' && <RolesTab customRoles={customRoles} memberRoles={memberRoles} members={members} />}
       {activeTab === 'hubs' && <HubsTab hubs={hubs} />}
-      {activeTab === 'offers' && <OffersTab />}
       {activeTab === 'quests' && <QuestsTab submissions={questSubmissions} quests={quests} adminId={adminId} />}
     </div>
   )
@@ -323,7 +325,7 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
   )
 }
 
-function MembersTab({ members, memberPoints }: { members: Profile[]; memberPoints: Record<string, number> }) {
+function MembersTab({ members, memberPoints, customRoles, memberRoles }: { members: Profile[]; memberPoints: Record<string, number>; customRoles: CustomRole[]; memberRoles: MemberRole[] }) {
   const router = useRouter()
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null)
   const [points, setPoints] = useState('')
@@ -331,6 +333,42 @@ function MembersTab({ members, memberPoints }: { members: Profile[]; memberPoint
   const [adding, setAdding] = useState(false)
   const [updatingMember, setUpdatingMember] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // メンバーに割り当てられたロールを取得
+  const getMemberRoles = (memberId: string) => {
+    const roleIds = memberRoles.filter(mr => mr.member_id === memberId).map(mr => mr.role_id)
+    return customRoles.filter(cr => roleIds.includes(cr.id))
+  }
+
+  // ロールの割り当て/解除
+  const handleToggleRole = async (memberId: string, roleId: string, isAssigned: boolean) => {
+    setUpdatingMember(memberId)
+    const supabase = createClient()
+
+    if (isAssigned) {
+      // 解除
+      await supabase
+        .from('member_roles')
+        .delete()
+        .eq('member_id', memberId)
+        .eq('role_id', roleId)
+    } else {
+      // 割り当て
+      await supabase.from('member_roles').insert({
+        member_id: memberId,
+        role_id: roleId,
+      })
+    }
+
+    router.refresh()
+    setUpdatingMember(null)
+  }
+
+  // ロール色を取得
+  const getRoleColorClasses = (color: RoleColor) => {
+    const option = ROLE_COLOR_OPTIONS.find(o => o.value === color)
+    return option ? `${option.bg}/20 ${option.text}` : 'bg-zinc-500/20 text-zinc-300'
+  }
 
   const handleAddPoints = async () => {
     if (!selectedMember || !points) return
@@ -510,6 +548,8 @@ function MembersTab({ members, memberPoints }: { members: Profile[]; memberPoint
               const currentRank = calculateRank(currentPoints)
               const isUpdating = updatingMember === member.id
 
+              const assignedRoles = getMemberRoles(member.id)
+
               return (
                 <div key={member.id} className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
                   {/* 上段: 基本情報 */}
@@ -536,6 +576,15 @@ function MembersTab({ members, memberPoints }: { members: Profile[]; memberPoint
                         }`}>
                           {member.subscription_status === 'free' ? '無料' : member.subscription_status === 'active' ? '有効' : '無効'}
                         </span>
+                        {/* カスタムロールバッジ */}
+                        {assignedRoles.map(role => (
+                          <span
+                            key={role.id}
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColorClasses(role.color)}`}
+                          >
+                            {role.name}
+                          </span>
+                        ))}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5 flex-wrap">
                         <span className="font-mono">{member.membership_id || '-'}</span>
@@ -551,11 +600,11 @@ function MembersTab({ members, memberPoints }: { members: Profile[]; memberPoint
                     </div>
                   </div>
 
-                  {/* 下段: 設定項目 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {/* ロール */}
+                  {/* 中段: 設定項目 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    {/* 権限 */}
                     <div>
-                      <label className="block text-xs text-zinc-500 mb-1">ロール</label>
+                      <label className="block text-xs text-zinc-500 mb-1">権限</label>
                       <select
                         value={member.role || 'member'}
                         onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'admin')}
@@ -604,12 +653,308 @@ function MembersTab({ members, memberPoints }: { members: Profile[]; memberPoint
                       </select>
                     </div>
                   </div>
+
+                  {/* 下段: カスタムロール割り当て */}
+                  {customRoles.length > 0 && (
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1.5">カスタムロール</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {customRoles.map(role => {
+                          const isAssigned = assignedRoles.some(r => r.id === role.id)
+                          return (
+                            <button
+                              key={role.id}
+                              onClick={() => handleToggleRole(member.id, role.id, isAssigned)}
+                              disabled={isUpdating}
+                              className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                                isAssigned
+                                  ? `${getRoleColorClasses(role.color)} ring-2 ring-white/30`
+                                  : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'
+                              } ${isUpdating ? 'opacity-50' : ''}`}
+                            >
+                              {role.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
           {filteredMembers.length === 0 && (
             <p className="text-zinc-500 text-center py-8">該当するメンバーが見つかりません</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function RolesTab({ customRoles, memberRoles, members }: { customRoles: CustomRole[]; memberRoles: MemberRole[]; members: Profile[] }) {
+  const router = useRouter()
+  const [showForm, setShowForm] = useState(false)
+  const [editingRole, setEditingRole] = useState<CustomRole | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    color: 'blue' as RoleColor,
+    description: '',
+  })
+
+  // 編集モード開始
+  const startEdit = (role: CustomRole) => {
+    setEditingRole(role)
+    setFormData({
+      name: role.name,
+      color: role.color,
+      description: role.description || '',
+    })
+    setShowForm(false)
+  }
+
+  // 編集キャンセル
+  const cancelEdit = () => {
+    setEditingRole(null)
+    setFormData({ name: '', color: 'blue', description: '' })
+  }
+
+  // ロール作成
+  const handleCreate = async () => {
+    if (!formData.name) return
+    setCreating(true)
+
+    const supabase = createClient()
+    await supabase.from('custom_roles').insert({
+      name: formData.name,
+      color: formData.color,
+      description: formData.description || null,
+    })
+
+    setFormData({ name: '', color: 'blue', description: '' })
+    setShowForm(false)
+    router.refresh()
+    setCreating(false)
+  }
+
+  // ロール更新
+  const handleUpdate = async () => {
+    if (!editingRole || !formData.name) return
+    setCreating(true)
+
+    const supabase = createClient()
+    await supabase
+      .from('custom_roles')
+      .update({
+        name: formData.name,
+        color: formData.color,
+        description: formData.description || null,
+      })
+      .eq('id', editingRole.id)
+
+    setEditingRole(null)
+    setFormData({ name: '', color: 'blue', description: '' })
+    router.refresh()
+    setCreating(false)
+  }
+
+  // ロール削除
+  const handleDelete = async (roleId: string) => {
+    if (!confirm('このロールを削除しますか？割り当てられているメンバーからも削除されます。')) return
+    setDeleting(roleId)
+
+    const supabase = createClient()
+    // まず割り当てを削除
+    await supabase.from('member_roles').delete().eq('role_id', roleId)
+    // ロールを削除
+    await supabase.from('custom_roles').delete().eq('id', roleId)
+
+    router.refresh()
+    setDeleting(null)
+  }
+
+  // ロールに割り当てられているメンバー数を取得
+  const getMemberCount = (roleId: string) => {
+    return memberRoles.filter(mr => mr.role_id === roleId).length
+  }
+
+  // 色クラスを取得
+  const getColorClasses = (color: RoleColor) => {
+    const option = ROLE_COLOR_OPTIONS.find(o => o.value === color)
+    return option ? `${option.bg} text-white` : 'bg-zinc-500 text-white'
+  }
+
+  const getColorBgClasses = (color: RoleColor) => {
+    const option = ROLE_COLOR_OPTIONS.find(o => o.value === color)
+    return option ? `${option.bg}/20 ${option.text}` : 'bg-zinc-500/20 text-zinc-300'
+  }
+
+  // フォーム
+  const renderForm = (isEdit: boolean) => (
+    <div className="mb-6 p-4 bg-white/5 rounded-xl border border-zinc-500/20">
+      <h3 className="font-medium text-white mb-4">{isEdit ? 'ロールを編集' : '新しいロールを作成'}</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-zinc-400 mb-1.5">名前 *</label>
+          <input
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="例: VIP, スタッフ, 初期メンバー"
+            className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-zinc-400 mb-1.5">色</label>
+          <div className="flex flex-wrap gap-2">
+            {ROLE_COLOR_OPTIONS.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setFormData({ ...formData, color: option.value })}
+                className={`w-8 h-8 rounded-lg ${option.bg} transition-all ${
+                  formData.color === option.value ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900' : 'opacity-60 hover:opacity-100'
+                }`}
+                title={option.label}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-medium text-zinc-400 mb-1.5">説明 (任意)</label>
+          <input
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="ロールの説明"
+            className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+          />
+        </div>
+        <div className="sm:col-span-2 flex gap-2">
+          {isEdit ? (
+            <>
+              <Button onClick={handleUpdate} loading={creating} disabled={!formData.name}>
+                更新
+              </Button>
+              <Button variant="outline" onClick={cancelEdit}>
+                キャンセル
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleCreate} loading={creating} disabled={!formData.name}>
+              ロールを作成
+            </Button>
+          )}
+        </div>
+      </div>
+      {/* プレビュー */}
+      {formData.name && (
+        <div className="mt-4 pt-4 border-t border-zinc-700">
+          <p className="text-xs text-zinc-500 mb-2">プレビュー</p>
+          <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getColorBgClasses(formData.color)}`}>
+            {formData.name}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-white text-lg">カスタムロール管理</h2>
+            <p className="text-xs text-zinc-400 mt-1">メンバーに割り当てるタグを作成・管理</p>
+          </div>
+          {!editingRole && (
+            <Button size="sm" onClick={() => { setShowForm(!showForm); setEditingRole(null); }}>
+              {showForm ? 'キャンセル' : '新規作成'}
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {/* 新規作成フォーム */}
+          {showForm && !editingRole && renderForm(false)}
+
+          {/* 編集フォーム */}
+          {editingRole && renderForm(true)}
+
+          {/* ロール一覧 */}
+          {customRoles.length > 0 ? (
+            <div className="space-y-2">
+              {customRoles.map(role => {
+                const memberCount = getMemberCount(role.id)
+                return (
+                  <div
+                    key={role.id}
+                    className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className={`w-10 h-10 rounded-lg ${getColorClasses(role.color)} flex items-center justify-center flex-shrink-0`}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${getColorBgClasses(role.color)}`}>
+                          {role.name}
+                        </span>
+                        <span className="text-xs text-zinc-500">
+                          {memberCount}人に割り当て
+                        </span>
+                      </div>
+                      {role.description && (
+                        <p className="text-xs text-zinc-500 mt-1">{role.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => startEdit(role)}
+                        className="p-2 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                        title="編集"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(role.id)}
+                        disabled={deleting === role.id}
+                        className="p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                        title="削除"
+                      >
+                        {deleting === role.id ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : !showForm && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              </div>
+              <p className="text-zinc-500 mb-2">カスタムロールがありません</p>
+              <button
+                onClick={() => setShowForm(true)}
+                className="text-[#c0c0c0] hover:text-white text-sm"
+              >
+                最初のロールを作成する →
+              </button>
+            </div>
           )}
         </CardContent>
       </Card>

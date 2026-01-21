@@ -68,6 +68,8 @@ export default async function AdminPage(props: Props) {
     { data: questSubmissions },
     { data: quests },
     { data: activityLogs },
+    { data: customRoles },
+    { data: memberRoles },
   ] = await Promise.all([
     supabase
       .from('invites')
@@ -95,6 +97,13 @@ export default async function AdminPage(props: Props) {
     supabase
       .from('activity_logs')
       .select('user_id, points'),
+    supabase
+      .from('custom_roles')
+      .select('*')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('member_roles')
+      .select('*'),
   ])
 
   // メンバーごとのポイントを集計
@@ -114,6 +123,8 @@ export default async function AdminPage(props: Props) {
         questSubmissions={questSubmissions ?? []}
         quests={quests ?? []}
         memberPoints={memberPoints}
+        customRoles={customRoles ?? []}
+        memberRoles={memberRoles ?? []}
         adminId={user.id}
         adminEmail={user.email || ''}
       />
