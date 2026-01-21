@@ -58,19 +58,34 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
       {activeTab === 'services' && (
         <div className="grid gap-4">
           <ServiceCard
-            title="MASU Hub"
-            description="MASUメンバーによるグローバルネットワーキング。各地のハブに参加して、仲間とつながろう。"
-            link="/app/hubs"
+            title="枡フォト / Masu Photo"
+            description="世界中で『枡を持って撮る』アートプロジェクト。【※15ヶ国・2025年12月現在】枡が人と文化をつなぐ表現を可能に。"
+            link="https://www.instagram.com/masu_photo/"
+            external
           />
           <ServiceCard
-            title="コミュニティ"
-            description="メンバー限定のコミュニティスペース。情報交換やイベント情報をチェック。"
-            link="/app/community"
+            title="FOMUS PARURE"
+            description="世界最小サイズの枡を活用したジュエリーブランド。"
+            link="https://fomus.base.shop/"
+            external
           />
           <ServiceCard
-            title="プロフィール"
-            description="あなたのギルドメンバーシップを管理。ランクやポイントを確認できます。"
-            link="/app/profile"
+            title="MASUKAME"
+            description="枡（益＝繁栄）と亀（長寿）を一体化した世界で唯一のアート作品。"
+            link="https://masukame.com/"
+            external
+          />
+          <ServiceCard
+            title="KUKU"
+            description="精霊と木の枡をめぐる物語。絵本・小説・アニメ・グッズへと展開する長編物語。鋭意制作中。"
+            link="https://kuku-story.com/"
+            external
+          />
+          <ServiceCard
+            title="SILVA"
+            description="世界初、枡を使って遊べるカードゲーム。子どもからご年配の方まで遊べます。"
+            link="https://silva-game.com/"
+            external
           />
         </div>
       )}
@@ -117,13 +132,19 @@ function ServiceCard({
   title,
   description,
   link,
+  external = false,
 }: {
   title: string
   description: string
   link: string
+  external?: boolean
 }) {
+  const linkProps = external
+    ? { href: link, target: '_blank', rel: 'noopener noreferrer' }
+    : { href: link }
+
   return (
-    <a href={link} className="block">
+    <a {...linkProps} className="block">
       <Card className="hover:bg-white/5 transition-colors cursor-pointer">
         <CardContent className="py-4">
           <div className="flex items-center gap-4">
@@ -136,9 +157,15 @@ function ServiceCard({
               <h3 className="font-semibold text-white mb-1">{title}</h3>
               <p className="text-sm text-zinc-400">{description}</p>
             </div>
-            <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            {external ? (
+              <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            )}
           </div>
         </CardContent>
       </Card>
