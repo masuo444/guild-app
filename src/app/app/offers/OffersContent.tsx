@@ -60,31 +60,29 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
           <ServiceCard
             title="枡フォト / Masu Photo"
             description="世界中で『枡を持って撮る』アートプロジェクト。【※15ヶ国・2025年12月現在】枡が人と文化をつなぐ表現を可能に。"
-            link="https://www.instagram.com/masu_photo/"
+            link="https://masuphoto.fomusglobal.com/"
             external
           />
           <ServiceCard
             title="FOMUS PARURE"
             description="世界最小サイズの枡を活用したジュエリーブランド。"
-            link="https://fomus.base.shop/"
+            link="https://parure.fomus.jp/"
             external
           />
           <ServiceCard
             title="MASUKAME"
             description="枡（益＝繁栄）と亀（長寿）を一体化した世界で唯一のアート作品。"
-            link="https://masukame.com/"
-            external
           />
           <ServiceCard
             title="KUKU"
-            description="精霊と木の枡をめぐる物語。絵本・小説・アニメ・グッズへと展開する長編物語。鋭意制作中。"
-            link="https://kuku-story.com/"
+            description="精霊と木の神をめぐる物語。絵本・小説・アニメ・グッズへと展開する長編物語。鋭意制作中。"
+            link="https://kuku.fomusglobal.com/"
             external
           />
           <ServiceCard
             title="SILVA"
             description="世界初、枡を使って遊べるカードゲーム。子どもからご年配の方まで遊べます。"
-            link="https://silva-game.com/"
+            link="https://silva.fomus.jp/"
             external
           />
         </div>
@@ -136,28 +134,24 @@ function ServiceCard({
 }: {
   title: string
   description: string
-  link: string
+  link?: string
   external?: boolean
 }) {
-  const linkProps = external
-    ? { href: link, target: '_blank', rel: 'noopener noreferrer' }
-    : { href: link }
-
-  return (
-    <a {...linkProps} className="block">
-      <Card className="hover:bg-white/5 transition-colors cursor-pointer">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[#c0c0c0]/20 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6 text-[#c0c0c0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-white mb-1">{title}</h3>
-              <p className="text-sm text-zinc-400">{description}</p>
-            </div>
-            {external ? (
+  const content = (
+    <Card className={link ? "hover:bg-white/5 transition-colors cursor-pointer" : ""}>
+      <CardContent className="py-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-lg bg-[#c0c0c0]/20 flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6 text-[#c0c0c0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-white mb-1">{title}</h3>
+            <p className="text-sm text-zinc-400">{description}</p>
+          </div>
+          {link && (
+            external ? (
               <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
@@ -165,10 +159,24 @@ function ServiceCard({
               <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            )
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  if (!link) {
+    return <div className="block">{content}</div>
+  }
+
+  const linkProps = external
+    ? { href: link, target: '_blank' as const, rel: 'noopener noreferrer' }
+    : { href: link }
+
+  return (
+    <a {...linkProps} className="block">
+      {content}
     </a>
   )
 }
