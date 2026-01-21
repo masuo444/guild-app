@@ -3,7 +3,7 @@
 import { Profile, ActivityLog } from '@/types/database'
 import { MembershipCard } from '@/components/membership/MembershipCard'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
-import { calculateRank, getPointsToNextRank, RANK_THRESHOLDS } from '@/config/rank'
+import { calculateRank, getPointsToNextRank } from '@/config/rank'
 import { formatDate } from '@/lib/utils'
 
 interface DashboardClientProps {
@@ -46,16 +46,6 @@ export function DashboardClient({ profile, totalPoints, recentLogs }: DashboardC
           sublabel={profile.home_country || ''}
         />
       </div>
-
-      {/* ランク進捗 */}
-      <Card className="mb-8">
-        <CardHeader>
-          <h2 className="font-semibold text-white">Rank Progress</h2>
-        </CardHeader>
-        <CardContent>
-          <RankProgress currentPoints={totalPoints} />
-        </CardContent>
-      </Card>
 
       {/* 最近のアクティビティ */}
       <Card>
@@ -112,39 +102,3 @@ function StatCard({
   )
 }
 
-function RankProgress({ currentPoints }: { currentPoints: number }) {
-  const ranks = ['D', 'C', 'B', 'A'] as const
-  const maxPoints = RANK_THRESHOLDS.A
-  const progress = Math.min((currentPoints / maxPoints) * 100, 100)
-
-  return (
-    <div>
-      <div className="flex justify-between mb-2">
-        {ranks.map((rank) => (
-          <div
-            key={rank}
-            className={`text-sm font-medium ${
-              currentPoints >= RANK_THRESHOLDS[rank]
-                ? 'text-white'
-                : 'text-zinc-300/50'
-            }`}
-          >
-            {rank}
-          </div>
-        ))}
-      </div>
-      <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-[#c0c0c0] via-[#c0c0c0] to-white rounded-full transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-      <div className="flex justify-between mt-1 text-xs text-zinc-300">
-        <span>0</span>
-        <span>{RANK_THRESHOLDS.C}</span>
-        <span>{RANK_THRESHOLDS.B}</span>
-        <span>{RANK_THRESHOLDS.A}+</span>
-      </div>
-    </div>
-  )
-}
