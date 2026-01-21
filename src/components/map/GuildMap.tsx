@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
+import { useLanguage } from '@/lib/i18n'
 
 interface MemberRole {
   role_id: string
@@ -47,6 +48,7 @@ interface HubFormData {
 
 export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegisterHub = true }: GuildMapProps) {
   const router = useRouter()
+  const { language, t } = useLanguage()
   const [showMembers, setShowMembers] = useState(canViewMembers)
   const [showHubs, setShowHubs] = useState(true)
   const [selected, setSelected] = useState<SelectedItem | null>(null)
@@ -278,7 +280,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
 
       {/* マップ */}
       <div className={`w-full h-[500px] rounded-xl overflow-hidden shadow-lg border border-zinc-500/30 ${isSelectingLocation ? 'cursor-crosshair' : ''}`}>
-        <APIProvider apiKey={apiKey}>
+        <APIProvider apiKey={apiKey} language={language}>
           <Map
             defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
             defaultZoom={3}
