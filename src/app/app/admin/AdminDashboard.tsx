@@ -4,6 +4,7 @@ import { useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, GuildQuest, QuestSubmission } from '@/types/database'
+import { calculateRank, RANK_THRESHOLDS } from '@/config/rank'
 import { canIssueFreeInvite } from '@/config/admin'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -27,6 +28,7 @@ interface AdminDashboardProps {
   hubs: MasuHub[]
   questSubmissions: QuestSubmissionWithRelations[]
   quests: GuildQuest[]
+  memberPoints: Record<string, number>
   adminId: string
   adminEmail: string
 }
@@ -69,7 +71,7 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
   ),
 }
 
-export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, adminId, adminEmail }: AdminDashboardProps) {
+export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, memberPoints, adminId, adminEmail }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('invites')
 
   // 承認待ちの投稿数
@@ -125,7 +127,7 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
 
       {/* コンテンツ */}
       {activeTab === 'invites' && <InvitesTab invites={invites} adminId={adminId} adminEmail={adminEmail} />}
-      {activeTab === 'members' && <MembersTab members={members} />}
+      {activeTab === 'members' && <MembersTab members={members} memberPoints={memberPoints} />}
       {activeTab === 'hubs' && <HubsTab hubs={hubs} />}
       {activeTab === 'offers' && <OffersTab />}
       {activeTab === 'quests' && <QuestsTab submissions={questSubmissions} quests={quests} adminId={adminId} />}
@@ -321,13 +323,13 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
   )
 }
 
-function MembersTab({ members }: { members: Profile[] }) {
+function MembersTab({ members, memberPoints }: { members: Profile[]; memberPoints: Record<string, number> }) {
   const router = useRouter()
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null)
   const [points, setPoints] = useState('')
   const [note, setNote] = useState('')
   const [adding, setAdding] = useState(false)
-  const [updatingRole, setUpdatingRole] = useState<string | null>(null)
+  const [updatingMember, setUpdatingMember] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   const handleAddPoints = async () => {
@@ -350,7 +352,7 @@ function MembersTab({ members }: { members: Profile[] }) {
   }
 
   const handleRoleChange = async (memberId: string, newRole: 'member' | 'admin') => {
-    setUpdatingRole(memberId)
+    setUpdatingMember(memberId)
     const supabase = createClient()
 
     await supabase
@@ -359,7 +361,42 @@ function MembersTab({ members }: { members: Profile[] }) {
       .eq('id', memberId)
 
     router.refresh()
-    setUpdatingRole(null)
+    setUpdatingMember(null)
+  }
+
+  const handleMembershipTypeChange = async (memberId: string, newType: MembershipType) => {
+    setUpdatingMember(memberId)
+    const supabase = createClient()
+
+    await supabase
+      .from('profiles')
+      .update({ membership_type: newType })
+      .eq('id', memberId)
+
+    router.refresh()
+    setUpdatingMember(null)
+  }
+
+  const handleRankChange = async (memberId: string, currentPoints: number, targetRank: Rank) => {
+    setUpdatingMember(memberId)
+    const targetPoints = RANK_THRESHOLDS[targetRank]
+    const pointsDiff = targetPoints - currentPoints
+
+    if (pointsDiff === 0) {
+      setUpdatingMember(null)
+      return
+    }
+
+    const supabase = createClient()
+    await supabase.from('activity_logs').insert({
+      user_id: memberId,
+      type: 'Rank Adjustment',
+      points: pointsDiff,
+      note: `ランク${targetRank}に調整`,
+    })
+
+    router.refresh()
+    setUpdatingMember(null)
   }
 
   // 検索フィルタ
@@ -379,6 +416,13 @@ function MembersTab({ members }: { members: Profile[] }) {
     ambassador: 'bg-purple-500/20 text-purple-300',
     staff: 'bg-blue-500/20 text-blue-300',
     partner: 'bg-amber-500/20 text-amber-300',
+  }
+
+  const rankColors: Record<Rank, string> = {
+    D: 'bg-zinc-500/20 text-zinc-300',
+    C: 'bg-green-500/20 text-green-300',
+    B: 'bg-blue-500/20 text-blue-300',
+    A: 'bg-amber-500/20 text-amber-300',
   }
 
   return (
@@ -459,29 +503,31 @@ function MembersTab({ members }: { members: Profile[] }) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {filteredMembers.map((member) => {
               const memberType = member.membership_type || 'standard'
+              const currentPoints = memberPoints[member.id] || 0
+              const currentRank = calculateRank(currentPoints)
+              const isUpdating = updatingMember === member.id
+
               return (
-                <div key={member.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div key={member.id} className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                  {/* 上段: 基本情報 */}
+                  <div className="flex items-center gap-3 mb-3">
                     {/* アバター */}
-                    <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {member.avatar_url ? (
                         <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-zinc-400 font-bold text-sm">
+                        <span className="text-zinc-400 font-bold">
                           {(member.display_name || '?')[0].toUpperCase()}
                         </span>
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-white truncate">
+                        <span className="font-semibold text-white">
                           {member.display_name || '名前未設定'}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeColors[memberType]}`}>
-                          {MEMBERSHIP_TYPE_LABELS[memberType]}
                         </span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           member.subscription_status === 'active' || member.subscription_status === 'free'
@@ -493,6 +539,8 @@ function MembersTab({ members }: { members: Profile[] }) {
                       </div>
                       <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5 flex-wrap">
                         <span className="font-mono">{member.membership_id || '-'}</span>
+                        <span>•</span>
+                        <span>{currentPoints}pt</span>
                         {member.home_city && member.home_country && (
                           <>
                             <span>•</span>
@@ -502,20 +550,59 @@ function MembersTab({ members }: { members: Profile[] }) {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                    <select
-                      value={member.role || 'member'}
-                      onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'admin')}
-                      disabled={updatingRole === member.id}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${
-                        member.role === 'admin'
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : 'bg-zinc-700 text-zinc-300'
-                      } ${updatingRole === member.id ? 'opacity-50' : ''}`}
-                    >
-                      <option value="member" className="bg-zinc-900">メンバー</option>
-                      <option value="admin" className="bg-zinc-900">管理者</option>
-                    </select>
+
+                  {/* 下段: 設定項目 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* ロール */}
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">ロール</label>
+                      <select
+                        value={member.role || 'member'}
+                        onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'admin')}
+                        disabled={isUpdating}
+                        className={`w-full px-2 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${
+                          member.role === 'admin'
+                            ? 'bg-purple-500/20 text-purple-300'
+                            : 'bg-zinc-700 text-zinc-300'
+                        } ${isUpdating ? 'opacity-50' : ''}`}
+                      >
+                        <option value="member" className="bg-zinc-900">メンバー</option>
+                        <option value="admin" className="bg-zinc-900">管理者</option>
+                      </select>
+                    </div>
+
+                    {/* ギルドランク */}
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">ランク</label>
+                      <select
+                        value={currentRank}
+                        onChange={(e) => handleRankChange(member.id, currentPoints, e.target.value as Rank)}
+                        disabled={isUpdating}
+                        className={`w-full px-2 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${rankColors[currentRank]} ${isUpdating ? 'opacity-50' : ''}`}
+                      >
+                        <option value="D" className="bg-zinc-900">D (0pt〜)</option>
+                        <option value="C" className="bg-zinc-900">C (100pt〜)</option>
+                        <option value="B" className="bg-zinc-900">B (300pt〜)</option>
+                        <option value="A" className="bg-zinc-900">A (800pt〜)</option>
+                      </select>
+                    </div>
+
+                    {/* メンバータイプ */}
+                    <div className="col-span-2 sm:col-span-2">
+                      <label className="block text-xs text-zinc-500 mb-1">タイプ</label>
+                      <select
+                        value={memberType}
+                        onChange={(e) => handleMembershipTypeChange(member.id, e.target.value as MembershipType)}
+                        disabled={isUpdating}
+                        className={`w-full px-2 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${typeColors[memberType]} ${isUpdating ? 'opacity-50' : ''}`}
+                      >
+                        <option value="standard" className="bg-zinc-900">Standard (有料)</option>
+                        <option value="model" className="bg-zinc-900">Model (無料)</option>
+                        <option value="ambassador" className="bg-zinc-900">Ambassador (無料)</option>
+                        <option value="staff" className="bg-zinc-900">Staff (無料)</option>
+                        <option value="partner" className="bg-zinc-900">Partner (無料)</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               )
