@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useLanguage } from '@/lib/i18n'
 
 interface NavItem {
   label: string
@@ -56,12 +57,56 @@ const navItems: NavItem[] = [
 
 export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?: boolean; isSuperAdmin?: boolean }) {
   const pathname = usePathname()
+  const { language, setLanguage, t } = useLanguage()
 
-  let allItems = [...navItems]
+  const localizedNavItems: NavItem[] = [
+    {
+      label: t.card,
+      href: '/app',
+      ariaLabel: 'Go to Dashboard',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      ),
+    },
+    {
+      label: t.map,
+      href: '/app/map',
+      ariaLabel: 'Go to Guild Map',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+        </svg>
+      ),
+    },
+    {
+      label: t.offers,
+      href: '/app/offers',
+      ariaLabel: 'Go to Offers and Quests',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+        </svg>
+      ),
+    },
+    {
+      label: t.profile,
+      href: '/app/profile',
+      ariaLabel: 'Go to your Profile',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      ),
+    },
+  ]
+
+  let allItems = [...localizedNavItems]
 
   if (isAdmin) {
     allItems.push({
-      label: 'Admin',
+      label: t.admin,
       href: '/app/admin',
       ariaLabel: 'Go to Admin Panel',
       icon: (
@@ -86,11 +131,25 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
     })
   }
 
+  const toggleLanguage = () => {
+    setLanguage(language === 'ja' ? 'en' : 'ja')
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900/80 backdrop-blur border-t border-zinc-500/30 md:static md:border-t-0 md:border-r md:w-64 md:min-h-screen" aria-label="Main navigation">
       {/* ロゴ（デスクトップのみ） */}
       <div className="hidden md:block p-6 border-b border-zinc-500/30">
-        <h1 className="text-xl font-bold text-white">FOMUS GUILD</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-white">FOMUS GUILD</h1>
+          {/* 言語切り替えボタン */}
+          <button
+            onClick={toggleLanguage}
+            className="px-2 py-1 text-xs font-medium rounded bg-zinc-700 hover:bg-zinc-600 text-white transition-colors"
+            aria-label={language === 'ja' ? 'Switch to English' : '日本語に切り替え'}
+          >
+            {language === 'ja' ? 'EN' : 'JA'}
+          </button>
+        </div>
       </div>
 
       {/* ナビゲーションリンク */}
@@ -121,6 +180,19 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
             </li>
           )
         })}
+        {/* モバイル用言語切り替え */}
+        <li role="none" className="md:hidden">
+          <button
+            onClick={toggleLanguage}
+            className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors text-zinc-300 hover:text-white hover:bg-zinc-500/20"
+            aria-label={language === 'ja' ? 'Switch to English' : '日本語に切り替え'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+            </svg>
+            <span className="text-xs font-medium">{language === 'ja' ? 'EN' : 'JA'}</span>
+          </button>
+        </li>
       </ul>
     </nav>
   )

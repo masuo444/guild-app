@@ -1,8 +1,10 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 export type Language = 'ja' | 'en'
+
+const LANGUAGE_KEY = 'fomus-guild-language'
 
 const translations = {
   ja: {
@@ -126,9 +128,30 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('ja')
+  const [language, setLanguageState] = useState<Language>('en')
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Load language from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(LANGUAGE_KEY) as Language | null
+    if (saved && (saved === 'ja' || saved === 'en')) {
+      setLanguageState(saved)
+    }
+    setIsLoaded(true)
+  }, [])
+
+  // Save language to localStorage when changed
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang)
+    localStorage.setItem(LANGUAGE_KEY, lang)
+  }
 
   const t = translations[language]
+
+  // Prevent flash of wrong language
+  if (!isLoaded) {
+    return null
+  }
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
