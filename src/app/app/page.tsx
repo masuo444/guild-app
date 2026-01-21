@@ -4,13 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardClient } from './DashboardClient'
 import { Profile } from '@/types/database'
 
-// デモ用のHub データ
-const demoHubs = [
-  { id: '1', name: 'MASU Tokyo', city: 'Tokyo', country: 'Japan', description: 'The flagship MASU Hub in Tokyo' },
-  { id: '2', name: 'MASU Osaka', city: 'Osaka', country: 'Japan', description: 'Western Japan hub for creators' },
-  { id: '3', name: 'MASU Singapore', city: 'Singapore', country: 'Singapore', description: 'Southeast Asia gateway' },
-]
-
 // ギルドメンバー限定セクションコンポーネント
 function GuildMemberOnlySection({ title, description }: { title: string; description: string }) {
   return (
@@ -44,56 +37,38 @@ export default async function DashboardPage(props: Props) {
   const searchParams = await props.searchParams
   const isDemo = searchParams?.demo === 'true'
 
-  // デモモードの場合：Hubのみ表示、他はロック
+  // デモモードの場合：マップのみアクセス可能、他は全て制限
   if (isDemo) {
     return (
       <div className="p-4 md:p-8 max-w-4xl mx-auto">
         {/* デモモードバナー */}
         <div className="bg-gradient-to-r from-[#c0c0c0]/20 to-[#c0c0c0]/10 border border-[#c0c0c0]/30 rounded-xl px-4 py-3 mb-6">
           <p className="font-medium text-white">FOMUS GUILD Preview</p>
-          <p className="text-sm text-zinc-400">MASU Hubsをプレビューできます。全機能を利用するにはギルドメンバーになってください。</p>
+          <p className="text-sm text-zinc-400">デモモードではマップ機能のみご利用いただけます。</p>
         </div>
 
         <h1 className="text-2xl font-bold text-white mb-6">Dashboard</h1>
 
-        {/* MASU Hubs セクション（公開） */}
-        <div className="bg-white/10 backdrop-blur rounded-xl p-6 mb-6 border border-zinc-500/30">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-orange-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        {/* マップへのアクセス（公開） */}
+        <Link
+          href="/app/map?demo=true"
+          className="block bg-gradient-to-r from-orange-500/20 to-orange-500/10 backdrop-blur rounded-xl p-6 mb-6 border border-orange-500/30 hover:border-orange-500/50 transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-7 h-7 text-orange-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
               </svg>
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-white">MASU Hubs</h2>
-              <p className="text-sm text-zinc-400">Global network of partner locations</p>
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-white mb-1">Guild Map</h2>
+              <p className="text-sm text-zinc-300">MASU Hubsの場所を確認できます</p>
             </div>
-          </div>
-
-          <div className="space-y-3">
-            {demoHubs.map((hub) => (
-              <div key={hub.id} className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-600/30">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium text-white">{hub.name}</h3>
-                    <p className="text-sm text-zinc-400">{hub.city}, {hub.country}</p>
-                    <p className="text-sm text-zinc-300 mt-1">{hub.description}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <Link
-            href="/app/map?demo=true"
-            className="mt-4 inline-flex items-center gap-2 text-[#c0c0c0] hover:text-white transition-colors text-sm"
-          >
-            View Full Map
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </Link>
-        </div>
+          </div>
+        </Link>
 
         {/* ギルドメンバー限定セクション */}
         <GuildMemberOnlySection
@@ -111,11 +86,16 @@ export default async function DashboardPage(props: Props) {
           description="Access exclusive offers and complete quests for rewards"
         />
 
+        <GuildMemberOnlySection
+          title="Profile"
+          description="Manage your profile and settings"
+        />
+
         {/* 参加を促すCTA */}
         <div className="bg-gradient-to-r from-zinc-800 to-zinc-700 rounded-xl p-8 text-center border border-zinc-500/30">
           <h2 className="text-2xl font-bold text-white mb-4">Join FOMUS GUILD</h2>
           <p className="text-zinc-300 mb-6">
-            Unlock all features, earn MASU Points, and connect with global creators.
+            全機能にアクセスして、MASU Pointsを獲得しよう。
           </p>
           <Link
             href="/auth/login"

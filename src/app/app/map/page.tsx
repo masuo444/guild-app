@@ -1,29 +1,45 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { GuildMap } from '@/components/map/GuildMap'
 import { canViewMembers, canRegisterHub } from '@/lib/access'
 import { SubscriptionStatus, CustomRole } from '@/types/database'
 
-export default async function MapPage() {
+interface Props {
+  searchParams: Promise<{ demo?: string }>
+}
+
+export default async function MapPage(props: Props) {
+  const searchParams = await props.searchParams
+  const isDemo = searchParams?.demo === 'true'
+
   const supabase = await createClient()
 
   // 現在のユーザーを取得
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
+  // デモモードでない場合は認証必須
+  if (!isDemo && !user) {
     redirect('/auth/login')
   }
 
-  // ユーザーのプロフィールを取得
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('subscription_status')
-    .eq('id', user.id)
-    .single()
+  // デモモードの場合は制限付きアクセス
+  let subscriptionStatus: SubscriptionStatus = 'free_tier'
+  let canSeeMembers = false
+  let canAddHub = false
 
-  const subscriptionStatus = (profile?.subscription_status || 'free_tier') as SubscriptionStatus
-  const canSeeMembers = canViewMembers(subscriptionStatus)
-  const canAddHub = canRegisterHub(subscriptionStatus)
+  if (user) {
+    // ユーザーのプロフィールを取得
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .single()
+
+    subscriptionStatus = (profile?.subscription_status || 'free_tier') as SubscriptionStatus
+    canSeeMembers = canViewMembers(subscriptionStatus)
+    canAddHub = canRegisterHub(subscriptionStatus)
+  }
 
   // メンバー情報は課金ユーザーのみ取得
   type MemberRole = {
@@ -88,8 +104,34 @@ export default async function MapPage() {
         </div>
       </div>
 
+      {/* デモモードバナー */}
+      {isDemo && (
+        <div className="mb-6 bg-gradient-to-r from-[#c0c0c0]/20 to-[#c0c0c0]/10 rounded-xl p-4 border border-[#c0c0c0]/30">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#c0c0c0]/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-[#c0c0c0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-white">Demo Mode</h3>
+              <p className="text-xs text-zinc-400">
+                MASU Hubsの場所をプレビューできます。メンバーの場所を見るにはギルドに参加してください。
+              </p>
+            </div>
+            <Link
+              href="/auth/login"
+              className="px-4 py-2 bg-[#c0c0c0] text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors flex-shrink-0"
+            >
+              Join Guild
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* 無料ユーザー向けアップグレードバナー */}
-      {!canSeeMembers && (
+      {!isDemo && !canSeeMembers && (
         <div className="mb-6 bg-gradient-to-r from-zinc-800 to-zinc-700 rounded-xl p-4 border border-zinc-500/30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[#c0c0c0]/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -126,7 +168,7 @@ export default async function MapPage() {
       <GuildMap
         members={members}
         hubs={hubs ?? []}
-        userId={user.id}
+        userId={user?.id ?? 'demo'}
         canViewMembers={canSeeMembers}
         canRegisterHub={canAddHub}
       />
