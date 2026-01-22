@@ -972,6 +972,7 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    address: '',
     country: '',
     city: '',
   })
@@ -982,6 +983,7 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     setFormData({
       name: hub.name,
       description: hub.description || '',
+      address: hub.address || '',
       country: hub.country,
       city: hub.city,
     })
@@ -991,17 +993,22 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
   // 編集をキャンセル
   const cancelEdit = () => {
     setEditingHub(null)
-    setFormData({ name: '', description: '', country: '', city: '' })
+    setFormData({ name: '', description: '', address: '', country: '', city: '' })
   }
 
-  // ジオコーディング処理
-  const geocodeAddress = async (city: string, country: string) => {
+  // ジオコーディング処理（住所を含めて正確な位置を取得）
+  const geocodeAddress = async (address: string, city: string, country: string) => {
     let lat = 0
     let lng = 0
 
+    // 住所がある場合はフル住所で検索、なければ都市名で検索
+    const searchQuery = address
+      ? `${address}, ${city}, ${country}`
+      : `${city}, ${country}`
+
     try {
       const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        `${city}, ${country}`
+        searchQuery
       )}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
 
       const response = await fetch(geocodeUrl)
@@ -1023,12 +1030,13 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     if (!formData.name || !formData.country || !formData.city) return
     setCreating(true)
 
-    const { lat, lng } = await geocodeAddress(formData.city, formData.country)
+    const { lat, lng } = await geocodeAddress(formData.address, formData.city, formData.country)
 
     const supabase = createClient()
     await supabase.from('masu_hubs').insert({
       name: formData.name,
       description: formData.description || null,
+      address: formData.address || null,
       country: formData.country,
       city: formData.city,
       lat,
@@ -1036,7 +1044,7 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
       is_active: true,
     })
 
-    setFormData({ name: '', description: '', country: '', city: '' })
+    setFormData({ name: '', description: '', address: '', country: '', city: '' })
     setShowForm(false)
     router.refresh()
     setCreating(false)
@@ -1047,11 +1055,15 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     if (!editingHub || !formData.name || !formData.country || !formData.city) return
     setUpdating(true)
 
-    // 都市か国が変わった場合のみ再ジオコーディング
+    // 住所、都市、国のいずれかが変わった場合に再ジオコーディング
     let lat = editingHub.lat
     let lng = editingHub.lng
-    if (formData.city !== editingHub.city || formData.country !== editingHub.country) {
-      const coords = await geocodeAddress(formData.city, formData.country)
+    if (
+      formData.address !== (editingHub.address || '') ||
+      formData.city !== editingHub.city ||
+      formData.country !== editingHub.country
+    ) {
+      const coords = await geocodeAddress(formData.address, formData.city, formData.country)
       lat = coords.lat
       lng = coords.lng
     }
@@ -1062,6 +1074,7 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
       .update({
         name: formData.name,
         description: formData.description || null,
+        address: formData.address || null,
         country: formData.country,
         city: formData.city,
         lat,
@@ -1070,7 +1083,7 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
       .eq('id', editingHub.id)
 
     setEditingHub(null)
-    setFormData({ name: '', description: '', country: '', city: '' })
+    setFormData({ name: '', description: '', address: '', country: '', city: '' })
     router.refresh()
     setUpdating(false)
   }
@@ -1118,6 +1131,15 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="簡単な説明"
+          className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+        />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="block text-xs font-medium text-zinc-400 mb-1.5">住所 (任意・より正確な位置情報)</label>
+        <input
+          value={formData.address}
+          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+          placeholder="例: 渋谷区神宮前1-2-3"
           className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
         />
       </div>
@@ -1196,7 +1218,9 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-white">{hub.name}</p>
-                  <p className="text-sm text-zinc-400">{hub.city}, {hub.country}</p>
+                  <p className="text-sm text-zinc-400">
+                    {hub.address ? `${hub.address}, ` : ''}{hub.city}, {hub.country}
+                  </p>
                   {hub.description && (
                     <p className="text-xs text-zinc-500 mt-0.5 truncate">{hub.description}</p>
                   )}
@@ -1251,7 +1275,9 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
                   <div key={hub.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 opacity-60">
                     <div className="flex-1">
                       <p className="font-medium text-zinc-400">{hub.name}</p>
-                      <p className="text-xs text-zinc-500">{hub.city}, {hub.country}</p>
+                      <p className="text-xs text-zinc-500">
+                        {hub.address ? `${hub.address}, ` : ''}{hub.city}, {hub.country}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
