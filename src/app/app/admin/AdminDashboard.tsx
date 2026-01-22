@@ -137,8 +137,8 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
   )
 }
 
-function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardProps['invites']; adminId: string; adminEmail: string }) {
-  const router = useRouter()
+function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites: AdminDashboardProps['invites']; adminId: string; adminEmail: string }) {
+  const [invites, setInvites] = useState(initialInvites)
   const [creating, setCreating] = useState(false)
   const [selectedType, setSelectedType] = useState<MembershipType>('standard')
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
@@ -157,25 +157,25 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
     const supabase = createClient()
     const code = generateInviteCode()
 
-    const { error } = await supabase.from('invites').insert({
+    const { data, error } = await supabase.from('invites').insert({
       code,
       invited_by: adminId,
       used: false,
       membership_type: selectedType,
-    })
+    }).select('*, profiles:used_by(display_name)').single()
 
     setCreating(false)
 
     if (error) {
       console.error('招待コード作成エラー:', error)
       alert(`エラー: ${error.message}`)
-    } else {
+    } else if (data) {
+      // ローカルステートに追加して即座に表示
+      setInvites(prev => [data, ...prev])
       setLastCreatedCode(code)
       // コードをクリップボードにコピー
       const url = `${window.location.origin}/invite/${code}`
       navigator.clipboard.writeText(url)
-      // ページをリフレッシュ
-      router.refresh()
     }
   }
 
