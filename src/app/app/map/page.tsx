@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { GuildMap } from '@/components/map/GuildMap'
-import { canViewMembers, canRegisterHub } from '@/lib/access'
+import { canViewMembers } from '@/lib/access'
 import { SubscriptionStatus, CustomRole } from '@/types/database'
 
 interface Props {
@@ -26,37 +26,17 @@ export default async function MapPage(props: Props) {
   // デモモードの場合は制限付きアクセス
   let subscriptionStatus: SubscriptionStatus = 'free_tier'
   let canSeeMembers = false
-  let canAddHub = false
-  let canAddShop = false
 
   if (user) {
     // ユーザーのプロフィールを取得
     const { data: profile } = await supabase
       .from('profiles')
-      .select('subscription_status, role')
+      .select('subscription_status')
       .eq('id', user.id)
       .single()
 
     subscriptionStatus = (profile?.subscription_status || 'free_tier') as SubscriptionStatus
     canSeeMembers = canViewMembers(subscriptionStatus)
-    canAddHub = canRegisterHub(subscriptionStatus)
-
-    // adminロールの場合はショップ追加可能
-    const isAdmin = profile?.role === 'admin'
-
-    // ambassadorロールをチェック
-    const { data: memberRoles } = await supabase
-      .from('member_roles')
-      .select('role:custom_roles(name)')
-      .eq('user_id', user.id)
-
-    const hasAmbassadorRole = memberRoles?.some((mr: { role: { name: string } | { name: string }[] | null }) => {
-      if (!mr.role) return false
-      const role = Array.isArray(mr.role) ? mr.role[0] : mr.role
-      return role?.name?.toLowerCase() === 'ambassador'
-    }) ?? false
-
-    canAddShop = isAdmin || hasAmbassadorRole
   }
 
   // メンバー情報は課金ユーザーのみ取得
@@ -186,10 +166,8 @@ export default async function MapPage(props: Props) {
       <GuildMap
         members={members}
         hubs={hubs ?? []}
-        userId={user?.id ?? 'demo'}
+        userId={user?.id}
         canViewMembers={canSeeMembers}
-        canRegisterHub={canAddHub}
-        canAddShop={canAddShop}
       />
 
       {/* MASU Hubs 一覧セクション */}

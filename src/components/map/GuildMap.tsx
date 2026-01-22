@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
-import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/lib/i18n'
 
 interface MemberRole {
@@ -29,8 +27,6 @@ interface GuildMapProps {
   hubs: MasuHub[]
   userId?: string
   canViewMembers?: boolean
-  canRegisterHub?: boolean
-  canAddShop?: boolean
 }
 
 type MarkerType = 'member' | 'hub'
@@ -40,93 +36,17 @@ interface SelectedItem {
   data: MemberMapData | MasuHub
 }
 
-interface HubFormData {
-  name: string
-  description: string
-  country: string
-  city: string
-  address: string
-  phone: string
-  website_url: string
-  google_maps_url: string
-  lat: number
-  lng: number
-}
-
-export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegisterHub = true, canAddShop = false }: GuildMapProps) {
-  const router = useRouter()
-  const { language, t } = useLanguage()
+export function GuildMap({ members, hubs, userId, canViewMembers = true }: GuildMapProps) {
+  const { language } = useLanguage()
   const [showMembers, setShowMembers] = useState(canViewMembers)
   const [showHubs, setShowHubs] = useState(true)
   const [selected, setSelected] = useState<SelectedItem | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // 拠点登録モーダル
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [isSelectingLocation, setIsSelectingLocation] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [formData, setFormData] = useState<HubFormData>({
-    name: '',
-    description: '',
-    country: '',
-    city: '',
-    address: '',
-    phone: '',
-    website_url: '',
-    google_maps_url: '',
-    lat: 0,
-    lng: 0,
-  })
-
   const handleMarkerClick = useCallback((type: MarkerType, data: MemberMapData | MasuHub) => {
-    if (isSelectingLocation) return
     setSelected({ type, data })
-  }, [isSelectingLocation])
-
-  const handleMapClick = useCallback((e: { detail: { latLng: { lat: number; lng: number } | null } }) => {
-    if (isSelectingLocation && e.detail.latLng) {
-      setFormData(prev => ({
-        ...prev,
-        lat: e.detail.latLng!.lat,
-        lng: e.detail.latLng!.lng,
-      }))
-      setIsSelectingLocation(false)
-    }
-  }, [isSelectingLocation])
-
-  const handleSubmitHub = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!userId) return
-
-    setSaving(true)
-    const supabase = createClient()
-
-    const { error } = await supabase
-      .from('masu_hubs')
-      .insert({
-        name: formData.name,
-        description: formData.description || null,
-        country: formData.country,
-        city: formData.city,
-        address: formData.address || null,
-        phone: formData.phone || null,
-        website_url: formData.website_url || null,
-        google_maps_url: formData.google_maps_url || null,
-        lat: formData.lat,
-        lng: formData.lng,
-        owner_id: userId,
-        is_active: true,
-      })
-
-    setSaving(false)
-
-    if (!error) {
-      setShowAddModal(false)
-      setFormData({ name: '', description: '', country: '', city: '', address: '', phone: '', website_url: '', google_maps_url: '', lat: 0, lng: 0 })
-      router.refresh()
-    }
-  }
+  }, [])
 
   // フィルタリングされたメンバー
   const filteredMembers = useMemo(() => {
@@ -216,17 +136,6 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
           >
             MASU Hubs
           </button>
-          {userId && canAddShop && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-[#c0c0c0] text-zinc-900 hover:bg-white transition-colors flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add My Shop
-            </button>
-          )}
           {/* 全画面ボタン */}
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
@@ -266,31 +175,13 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
         </div>
       )}
 
-      {/* 位置選択モード表示 */}
-      {isSelectingLocation && (
-        <div className="mb-3 p-3 bg-[#c0c0c0]/20 border border-[#c0c0c0] rounded-lg text-sm text-white flex items-center gap-2">
-          <svg className="w-5 h-5 text-[#c0c0c0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          Click on the map to select your shop location
-          <button
-            onClick={() => setIsSelectingLocation(false)}
-            className="ml-auto text-zinc-300 hover:text-white"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
       {/* マップ */}
-      <div className={`w-full ${isFullscreen ? 'h-[calc(100vh-140px)]' : 'h-[500px]'} rounded-xl overflow-hidden shadow-lg border border-zinc-500/30 ${isSelectingLocation ? 'cursor-crosshair' : ''}`}>
+      <div className={`w-full ${isFullscreen ? 'h-[calc(100vh-140px)]' : 'h-[500px]'} rounded-xl overflow-hidden shadow-lg border border-zinc-500/30`}>
         <APIProvider apiKey={apiKey} language={language}>
           <Map
             defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
             defaultZoom={3}
             style={{ width: '100%', height: '100%' }}
-            onClick={handleMapClick}
           >
             {/* メンバーマーカー - アバター画像または緑色ピン */}
             {showMembers &&
@@ -363,14 +254,6 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
                 />
               ))}
 
-            {/* 新規登録位置マーカー */}
-            {formData.lat !== 0 && formData.lng !== 0 && showAddModal && (
-              <Marker
-                position={{ lat: formData.lat, lng: formData.lng }}
-                title="New Location"
-              />
-            )}
-
             {/* 情報ウィンドウ */}
             {selected && (
               <InfoWindow
@@ -394,168 +277,6 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true, canRegi
           </Map>
         </APIProvider>
       </div>
-
-
-      {/* 拠点登録モーダル */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-500/30 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold text-white mb-4">Add My Shop</h3>
-            <form onSubmit={handleSubmitHub} className="space-y-4">
-              <div>
-                <label className="block text-sm text-zinc-300 mb-1">Shop Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  placeholder="My MASU Shop"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-zinc-300 mb-1">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] resize-none"
-                  rows={3}
-                  placeholder="Tell us about your shop..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-zinc-300 mb-1">Country *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                    placeholder="Japan"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-zinc-300 mb-1">City *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                    placeholder="Tokyo"
-                  />
-                </div>
-              </div>
-
-              {/* 住所 */}
-              <div>
-                <label className="block text-sm text-zinc-300 mb-1">Address</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  placeholder="1-2-3 Shibuya, Shibuya-ku"
-                />
-              </div>
-
-              {/* 電話番号 */}
-              <div>
-                <label className="block text-sm text-zinc-300 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  placeholder="+81-3-1234-5678"
-                />
-              </div>
-
-              {/* ウェブサイト */}
-              <div>
-                <label className="block text-sm text-zinc-300 mb-1">Website URL</label>
-                <input
-                  type="url"
-                  value={formData.website_url}
-                  onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  placeholder="https://example.com"
-                />
-              </div>
-
-              {/* Google Maps URL */}
-              <div>
-                <label className="block text-sm text-zinc-300 mb-1">Google Maps URL</label>
-                <input
-                  type="url"
-                  value={formData.google_maps_url}
-                  onChange={(e) => setFormData({ ...formData, google_maps_url: e.target.value })}
-                  className="w-full px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  placeholder="https://maps.google.com/..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-zinc-300 mb-1">Pin Location *</label>
-                {formData.lat !== 0 && formData.lng !== 0 ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-white text-sm">
-                      {formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSelectingLocation(true)
-                        setShowAddModal(false)
-                        setTimeout(() => setShowAddModal(true), 100)
-                      }}
-                      className="text-[#c0c0c0] text-sm underline hover:text-zinc-200"
-                    >
-                      Change
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsSelectingLocation(true)}
-                    className="w-full px-4 py-2 bg-[#c0c0c0]/20 border border-[#c0c0c0] rounded-lg text-[#c0c0c0] hover:bg-[#c0c0c0]/30 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Click on Map to Select Location
-                  </button>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false)
-                    setFormData({ name: '', description: '', country: '', city: '', address: '', phone: '', website_url: '', google_maps_url: '', lat: 0, lng: 0 })
-                    setIsSelectingLocation(false)
-                  }}
-                  className="flex-1 px-4 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || formData.lat === 0 || formData.lng === 0}
-                  className="flex-1 px-4 py-2 bg-[#c0c0c0] text-zinc-900 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  {saving ? 'Saving...' : 'Add Shop'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
