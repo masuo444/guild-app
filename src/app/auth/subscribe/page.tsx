@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/Button'
 function SubscribeForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [loading, setLoading] = useState(false)
-  const [checkingStatus, setCheckingStatus] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [isJapan, setIsJapan] = useState<boolean | null>(null)
   const canceled = searchParams.get('canceled') === 'true'
 
   useEffect(() => {
-    const checkSubscriptionStatus = async () => {
+    const checkAndRedirect = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
 
@@ -36,13 +36,48 @@ function SubscribeForm() {
         return
       }
 
-      setCheckingStatus(false)
+      // キャンセルから戻ってきた場合は選択画面を表示
+      if (canceled) {
+        // 日本判定
+        const detectedJapan = detectJapan()
+        setIsJapan(detectedJapan)
+        setLoading(false)
+        return
+      }
+
+      // 日本かどうか自動判定
+      const detectedJapan = detectJapan()
+      setIsJapan(detectedJapan)
+
+      // 自動的にStripe決済へ
+      await startCheckout(detectedJapan)
     }
 
-    checkSubscriptionStatus()
-  }, [router])
+    checkAndRedirect()
+  }, [router, canceled])
 
-  const handleSubscribe = async (isJapan: boolean) => {
+  // 日本判定（言語・タイムゾーン）
+  const detectJapan = (): boolean => {
+    // ブラウザ言語をチェック
+    const language = navigator.language || (navigator as { userLanguage?: string }).userLanguage || ''
+    if (language.startsWith('ja')) {
+      return true
+    }
+
+    // タイムゾーンをチェック
+    try {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      if (timeZone === 'Asia/Tokyo') {
+        return true
+      }
+    } catch {
+      // タイムゾーン取得失敗
+    }
+
+    return false
+  }
+
+  const startCheckout = async (japan: boolean) => {
     setLoading(true)
     setError('')
 
@@ -50,7 +85,7 @@ function SubscribeForm() {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isJapan }),
+        body: JSON.stringify({ isJapan: japan }),
       })
 
       const data = await response.json()
@@ -67,14 +102,17 @@ function SubscribeForm() {
     }
   }
 
-  if (checkingStatus) {
+  // ローディング中
+  if (loading && !canceled) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
-        <div className="animate-spin w-8 h-8 border-2 border-[#c0c0c0] border-t-transparent rounded-full" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-4">
+        <div className="animate-spin w-8 h-8 border-2 border-[#c0c0c0] border-t-transparent rounded-full mb-4" />
+        <p className="text-zinc-400 text-sm">決済ページへ移動中...</p>
       </div>
     )
   }
 
+  // キャンセル後 or エラー時の画面
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-4">
       <div className="max-w-md w-full">
@@ -133,24 +171,14 @@ function SubscribeForm() {
             </div>
           </div>
 
-          {/* 価格選択 */}
-          <div className="space-y-3">
-            <Button
-              onClick={() => handleSubscribe(true)}
-              loading={loading}
-              className="w-full py-4 text-lg"
-            >
-              ¥1,500/月 で登録（日本）
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleSubscribe(false)}
-              loading={loading}
-              className="w-full"
-            >
-              $10/month（International）
-            </Button>
-          </div>
+          {/* 決済ボタン */}
+          <Button
+            onClick={() => startCheckout(isJapan ?? false)}
+            loading={loading}
+            className="w-full py-4 text-lg"
+          >
+            {isJapan ? '¥980/月 で登録' : '$10/month で登録'}
+          </Button>
 
           <p className="text-xs text-zinc-500 text-center mt-6">
             いつでもキャンセル可能です。決済はStripeで安全に処理されます。
