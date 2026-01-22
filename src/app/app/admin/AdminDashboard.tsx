@@ -996,6 +996,52 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     setFormData({ name: '', description: '', address: '', country: '', city: '' })
   }
 
+  const [autoFilling, setAutoFilling] = useState(false)
+
+  // 住所から国・都市を自動取得
+  const autoFillFromAddress = async () => {
+    if (!formData.address) return
+    setAutoFilling(true)
+
+    try {
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        formData.address
+      )}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+
+      const response = await fetch(geocodeUrl)
+      const data = await response.json()
+
+      if (data.results && data.results[0]) {
+        const components = data.results[0].address_components
+        let country = ''
+        let city = ''
+
+        for (const component of components) {
+          if (component.types.includes('country')) {
+            country = component.long_name
+          }
+          if (component.types.includes('locality')) {
+            city = component.long_name
+          }
+          // localityがない場合はadministrative_area_level_1を使用
+          if (!city && component.types.includes('administrative_area_level_1')) {
+            city = component.long_name
+          }
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          country: country || prev.country,
+          city: city || prev.city,
+        }))
+      }
+    } catch {
+      // Failed to auto-fill
+    }
+
+    setAutoFilling(false)
+  }
+
   // ジオコーディング処理（住所を含めて正確な位置を取得）
   const geocodeAddress = async (address: string, city: string, country: string) => {
     let lat = 0
@@ -1135,13 +1181,33 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
         />
       </div>
       <div className="sm:col-span-2">
-        <label className="block text-xs font-medium text-zinc-400 mb-1.5">住所 (任意・より正確な位置情報)</label>
-        <input
-          value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          placeholder="例: 渋谷区神宮前1-2-3"
-          className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-        />
+        <label className="block text-xs font-medium text-zinc-400 mb-1.5">住所（入力すると国・都市を自動取得）</label>
+        <div className="flex gap-2">
+          <input
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            placeholder="例: 東京都渋谷区神宮前1-2-3"
+            className="flex-1 px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+          />
+          <button
+            type="button"
+            onClick={autoFillFromAddress}
+            disabled={!formData.address || autoFilling}
+            className="px-4 py-3 bg-blue-500/20 text-blue-300 rounded-xl text-sm font-medium hover:bg-blue-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {autoFilling ? (
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            )}
+            自動取得
+          </button>
+        </div>
       </div>
       <div>
         <label className="block text-xs font-medium text-zinc-400 mb-1.5">国 *</label>
