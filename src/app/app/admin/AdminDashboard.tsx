@@ -17,9 +17,10 @@ interface QuestSubmissionWithRelations extends QuestSubmission {
   profiles: { display_name: string | null; membership_id: string | null } | null
 }
 
-// 招待者情報付きのInvite
+// 招待者・被招待者情報付きのInvite
 interface InviteWithRelations extends Invite {
-  profiles: { display_name: string } | null
+  inviter: { display_name: string | null; membership_id: string | null } | null
+  invitee: { display_name: string | null; membership_id: string | null } | null
 }
 
 interface AdminDashboardProps {
@@ -170,10 +171,11 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
       console.error('招待コード作成エラー:', error)
       alert(`エラー: ${error.message}`)
     } else if (data) {
-      // ローカルステートに追加して即座に表示（profilesは未使用なのでnull）
+      // ローカルステートに追加して即座に表示
       const newInvite = {
         ...data,
-        profiles: null,
+        inviter: null,
+        invitee: null,
       }
       setInvites(prev => [newInvite, ...prev])
       setLastCreatedCode(code)
@@ -300,40 +302,72 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
         </CardContent>
       </Card>
 
-      {/* 使用済みの招待コード */}
+      {/* 招待履歴（誰が誰を招待したか） */}
       {usedInvites.length > 0 && (
         <Card>
           <CardHeader>
-            <h2 className="font-semibold text-white">使用済み ({usedInvites.length})</h2>
+            <h2 className="font-semibold text-white">招待履歴 ({usedInvites.length})</h2>
+            <p className="text-xs text-zinc-400 mt-1">誰が誰を招待したかの記録</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {usedInvites.map((invite) => (
                 <div
                   key={invite.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-white/5"
+                  className="p-4 rounded-xl bg-white/5 border border-zinc-700/50"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-mono text-zinc-400">{invite.code}</p>
-                        {invite.membership_type && invite.membership_type !== 'standard' && (
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium opacity-60 ${getTypeBgColor(invite.membership_type)}`}>
-                            {MEMBERSHIP_TYPE_LABELS[invite.membership_type]}
-                          </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    {/* 招待者 */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white font-medium truncate">
+                          {invite.inviter?.display_name || '不明'}
+                        </p>
+                        {invite.inviter?.membership_id && (
+                          <p className="text-xs text-zinc-500 font-mono">{invite.inviter.membership_id}</p>
                         )}
                       </div>
-                      <p className="text-xs text-zinc-500">
-                        {invite.profiles?.display_name || '不明'} が使用
-                      </p>
+                    </div>
+
+                    {/* 矢印 */}
+                    <div className="flex items-center justify-center sm:px-2">
+                      <svg className="w-5 h-5 text-green-400 rotate-90 sm:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </div>
+
+                    {/* 被招待者 */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white font-medium truncate">
+                          {invite.invitee?.display_name || '不明'}
+                        </p>
+                        {invite.invitee?.membership_id && (
+                          <p className="text-xs text-zinc-500 font-mono">{invite.invitee.membership_id}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* メタ情報 */}
+                    <div className="sm:ml-auto flex items-center gap-2 text-xs text-zinc-500">
+                      {invite.membership_type && invite.membership_type !== 'standard' && (
+                        <span className={`px-1.5 py-0.5 rounded font-medium ${getTypeBgColor(invite.membership_type)}`}>
+                          {MEMBERSHIP_TYPE_LABELS[invite.membership_type]}
+                        </span>
+                      )}
+                      <span>{formatDate(invite.created_at)}</span>
                     </div>
                   </div>
-                  <span className="text-xs text-zinc-500">{formatDate(invite.created_at)}</span>
                 </div>
               ))}
             </div>
@@ -362,25 +396,43 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
   // ロールの割り当て/解除
   const handleToggleRole = async (memberId: string, roleId: string, isAssigned: boolean) => {
     setUpdatingMember(memberId)
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
 
-    if (isAssigned) {
-      // 解除
-      await supabase
-        .from('member_roles')
-        .delete()
-        .eq('member_id', memberId)
-        .eq('role_id', roleId)
-    } else {
-      // 割り当て
-      await supabase.from('member_roles').insert({
-        member_id: memberId,
-        role_id: roleId,
-      })
+      if (isAssigned) {
+        // 解除
+        const { error } = await supabase
+          .from('member_roles')
+          .delete()
+          .eq('member_id', memberId)
+          .eq('role_id', roleId)
+
+        if (error) {
+          console.error('Role toggle error:', error)
+          alert(`更新エラー: ${error.message}`)
+          return
+        }
+      } else {
+        // 割り当て
+        const { error } = await supabase.from('member_roles').insert({
+          member_id: memberId,
+          role_id: roleId,
+        })
+
+        if (error) {
+          console.error('Role toggle error:', error)
+          alert(`更新エラー: ${error.message}`)
+          return
+        }
+      }
+
+      router.refresh()
+    } catch (err) {
+      console.error('Role toggle error:', err)
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingMember(null)
     }
-
-    router.refresh()
-    setUpdatingMember(null)
   }
 
   // ロール色を取得
@@ -410,50 +462,131 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
 
   const handleRoleChange = async (memberId: string, newRole: 'member' | 'admin') => {
     setUpdatingMember(memberId)
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', memberId)
 
-    await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', memberId)
-
-    router.refresh()
-    setUpdatingMember(null)
+      if (error) {
+        console.error('Role update error:', error)
+        alert(`更新エラー: ${error.message}`)
+      } else {
+        router.refresh()
+      }
+    } catch (err) {
+      console.error('Role update error:', err)
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingMember(null)
+    }
   }
 
   const handleMembershipTypeChange = async (memberId: string, newType: MembershipType) => {
     setUpdatingMember(memberId)
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
 
-    await supabase
-      .from('profiles')
-      .update({ membership_type: newType })
-      .eq('id', memberId)
+      // メンバータイプに応じてsubscription_statusも更新
+      const subscriptionStatus = isFreeMembershipType(newType) ? 'free' : 'free_tier'
 
-    router.refresh()
-    setUpdatingMember(null)
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          membership_type: newType,
+          subscription_status: subscriptionStatus,
+        })
+        .eq('id', memberId)
+
+      if (error) {
+        console.error('Membership type update error:', error)
+        alert(`更新エラー: ${error.message}`)
+      } else {
+        router.refresh()
+      }
+    } catch (err) {
+      console.error('Membership type update error:', err)
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingMember(null)
+    }
   }
 
   const handleRankChange = async (memberId: string, currentPoints: number, targetRank: Rank) => {
     setUpdatingMember(memberId)
-    const targetPoints = RANK_THRESHOLDS[targetRank]
-    const pointsDiff = targetPoints - currentPoints
+    try {
+      const targetPoints = RANK_THRESHOLDS[targetRank]
+      const pointsDiff = targetPoints - currentPoints
 
-    if (pointsDiff === 0) {
+      if (pointsDiff === 0) {
+        return
+      }
+
+      const supabase = createClient()
+      const { error } = await supabase.from('activity_logs').insert({
+        user_id: memberId,
+        type: 'Rank Adjustment',
+        points: pointsDiff,
+        note: `ランク${targetRank}に調整`,
+      })
+
+      if (error) {
+        console.error('Rank update error:', error)
+        alert(`更新エラー: ${error.message}`)
+      } else {
+        router.refresh()
+      }
+    } catch (err) {
+      console.error('Rank update error:', err)
+      alert('更新に失敗しました')
+    } finally {
       setUpdatingMember(null)
-      return
     }
+  }
 
-    const supabase = createClient()
-    await supabase.from('activity_logs').insert({
-      user_id: memberId,
-      type: 'Rank Adjustment',
-      points: pointsDiff,
-      note: `ランク${targetRank}に調整`,
-    })
+  const handleSubscriptionStatusChange = async (memberId: string, newStatus: 'active' | 'free' | 'free_tier') => {
+    setUpdatingMember(memberId)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('profiles')
+        .update({ subscription_status: newStatus })
+        .eq('id', memberId)
 
-    router.refresh()
-    setUpdatingMember(null)
+      if (error) {
+        console.error('Subscription status update error:', error)
+        alert(`更新エラー: ${error.message}`)
+      } else {
+        router.refresh()
+      }
+    } catch (err) {
+      console.error('Subscription status update error:', err)
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingMember(null)
+    }
+  }
+
+  const handleMembershipStatusChange = async (memberId: string, newStatus: 'active' | 'inactive') => {
+    setUpdatingMember(memberId)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('profiles')
+        .update({ membership_status: newStatus })
+        .eq('id', memberId)
+
+      if (error) {
+        alert(`更新エラー: ${error.message}`)
+      } else {
+        router.refresh()
+      }
+    } catch (err) {
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingMember(null)
+    }
   }
 
   // 検索フィルタ
@@ -480,6 +613,17 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
     C: 'bg-green-500/20 text-green-300',
     B: 'bg-blue-500/20 text-blue-300',
     A: 'bg-amber-500/20 text-amber-300',
+  }
+
+  const statusColors: Record<string, string> = {
+    active: 'bg-green-500/20 text-green-300',
+    free: 'bg-blue-500/20 text-blue-300',
+    free_tier: 'bg-red-500/20 text-red-300',
+  }
+
+  const membershipStatusColors: Record<string, string> = {
+    active: 'bg-green-500/20 text-green-300',
+    inactive: 'bg-red-500/20 text-red-300',
   }
 
   return (
@@ -588,13 +732,6 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                         <span className="font-semibold text-white">
                           {member.display_name || '名前未設定'}
                         </span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          member.subscription_status === 'active' || member.subscription_status === 'free'
-                            ? 'bg-green-500/20 text-green-300'
-                            : 'bg-red-500/20 text-red-300'
-                        }`}>
-                          {member.subscription_status === 'free' ? '無料' : member.subscription_status === 'active' ? '有効' : '無効'}
-                        </span>
                         {/* カスタムロールバッジ */}
                         {assignedRoles.map(role => (
                           <span
@@ -620,7 +757,22 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                   </div>
 
                   {/* 中段: 設定項目 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
+                    {/* ステータス */}
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">ステータス</label>
+                      <select
+                        value={member.subscription_status || 'free_tier'}
+                        onChange={(e) => handleSubscriptionStatusChange(member.id, e.target.value as 'active' | 'free' | 'free_tier')}
+                        disabled={isUpdating}
+                        className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${statusColors[member.subscription_status || 'free_tier']} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <option value="active" className="bg-zinc-900">有効</option>
+                        <option value="free" className="bg-zinc-900">無料</option>
+                        <option value="free_tier" className="bg-zinc-900">無効</option>
+                      </select>
+                    </div>
+
                     {/* 権限 */}
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">権限</label>
@@ -628,11 +780,11 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                         value={member.role || 'member'}
                         onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'admin')}
                         disabled={isUpdating}
-                        className={`w-full px-2 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${
+                        className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${
                           member.role === 'admin'
                             ? 'bg-purple-500/20 text-purple-300'
                             : 'bg-zinc-700 text-zinc-300'
-                        } ${isUpdating ? 'opacity-50' : ''}`}
+                        } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <option value="member" className="bg-zinc-900">メンバー</option>
                         <option value="admin" className="bg-zinc-900">管理者</option>
@@ -646,7 +798,7 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                         value={currentRank}
                         onChange={(e) => handleRankChange(member.id, currentPoints, e.target.value as Rank)}
                         disabled={isUpdating}
-                        className={`w-full px-2 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${rankColors[currentRank]} ${isUpdating ? 'opacity-50' : ''}`}
+                        className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${rankColors[currentRank]} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <option value="D" className="bg-zinc-900">D (0pt〜)</option>
                         <option value="C" className="bg-zinc-900">C (100pt〜)</option>
@@ -656,19 +808,33 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                     </div>
 
                     {/* メンバータイプ */}
-                    <div className="col-span-2 sm:col-span-2">
+                    <div>
                       <label className="block text-xs text-zinc-500 mb-1">タイプ</label>
                       <select
                         value={memberType}
                         onChange={(e) => handleMembershipTypeChange(member.id, e.target.value as MembershipType)}
                         disabled={isUpdating}
-                        className={`w-full px-2 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${typeColors[memberType]} ${isUpdating ? 'opacity-50' : ''}`}
+                        className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${typeColors[memberType]} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <option value="standard" className="bg-zinc-900">Standard (有料)</option>
                         <option value="model" className="bg-zinc-900">Model (無料)</option>
                         <option value="ambassador" className="bg-zinc-900">Ambassador (無料)</option>
                         <option value="staff" className="bg-zinc-900">Staff (無料)</option>
                         <option value="partner" className="bg-zinc-900">Partner (無料)</option>
+                      </select>
+                    </div>
+
+                    {/* マップ表示 */}
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">マップ表示</label>
+                      <select
+                        value={member.membership_status || 'active'}
+                        onChange={(e) => handleMembershipStatusChange(member.id, e.target.value as 'active' | 'inactive')}
+                        disabled={isUpdating}
+                        className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${membershipStatusColors[member.membership_status || 'active']} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <option value="active" className="bg-zinc-900">表示する</option>
+                        <option value="inactive" className="bg-zinc-900">非表示</option>
                       </select>
                     </div>
                   </div>

@@ -1,9 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { MembershipType, isFreeMembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
+import { Language, getInitialLanguage, getTranslations } from '@/lib/i18n'
+import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
+
+const LANGUAGE_KEY = 'fomus-guild-language'
 
 type Mode = 'login' | 'register'
 type RegisterStep = 'invite' | 'email' | 'sent'
@@ -11,6 +15,7 @@ type RegisterStep = 'invite' | 'email' | 'sent'
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('register')
   const [registerStep, setRegisterStep] = useState<RegisterStep>('invite')
+  const [language, setLanguageState] = useState<Language>('en')
 
   // Login state
   const [loginEmail, setLoginEmail] = useState('')
@@ -31,6 +36,18 @@ export default function LoginPage() {
   const [registerError, setRegisterError] = useState('')
 
   const supabase = createClient()
+
+  useEffect(() => {
+    const lang = getInitialLanguage()
+    setLanguageState(lang)
+  }, [])
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang)
+    localStorage.setItem(LANGUAGE_KEY, lang)
+  }
+
+  const t = getTranslations(language)
 
   // 既存ユーザーログイン
   const handleLogin = async (e: React.FormEvent) => {
@@ -53,7 +70,7 @@ export default function LoginPage() {
 
     setLoginMessage({
       type: 'success',
-      text: 'ログインリンクをメールで送信しました。メールをご確認ください。',
+      text: t.loginLinkSent,
     })
     setLoginLoading(false)
   }
@@ -71,13 +88,13 @@ export default function LoginPage() {
       .single()
 
     if (error || !data) {
-      setInviteError('この招待コードは無効です')
+      setInviteError(t.invalidCode)
       setInviteLoading(false)
       return
     }
 
     if (data.used) {
-      setInviteError('この招待コードは既に使用されています')
+      setInviteError(t.codeAlreadyUsed)
       setInviteLoading(false)
       return
     }
@@ -100,13 +117,13 @@ export default function LoginPage() {
     setRegisterLoading(true)
     setRegisterError('')
 
+    // 招待コードをcookieに保存（メールリンクからの戻り時に使用）
+    document.cookie = `pending_invite_code=${validatedInvite.code}; path=/; max-age=3600; SameSite=Lax`
+
     const { error } = await supabase.auth.signInWithOtp({
       email: registerEmail,
       options: {
         emailRedirectTo: `${window.location.origin}/api/auth/callback?invite_code=${validatedInvite.code}`,
-        data: {
-          invite_code: validatedInvite.code,
-        },
       },
     })
 
@@ -122,11 +139,19 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center p-4">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <StandaloneLanguageSwitcher
+          language={language}
+          onLanguageChange={setLanguage}
+        />
+      </div>
+
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">FOMUS GUILD</h1>
-          <p className="text-zinc-300">Join the global MASU community</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t.loginTitle}</h1>
+          <p className="text-zinc-300">{t.loginSubtitle}</p>
         </div>
 
         {/* Mode Tabs */}
@@ -139,7 +164,7 @@ export default function LoginPage() {
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            新規登録
+            {t.newRegistration}
           </button>
           <button
             onClick={() => setMode('login')}
@@ -149,7 +174,7 @@ export default function LoginPage() {
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            ログイン
+            {t.login}
           </button>
         </div>
 
@@ -160,16 +185,16 @@ export default function LoginPage() {
           {mode === 'login' && (
             <>
               <div className="text-center mb-6">
-                <h2 className="text-xl font-medium text-white mb-2">既存メンバーログイン</h2>
+                <h2 className="text-xl font-medium text-white mb-2">{t.existingMemberLogin}</h2>
                 <p className="text-sm text-zinc-400">
-                  登録済みのメールアドレスを入力してください
+                  {t.enterRegisteredEmail}
                 </p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label htmlFor="login-email" className="block text-sm font-medium text-zinc-300 mb-1">
-                    メールアドレス
+                    {t.emailAddress}
                   </label>
                   <input
                     id="login-email"
@@ -205,10 +230,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      送信中...
+                      {t.sending}
                     </>
                   ) : (
-                    'ログインリンクを送信'
+                    t.sendLoginLink
                   )}
                 </button>
               </form>
@@ -219,16 +244,16 @@ export default function LoginPage() {
           {mode === 'register' && registerStep === 'invite' && (
             <>
               <div className="text-center mb-6">
-                <h2 className="text-xl font-medium text-white mb-2">招待コードを入力</h2>
+                <h2 className="text-xl font-medium text-white mb-2">{t.enterInviteCode}</h2>
                 <p className="text-sm text-zinc-400">
-                  招待コードがない場合は、既存メンバーから招待を受けてください
+                  {t.noInviteCode}
                 </p>
               </div>
 
               <form onSubmit={handleCheckInvite} className="space-y-4">
                 <div>
                   <label htmlFor="invite-code" className="block text-sm font-medium text-zinc-300 mb-1">
-                    招待コード
+                    {t.inviteCode}
                   </label>
                   <input
                     id="invite-code"
@@ -236,7 +261,7 @@ export default function LoginPage() {
                     required
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    placeholder="例: ABC12345"
+                    placeholder={t.inviteCodePlaceholder}
                     className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent font-mono text-center text-lg tracking-wider"
                     maxLength={8}
                   />
@@ -259,10 +284,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      確認中...
+                      {t.checking}
                     </>
                   ) : (
-                    '次へ'
+                    t.next
                   )}
                 </button>
               </form>
@@ -278,10 +303,10 @@ export default function LoginPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-medium text-white mb-2">招待コード確認完了</h2>
+                <h2 className="text-xl font-medium text-white mb-2">{t.inviteConfirmed}</h2>
                 {validatedInvite.isFree && (
                   <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium mt-2">
-                    {MEMBERSHIP_TYPE_LABELS[validatedInvite.membershipType]} (無料招待)
+                    {MEMBERSHIP_TYPE_LABELS[validatedInvite.membershipType]} {t.freeInvite}
                   </div>
                 )}
               </div>
@@ -289,7 +314,7 @@ export default function LoginPage() {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
                   <label htmlFor="register-email" className="block text-sm font-medium text-zinc-300 mb-1">
-                    メールアドレス
+                    {t.emailAddress}
                   </label>
                   <input
                     id="register-email"
@@ -319,10 +344,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      送信中...
+                      {t.sending}
                     </>
                   ) : (
-                    '登録リンクを送信'
+                    t.sendRegisterLink
                   )}
                 </button>
 
@@ -331,16 +356,12 @@ export default function LoginPage() {
                   onClick={() => { setRegisterStep('invite'); setValidatedInvite(null); }}
                   className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
                 >
-                  ← 招待コードを変更
+                  {t.changeInviteCode}
                 </button>
               </form>
 
               <p className="text-xs text-zinc-500 text-center mt-4">
-                {validatedInvite.isFree ? (
-                  <>無料でFOMUS GUILDに参加できます</>
-                ) : (
-                  <>メール確認後、$10/月のサブスクリプションで参加できます</>
-                )}
+                {validatedInvite.isFree ? t.freeJoinGuild : t.paidJoinGuild}
               </p>
             </>
           )}
@@ -353,12 +374,12 @@ export default function LoginPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-xl font-medium text-white mb-2">メールを確認してください</h2>
+              <h2 className="text-xl font-medium text-white mb-2">{t.checkEmailForRegister}</h2>
               <p className="text-zinc-400 text-sm mb-2">
-                <strong className="text-white">{registerEmail}</strong> に登録リンクを送信しました
+                {t.registerLinkSent} <strong className="text-white">{registerEmail}</strong>
               </p>
               <p className="text-zinc-500 text-xs">
-                メールのリンクをクリックして登録を完了してください
+                {t.clickLinkToComplete}
               </p>
             </div>
           )}
@@ -367,7 +388,7 @@ export default function LoginPage() {
         {/* Back to home */}
         <div className="mt-6 text-center">
           <Link href="/" className="text-zinc-400 hover:text-white text-sm transition-colors">
-            ← Back to Home
+            {t.backToHome}
           </Link>
         </div>
       </div>

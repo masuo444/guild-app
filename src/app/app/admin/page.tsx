@@ -73,9 +73,9 @@ export default async function AdminPage(props: Props) {
   ] = await Promise.all([
     supabase
       .from('invites')
-      .select('*, profiles:used_by(display_name)')
+      .select('*, inviter:invited_by(display_name, membership_id), invitee:used_by(display_name, membership_id)')
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(100),
     supabase
       .from('profiles')
       .select('*')

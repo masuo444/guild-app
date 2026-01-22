@@ -1,60 +1,131 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { Language, getInitialLanguage } from '@/lib/i18n'
+import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
-// ログイン機能は一時的に無効化
-export default async function HomePage() {
+const LANGUAGE_KEY = 'fomus-guild-language'
+
+export default function HomePage() {
+  const [language, setLanguage] = useState<Language>('ja')
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  useEffect(() => {
+    const lang = getInitialLanguage()
+    setLanguage(lang)
+    setIsLoaded(true)
+  }, [])
+
+  const handleLanguageChange = (lang: Language) => {
+    setLanguage(lang)
+    localStorage.setItem(LANGUAGE_KEY, lang)
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+        <div className="animate-spin w-6 h-6 border border-amber-300 border-t-amber-600 rounded-full" />
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-900 text-white">
-      {/* ナビゲーション */}
-      <nav className="absolute top-0 left-0 right-0 p-6">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">FOMUS GUILD</h1>
-          <Link
-            href="/app"
-            className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
-          >
-            Enter App
-          </Link>
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-orange-50 to-green-50 text-stone-800 flex flex-col">
+      {/* Header */}
+      <header className="w-full p-6 md:p-8">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
+          <div>
+            <h1 className="text-lg md:text-xl font-semibold tracking-wide text-stone-700">
+              FOMUS GUILD
+            </h1>
+            <p className="text-xs text-stone-500 tracking-widest mt-0.5">
+              Invitation Only
+            </p>
+          </div>
+          <StandaloneLanguageSwitcher
+            language={language}
+            onLanguageChange={handleLanguageChange}
+            theme="light"
+          />
         </div>
-      </nav>
+      </header>
 
-      {/* ヒーロー */}
-      <main className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
-        <div className="max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800 text-zinc-300 text-sm mb-6">
-            <span className="w-2 h-2 bg-green-500 rounded-full" />
-            Invitation Only
+      {/* Main */}
+      <main className="flex-1 flex items-center justify-center px-6 md:px-8 py-8 md:py-12">
+        <div className="max-w-4xl mx-auto w-full">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+            {/* Image */}
+            <div className="order-1 md:order-2 flex justify-center">
+              <div className="relative w-full max-w-sm aspect-square rounded-2xl overflow-hidden shadow-xl">
+                <Image
+                  src="/fomus-masu.png"
+                  alt="FOMUS Masu - Japanese traditional wooden cups"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="order-2 md:order-1 text-center md:text-left">
+              {/* Main Copy */}
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-medium leading-relaxed tracking-wide text-stone-800 mb-6">
+                {language === 'ja' ? (
+                  <>世界とつながり、<br />日本の文化づくりに<br className="hidden md:block" />関わる場所。</>
+                ) : (
+                  <>A place to connect<br />with the world and shape<br className="hidden md:block" />Japanese culture.</>
+                )}
+              </h2>
+
+              {/* Sub Copy */}
+              <p className="text-sm md:text-base text-stone-600 leading-relaxed mb-8">
+                {language === 'ja' ? (
+                  <>FOMUS GUILDは、日本の伝統工芸「枡」を起点に生まれた招待制のコミュニティです。</>
+                ) : (
+                  <>FOMUS GUILD is an invitation-only community born from the Japanese craft of Masu.</>
+                )}
+              </p>
+
+              {/* Additional Copy */}
+              <p className="text-xs md:text-sm text-stone-500 mb-8 md:mb-10">
+                {language === 'ja' ? (
+                  <>参加者は「ユーザー」ではなく、<br className="sm:hidden" />文化づくりの"仲間"として迎えられます。</>
+                ) : (
+                  <>Members are welcomed not as users,<br className="sm:hidden" />but as companions in cultural creation.</>
+                )}
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 md:justify-start justify-center">
+                <Link
+                  href="/auth/login"
+                  className="inline-flex items-center justify-center px-8 py-3.5 bg-stone-800 text-white rounded-full font-medium text-sm md:text-base hover:bg-stone-700 transition-colors min-w-[180px] shadow-lg"
+                >
+                  {language === 'ja' ? 'ギルドに入る' : 'Enter the Guild'}
+                </Link>
+                <Link
+                  href="/app?demo=true"
+                  className="inline-flex items-center justify-center px-6 py-3 text-stone-600 hover:text-stone-800 transition-colors text-sm"
+                >
+                  {language === 'ja' ? 'デモを見る →' : 'View Demo →'}
+                </Link>
+              </div>
+            </div>
           </div>
-
-          <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-            A Private Guild for
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200">
-              Global Creators
-            </span>
-          </h2>
-
-          <p className="text-lg text-zinc-400 mb-8 max-w-lg mx-auto">
-            Connect with like-minded members, unlock exclusive benefits,
-            and grow together across borders.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/app"
-              className="px-8 py-3 bg-white text-zinc-900 rounded-lg font-medium hover:bg-zinc-100 transition-colors"
-            >
-              Enter App
-            </Link>
-            <Link
-              href="/app?demo=true"
-              className="px-8 py-3 border border-zinc-500 text-white rounded-lg font-medium hover:bg-white/10 transition-colors"
-            >
-              Try Demo
-            </Link>
-          </div>
-
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="w-full p-6 md:p-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-xs text-stone-400">
+            {language === 'ja' ? '運営：FOMUS / MaSU' : 'Operated by FOMUS / MaSU'}
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }

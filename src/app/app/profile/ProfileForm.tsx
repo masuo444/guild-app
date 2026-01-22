@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
 import { generateInviteCode } from '@/lib/utils'
+import { updateProfile } from './actions'
 
 interface ProfileFormProps {
   profile: Profile
@@ -120,8 +121,6 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     setSaving(true)
     setMessage(null)
 
-    const supabase = createClient()
-
     // 都市・国が設定されている場合は Geocoding で座標を取得
     let lat = profile.lat || 0
     let lng = profile.lng || 0
@@ -144,22 +143,21 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       }
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        display_name: formData.display_name,
-        instagram_id: formData.instagram_id || null,
-        avatar_url: formData.avatar_url || null,
-        home_country: formData.home_country,
-        home_city: formData.home_city,
-        lat,
-        lng,
-        show_location_on_map: formData.show_location_on_map,
-      })
-      .eq('id', profile.id)
+    // Server Actionを使用してプロフィールを更新（マップページのキャッシュも無効化される）
+    const result = await updateProfile({
+      userId: profile.id,
+      display_name: formData.display_name,
+      instagram_id: formData.instagram_id || null,
+      avatar_url: formData.avatar_url || null,
+      home_country: formData.home_country,
+      home_city: formData.home_city,
+      lat,
+      lng,
+      show_location_on_map: formData.show_location_on_map,
+    })
 
-    if (error) {
-      setMessage({ type: 'error', text: 'Failed to update profile' })
+    if (!result.success) {
+      setMessage({ type: 'error', text: result.error || 'Failed to update profile' })
     } else {
       setMessage({ type: 'success', text: 'Profile updated successfully' })
       router.refresh()

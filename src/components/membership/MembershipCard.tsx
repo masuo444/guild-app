@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Profile, Rank, MembershipType, isFreeMembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
 import { formatDate } from '@/lib/utils'
 import { calculateRank } from '@/config/rank'
@@ -7,11 +8,14 @@ import { calculateRank } from '@/config/rank'
 interface MembershipCardProps {
   profile: Profile
   points: number
+  inviteCount?: number
   translations?: {
     guildMember: string
     memberSince: string
     points: string
     rank: string
+    invites?: string
+    tapToFlip?: string
   }
 }
 
@@ -112,7 +116,8 @@ function GuildEmblem() {
   )
 }
 
-export function MembershipCard({ profile, points, translations }: MembershipCardProps) {
+export function MembershipCard({ profile, points, inviteCount = 0, translations }: MembershipCardProps) {
+  const [isFlipped, setIsFlipped] = useState(false)
   const rank = calculateRank(points)
   const membershipType = profile.membership_type || 'standard'
   const isFree = isFreeMembershipType(membershipType)
@@ -123,122 +128,196 @@ export function MembershipCard({ profile, points, translations }: MembershipCard
     memberSince: 'Member Since',
     points: 'Points',
     rank: 'Rank',
+    invites: 'Invites',
+    tapToFlip: 'Tap to flip',
+  }
+
+  const handleFlip = () => {
+    setIsFlipped(!isFlipped)
   }
 
   return (
-    <div className="w-full max-w-md mx-auto perspective-1000">
-      <div className="relative aspect-[1.586/1] rounded-xl overflow-hidden shadow-2xl transform transition-transform duration-300 hover:scale-[1.02]">
-        {/* メイン背景（ダーク革風） */}
+    <div className="w-full max-w-md mx-auto" style={{ perspective: '1000px' }}>
+      <div
+        onClick={handleFlip}
+        className="relative aspect-[1.586/1] cursor-pointer"
+        style={{
+          transformStyle: 'preserve-3d',
+          transition: 'transform 0.6s',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+        }}
+      >
+        {/* 表面（フロント） */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 rounded-xl overflow-hidden shadow-2xl"
           style={{
-            background: 'linear-gradient(135deg, #2a2420 0%, #1a1614 50%, #2a2420 100%)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
           }}
-        />
+        >
+          {/* メイン背景（ダーク革風） */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(135deg, #2a2420 0%, #1a1614 50%, #2a2420 100%)',
+            }}
+          />
 
-        {/* 微細なテクスチャ効果 */}
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          }}
-        />
+          {/* 微細なテクスチャ効果 */}
+          <div
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+            }}
+          />
 
-        {/* ゴールドのグロー効果 */}
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#d4af37] via-transparent to-transparent" />
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#b8860b] via-transparent to-transparent" />
+          {/* ゴールドのグロー効果 */}
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#d4af37] via-transparent to-transparent" />
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#b8860b] via-transparent to-transparent" />
 
-        {/* シマー効果（アニメーション） */}
-        <div className="absolute inset-0 opacity-5 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent -translate-x-full animate-[shimmer_4s_infinite]" />
+          {/* シマー効果（アニメーション） */}
+          <div className="absolute inset-0 opacity-5 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent -translate-x-full animate-[shimmer_4s_infinite]" />
 
-        {/* コーナーフレーム */}
-        <CornerFrame position="tl" />
-        <CornerFrame position="tr" />
-        <CornerFrame position="bl" />
-        <CornerFrame position="br" />
+          {/* コーナーフレーム */}
+          <CornerFrame position="tl" />
+          <CornerFrame position="tr" />
+          <CornerFrame position="bl" />
+          <CornerFrame position="br" />
 
-        {/* 内側のゴールドボーダー */}
-        <div className="absolute inset-3 rounded-lg border border-[#d4af37]/30" />
+          {/* 内側のゴールドボーダー */}
+          <div className="absolute inset-3 rounded-lg border border-[#d4af37]/30" />
 
-        {/* メインコンテンツ */}
-        <div className="relative z-10 h-full p-5 flex flex-col justify-between">
-          {/* トップセクション */}
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <GuildEmblem />
-                <div>
-                  <h2 className="text-[#f5e6d3] font-bold text-lg tracking-wider" style={{ fontFamily: 'serif' }}>
-                    FOMUS GUILD
-                  </h2>
-                  <p className="text-[#a89984] text-[10px] uppercase tracking-[0.2em]">
-                    {t.guildMember}
+          {/* メインコンテンツ */}
+          <div className="relative z-10 h-full p-5 flex flex-col justify-between">
+            {/* トップセクション */}
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <GuildEmblem />
+                  <div>
+                    <h2 className="text-[#f5e6d3] font-bold text-lg tracking-wider" style={{ fontFamily: 'serif' }}>
+                      FOMUS GUILD
+                    </h2>
+                    <p className="text-[#a89984] text-[10px] uppercase tracking-[0.2em]">
+                      {t.guildMember}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <ShieldRankBadge rank={rank} label={t.rank} />
+            </div>
+
+            {/* センターセクション - メンバー名 */}
+            <div className="flex-1 flex items-center">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-[#f5e6d3] text-2xl font-light tracking-wide" style={{ fontFamily: 'serif' }}>
+                    {profile.display_name || 'Member'}
+                  </p>
+                  {/* 無料メンバーバッジ */}
+                  {isFree && (
+                    <span
+                      className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                      style={{
+                        backgroundColor: typeStyle.bgColor,
+                        color: typeStyle.textColor,
+                      }}
+                    >
+                      {MEMBERSHIP_TYPE_LABELS[membershipType]}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-12 h-px bg-gradient-to-r from-[#d4af37]/60 to-transparent" />
+                  <p className="text-[#6b5b4f] font-mono text-xs tracking-wider">
+                    {profile.membership_id}
                   </p>
                 </div>
               </div>
             </div>
-            <ShieldRankBadge rank={rank} label={t.rank} />
-          </div>
 
-          {/* センターセクション - メンバー名 */}
-          <div className="flex-1 flex items-center">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-[#f5e6d3] text-2xl font-light tracking-wide" style={{ fontFamily: 'serif' }}>
-                  {profile.display_name || 'Member'}
+            {/* ボトムセクション */}
+            <div className="flex justify-between items-end">
+              {/* ポイント */}
+              <div>
+                <p className="text-[#6b5b4f] text-[10px] uppercase tracking-[0.15em] mb-0.5">
+                  {t.points}
                 </p>
-                {/* 無料メンバーバッジ */}
-                {isFree && (
-                  <span
-                    className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                    style={{
-                      backgroundColor: typeStyle.bgColor,
-                      color: typeStyle.textColor,
-                    }}
-                  >
-                    {MEMBERSHIP_TYPE_LABELS[membershipType]}
-                  </span>
-                )}
+                <p className="text-[#d4af37] text-3xl font-light" style={{ fontFamily: 'serif' }}>
+                  {points.toLocaleString()}
+                  <span className="text-[#6b5b4f] text-sm ml-1">pt</span>
+                </p>
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="w-12 h-px bg-gradient-to-r from-[#d4af37]/60 to-transparent" />
-                <p className="text-[#6b5b4f] font-mono text-xs tracking-wider">
-                  {profile.membership_id}
+
+              {/* 加入日 */}
+              <div className="text-right">
+                <p className="text-[#6b5b4f] text-[10px] uppercase tracking-[0.15em] mb-0.5">
+                  {t.memberSince}
+                </p>
+                <p className="text-[#a89984] text-sm font-light">
+                  {formatDate(profile.created_at)}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* ボトムセクション */}
-          <div className="flex justify-between items-end">
-            {/* ポイント */}
-            <div>
-              <p className="text-[#6b5b4f] text-[10px] uppercase tracking-[0.15em] mb-0.5">
-                {t.points}
-              </p>
-              <p className="text-[#d4af37] text-3xl font-light" style={{ fontFamily: 'serif' }}>
-                {points.toLocaleString()}
-                <span className="text-[#6b5b4f] text-sm ml-1">pt</span>
-              </p>
-            </div>
-
-            {/* 加入日 */}
-            <div className="text-right">
-              <p className="text-[#6b5b4f] text-[10px] uppercase tracking-[0.15em] mb-0.5">
-                {t.memberSince}
-              </p>
-              <p className="text-[#a89984] text-sm font-light">
-                {formatDate(profile.created_at)}
-              </p>
-            </div>
-          </div>
+          {/* カードエッジのハイライト */}
+          <div className="absolute inset-0 rounded-xl border border-[#d4af37]/20" />
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/40 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/20 to-transparent" />
         </div>
 
-        {/* カードエッジのハイライト */}
-        <div className="absolute inset-0 rounded-xl border border-[#d4af37]/20" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/20 to-transparent" />
+        {/* 裏面（バック） */}
+        <div
+          className="absolute inset-0 rounded-xl overflow-hidden shadow-2xl"
+          style={{
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+          }}
+        >
+          {/* 背景 */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(135deg, #1a1614 0%, #2a2420 50%, #1a1614 100%)',
+            }}
+          />
+
+          {/* テクスチャ */}
+          <div
+            className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+            }}
+          />
+
+          {/* ゴールドのグロー効果 */}
+          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#d4af37] via-transparent to-transparent" />
+
+          {/* コーナーフレーム */}
+          <CornerFrame position="tl" />
+          <CornerFrame position="tr" />
+          <CornerFrame position="bl" />
+          <CornerFrame position="br" />
+
+          {/* 内側のゴールドボーダー */}
+          <div className="absolute inset-3 rounded-lg border border-[#d4af37]/30" />
+
+          {/* 裏面コンテンツ - 招待数のみ */}
+          <div className="relative z-10 h-full flex items-center justify-center">
+            <p className="text-[#d4af37] text-7xl font-light" style={{ fontFamily: 'serif' }}>
+              {inviteCount}
+            </p>
+          </div>
+
+          {/* カードエッジのハイライト */}
+          <div className="absolute inset-0 rounded-xl border border-[#d4af37]/20" />
+        </div>
       </div>
+
+      {/* タップヒント */}
+      <p className="text-center text-[#6b5b4f] text-xs mt-2">{t.tapToFlip}</p>
 
       {/* スタイル定義 */}
       <style jsx>{`

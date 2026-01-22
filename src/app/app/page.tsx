@@ -135,6 +135,12 @@ export default async function DashboardPage(props: Props) {
   // ポイント集計
   const totalPoints = logs?.reduce((sum, log) => sum + (log.points || 0), 0) ?? 0
 
+  // 招待した人数を取得
+  const { count: inviteCount } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('invited_by', user.id)
+
   // プロフィールがない場合のフォールバック
   const userProfile: Profile = profile || {
     id: user.id,
@@ -161,6 +167,7 @@ export default async function DashboardPage(props: Props) {
       profile={userProfile}
       totalPoints={totalPoints}
       recentLogs={logs || []}
+      inviteCount={inviteCount || 0}
     />
   )
 }

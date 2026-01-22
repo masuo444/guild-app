@@ -10,9 +10,10 @@ interface DashboardClientProps {
   profile: Profile
   totalPoints: number
   recentLogs: ActivityLog[]
+  inviteCount: number
 }
 
-export function DashboardClient({ profile, totalPoints, recentLogs }: DashboardClientProps) {
+export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount }: DashboardClientProps) {
   const rank = calculateRank(totalPoints)
   const pointsToNext = getPointsToNextRank(totalPoints)
 
@@ -22,7 +23,7 @@ export function DashboardClient({ profile, totalPoints, recentLogs }: DashboardC
 
       {/* 会員証 */}
       <div className="mb-8">
-        <MembershipCard profile={profile} points={totalPoints} />
+        <MembershipCard profile={profile} points={totalPoints} inviteCount={inviteCount} />
       </div>
 
       {/* ステータスカード */}
