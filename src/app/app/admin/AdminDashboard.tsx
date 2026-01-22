@@ -142,6 +142,7 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
   const [creating, setCreating] = useState(false)
   const [selectedType, setSelectedType] = useState<MembershipType>('standard')
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [lastCreatedCode, setLastCreatedCode] = useState<string | null>(null)
 
   // 無料招待を発行できるか
   const canCreateFreeInvite = canIssueFreeInvite(adminEmail)
@@ -163,15 +164,19 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
       membership_type: selectedType,
     })
 
+    setCreating(false)
+
     if (error) {
       console.error('招待コード作成エラー:', error)
       alert(`エラー: ${error.message}`)
     } else {
-      alert(`招待コード ${code} を作成しました`)
+      setLastCreatedCode(code)
+      // コードをクリップボードにコピー
+      const url = `${window.location.origin}/invite/${code}`
+      navigator.clipboard.writeText(url)
+      // ページをリフレッシュ
+      router.refresh()
     }
-
-    router.refresh()
-    setCreating(false)
   }
 
   const copyToClipboard = (code: string) => {
@@ -228,6 +233,16 @@ function InvitesTab({ invites, adminId, adminEmail }: { invites: AdminDashboardP
             <p className="text-xs text-zinc-500 mt-3">
               ※ 無料招待コードはスーパー管理者のみ発行可能です
             </p>
+          )}
+          {lastCreatedCode && (
+            <div className="mt-3 p-3 bg-green-500/20 border border-green-500/30 rounded-xl">
+              <p className="text-green-300 text-sm font-medium">
+                招待コード <span className="font-mono">{lastCreatedCode}</span> を作成しました！
+              </p>
+              <p className="text-green-400/70 text-xs mt-1">
+                招待URLをクリップボードにコピーしました
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
