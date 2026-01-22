@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
+import { generateInviteCode } from '@/lib/utils'
 
 interface ProfileFormProps {
   profile: Profile
@@ -20,6 +21,13 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 招待コード関連
+  const [creatingInvite, setCreatingInvite] = useState(false)
+  const [myInvites, setMyInvites] = useState<Array<{ code: string; used: boolean; created_at: string }>>([])
+  const [invitesLoaded, setInvitesLoaded] = useState(false)
+  const [copiedInviteCode, setCopiedInviteCode] = useState<string | null>(null)
+  const [lastCreatedInvite, setLastCreatedInvite] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     display_name: profile.display_name || '',
@@ -164,6 +172,58 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/')
+  }
+
+  // 自分の招待コードを取得
+  const loadMyInvites = async () => {
+    if (invitesLoaded) return
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('invites')
+      .select('code, used, created_at')
+      .eq('invited_by', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (data) {
+      setMyInvites(data)
+    }
+    setInvitesLoaded(true)
+  }
+
+  // 招待コードを発行
+  const handleCreateInvite = async () => {
+    setCreatingInvite(true)
+    const supabase = createClient()
+    const code = generateInviteCode()
+
+    const { data, error } = await supabase.from('invites').insert({
+      code,
+      invited_by: profile.id,
+      used: false,
+      membership_type: 'standard', // 一般ユーザーはスタンダードのみ
+    }).select().single()
+
+    setCreatingInvite(false)
+
+    if (error) {
+      console.error('招待コード作成エラー:', error)
+      alert(`エラー: ${error.message}`)
+    } else if (data) {
+      setMyInvites(prev => [{ code: data.code, used: false, created_at: data.created_at }, ...prev])
+      setLastCreatedInvite(code)
+      // クリップボードにコピー
+      const url = `${window.location.origin}/invite/${code}`
+      navigator.clipboard.writeText(url)
+    }
+  }
+
+  // 招待URLをコピー
+  const copyInviteUrl = (code: string) => {
+    const url = `${window.location.origin}/invite/${code}`
+    navigator.clipboard.writeText(url)
+    setCopiedInviteCode(code)
+    setTimeout(() => setCopiedInviteCode(null), 2000)
   }
 
   return (
@@ -378,6 +438,76 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                 {new Date(profile.created_at).toLocaleDateString()}
               </span>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 招待コード発行 */}
+      <Card>
+        <CardHeader>
+          <h2 className="font-semibold text-white">友達を招待</h2>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-zinc-400 mb-4">
+            招待コードを発行して友達をFOMUS GUILDに招待できます。
+            招待された方は月額会員として参加できます。
+          </p>
+
+          <Button onClick={handleCreateInvite} loading={creatingInvite} className="w-full mb-4">
+            招待コードを発行
+          </Button>
+
+          {lastCreatedInvite && (
+            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl">
+              <p className="text-green-300 text-sm font-medium">
+                招待コード <span className="font-mono">{lastCreatedInvite}</span> を作成しました！
+              </p>
+              <p className="text-green-400/70 text-xs mt-1">
+                招待URLをクリップボードにコピーしました
+              </p>
+            </div>
+          )}
+
+          {/* 発行済みコード一覧 */}
+          <div className="border-t border-zinc-500/30 pt-4">
+            <button
+              onClick={loadMyInvites}
+              className="text-sm text-[#c0c0c0] hover:text-white transition-colors"
+            >
+              {invitesLoaded ? '発行済みコード' : '発行済みコードを表示'}
+            </button>
+
+            {invitesLoaded && myInvites.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {myInvites.map((invite) => (
+                  <div
+                    key={invite.code}
+                    className={`flex items-center justify-between p-2 rounded-lg ${
+                      invite.used ? 'bg-zinc-700/50' : 'bg-white/5'
+                    }`}
+                  >
+                    <div>
+                      <span className="font-mono text-sm text-white">{invite.code}</span>
+                      <span className={`ml-2 text-xs ${invite.used ? 'text-zinc-500' : 'text-green-400'}`}>
+                        {invite.used ? '使用済み' : '未使用'}
+                      </span>
+                    </div>
+                    {!invite.used && (
+                      <button
+                        onClick={() => copyInviteUrl(invite.code)}
+                        className="text-xs text-[#c0c0c0] hover:text-white transition-colors"
+                      >
+                        {copiedInviteCode === invite.code ? 'コピー済み!' : 'URLをコピー'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {invitesLoaded && myInvites.length === 0 && (
+              <p className="text-zinc-500 text-sm mt-2">まだ招待コードを発行していません</p>
+            )}
           </div>
         </CardContent>
       </Card>
