@@ -115,6 +115,11 @@ export async function GET(request: Request) {
           subscription_status: isAdmin ? 'active' : subscriptionStatus,
           invited_by: invitedBy,
         })
+
+        // スタンダード会員（有料）の場合は決済ページへリダイレクト
+        if (!isAdmin && !isFreeMembershipType(membershipType)) {
+          return NextResponse.redirect(`${origin}/auth/subscribe`)
+        }
       } else if (isAdmin && profile.subscription_status !== 'active') {
         // 既存プロフィールで管理者の場合、ステータスを更新
         await supabase
@@ -124,6 +129,9 @@ export async function GET(request: Request) {
             subscription_status: 'active',
           })
           .eq('id', user.id)
+      } else if (profile.subscription_status === 'free_tier') {
+        // 既存ユーザーで未課金の場合は決済ページへ
+        return NextResponse.redirect(`${origin}/auth/subscribe`)
       }
     }
 
