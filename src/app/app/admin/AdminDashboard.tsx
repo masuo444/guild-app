@@ -162,7 +162,7 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
       invited_by: adminId,
       used: false,
       membership_type: selectedType,
-    }).select('*, profiles:used_by(display_name)').single()
+    }).select().single()
 
     setCreating(false)
 
@@ -170,8 +170,12 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
       console.error('招待コード作成エラー:', error)
       alert(`エラー: ${error.message}`)
     } else if (data) {
-      // ローカルステートに追加して即座に表示
-      setInvites(prev => [data, ...prev])
+      // ローカルステートに追加して即座に表示（profilesは未使用なのでnull）
+      const newInvite = {
+        ...data,
+        profiles: null,
+      }
+      setInvites(prev => [newInvite, ...prev])
       setLastCreatedCode(code)
       // コードをクリップボードにコピー
       const url = `${window.location.origin}/invite/${code}`
