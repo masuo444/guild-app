@@ -386,6 +386,7 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
   const [adding, setAdding] = useState(false)
   const [updatingMember, setUpdatingMember] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [editingPoints, setEditingPoints] = useState<Record<string, string>>({})
 
   // メンバーに割り当てられたロールを取得
   const getMemberRoles = (memberId: string) => {
@@ -589,6 +590,50 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
     }
   }
 
+  const handleDirectPointsChange = async (memberId: string, currentPoints: number) => {
+    const newPointsStr = editingPoints[memberId]
+    if (newPointsStr === undefined || newPointsStr === '') return
+
+    const newPoints = parseInt(newPointsStr)
+    if (isNaN(newPoints)) return
+
+    const pointsDiff = newPoints - currentPoints
+    if (pointsDiff === 0) {
+      setEditingPoints(prev => {
+        const updated = { ...prev }
+        delete updated[memberId]
+        return updated
+      })
+      return
+    }
+
+    setUpdatingMember(memberId)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from('activity_logs').insert({
+        user_id: memberId,
+        type: 'Admin Adjustment',
+        points: pointsDiff,
+        note: `ポイントを${currentPoints}から${newPoints}に調整`,
+      })
+
+      if (error) {
+        alert(`更新エラー: ${error.message}`)
+      } else {
+        setEditingPoints(prev => {
+          const updated = { ...prev }
+          delete updated[memberId]
+          return updated
+        })
+        router.refresh()
+      }
+    } catch (err) {
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingMember(null)
+    }
+  }
+
   // 検索フィルタ
   const filteredMembers = members.filter((member) => {
     const query = searchQuery.toLowerCase()
@@ -757,7 +802,7 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                   </div>
 
                   {/* 中段: 設定項目 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-3">
                     {/* ステータス */}
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">ステータス</label>
@@ -805,6 +850,26 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                         <option value="B" className="bg-zinc-900">B (300pt〜)</option>
                         <option value="A" className="bg-zinc-900">A (800pt〜)</option>
                       </select>
+                    </div>
+
+                    {/* ポイント */}
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">ポイント</label>
+                      <div className="flex gap-1">
+                        <input
+                          type="number"
+                          value={editingPoints[member.id] ?? currentPoints}
+                          onChange={(e) => setEditingPoints(prev => ({ ...prev, [member.id]: e.target.value }))}
+                          onBlur={() => handleDirectPointsChange(member.id, currentPoints)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleDirectPointsChange(member.id, currentPoints)
+                            }
+                          }}
+                          disabled={isUpdating}
+                          className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 bg-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        />
+                      </div>
                     </div>
 
                     {/* メンバータイプ */}
