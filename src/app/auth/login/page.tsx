@@ -10,7 +10,7 @@ import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 const LANGUAGE_KEY = 'fomus-guild-language'
 
 type Mode = 'login' | 'register'
-type RegisterStep = 'invite' | 'email' | 'sent'
+type RegisterStep = 'invite' | 'email' | 'code'
 
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('register')
@@ -21,6 +21,8 @@ export default function LoginPage() {
   const [loginEmail, setLoginEmail] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginMessage, setLoginMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [loginStep, setLoginStep] = useState<'email' | 'code'>('email')
+  const [loginCode, setLoginCode] = useState('')
 
   // Register state
   const [inviteCode, setInviteCode] = useState('')
@@ -34,6 +36,7 @@ export default function LoginPage() {
   const [registerEmail, setRegisterEmail] = useState('')
   const [registerLoading, setRegisterLoading] = useState(false)
   const [registerError, setRegisterError] = useState('')
+  const [registerCode, setRegisterCode] = useState('')
 
   const supabase = createClient()
 
@@ -49,7 +52,7 @@ export default function LoginPage() {
 
   const t = getTranslations(language)
 
-  // 既存ユーザーログイン
+  // 既存ユーザーログイン - OTPコード送信
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoginLoading(true)
@@ -58,7 +61,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: loginEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        shouldCreateUser: false,
       },
     })
 
@@ -68,11 +71,34 @@ export default function LoginPage() {
       return
     }
 
+    setLoginStep('code')
     setLoginMessage({
       type: 'success',
-      text: t.loginLinkSent,
+      text: '認証コードをメールに送信しました。',
     })
     setLoginLoading(false)
+  }
+
+  // OTPコード検証
+  const handleVerifyLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginLoading(true)
+    setLoginMessage(null)
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: loginEmail,
+      token: loginCode,
+      type: 'email',
+    })
+
+    if (error) {
+      setLoginMessage({ type: 'error', text: 'コードが正しくありません。もう一度お試しください。' })
+      setLoginLoading(false)
+      return
+    }
+
+    // ログイン成功 - リダイレクト
+    window.location.href = '/app'
   }
 
   // 招待コード確認
@@ -109,7 +135,7 @@ export default function LoginPage() {
     setInviteLoading(false)
   }
 
-  // 新規登録
+  // 新規登録 - OTPコード送信
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validatedInvite) return
@@ -117,14 +143,8 @@ export default function LoginPage() {
     setRegisterLoading(true)
     setRegisterError('')
 
-    // 招待コードをcookieに保存（メールリンクからの戻り時に使用）
-    document.cookie = `pending_invite_code=${validatedInvite.code}; path=/; max-age=3600; SameSite=Lax`
-
     const { error } = await supabase.auth.signInWithOtp({
       email: registerEmail,
-      options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback?invite_code=${validatedInvite.code}`,
-      },
     })
 
     if (error) {
@@ -133,8 +153,52 @@ export default function LoginPage() {
       return
     }
 
-    setRegisterStep('sent')
+    setRegisterStep('code')
     setRegisterLoading(false)
+  }
+
+  // 新規登録 - OTPコード検証
+  const handleVerifyRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validatedInvite) return
+
+    setRegisterLoading(true)
+    setRegisterError('')
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: registerEmail,
+      token: registerCode,
+      type: 'email',
+    })
+
+    if (error) {
+      setRegisterError('コードが正しくありません。もう一度お試しください。')
+      setRegisterLoading(false)
+      return
+    }
+
+    // 認証成功 - 招待コード処理
+    if (data.user) {
+      const { error: updateError } = await supabase
+        .from('invites')
+        .update({ used: true, used_by: data.user.id })
+        .eq('code', validatedInvite.code)
+        .eq('used', false)
+
+      if (!updateError) {
+        // プロフィール更新
+        await supabase
+          .from('profiles')
+          .update({
+            membership_status: 'active',
+            membership_type: validatedInvite.membershipType,
+            subscription_status: validatedInvite.isFree ? 'free' : 'free_tier',
+          })
+          .eq('id', data.user.id)
+      }
+    }
+
+    window.location.href = validatedInvite.isFree ? '/app' : '/auth/subscribe'
   }
 
   return (
@@ -181,8 +245,8 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white/10 backdrop-blur rounded-xl border border-zinc-500/30 p-6">
 
-          {/* 既存ユーザーログイン */}
-          {mode === 'login' && (
+          {/* 既存ユーザーログイン - メールアドレス入力 */}
+          {mode === 'login' && loginStep === 'email' && (
             <>
               <div className="text-center mb-6">
                 <h2 className="text-xl font-medium text-white mb-2">{t.existingMemberLogin}</h2>
@@ -233,8 +297,82 @@ export default function LoginPage() {
                       {t.sending}
                     </>
                   ) : (
-                    t.sendLoginLink
+                    t.login
                   )}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* 既存ユーザーログイン - 認証コード入力 */}
+          {mode === 'login' && loginStep === 'code' && (
+            <>
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-medium text-white mb-2">認証コードを入力</h2>
+                <p className="text-sm text-zinc-400">
+                  <strong className="text-white">{loginEmail}</strong> に送信されたコードを入力してください
+                </p>
+              </div>
+
+              <form onSubmit={handleVerifyLogin} className="space-y-4">
+                <div>
+                  <label htmlFor="login-code" className="block text-sm font-medium text-zinc-300 mb-1">
+                    認証コード（6桁）
+                  </label>
+                  <input
+                    id="login-code"
+                    type="text"
+                    required
+                    value={loginCode}
+                    onChange={(e) => setLoginCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent font-mono text-center text-2xl tracking-[0.5em]"
+                    maxLength={6}
+                    autoFocus
+                  />
+                </div>
+
+                {loginMessage && (
+                  <div
+                    className={`p-3 rounded-lg text-sm ${
+                      loginMessage.type === 'success'
+                        ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                        : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                    }`}
+                  >
+                    {loginMessage.text}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loginLoading || loginCode.length !== 6}
+                  className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {loginLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      確認中...
+                    </>
+                  ) : (
+                    'ログイン'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setLoginStep('email'); setLoginCode(''); setLoginMessage(null); }}
+                  className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
+                >
+                  メールアドレスを変更する
                 </button>
               </form>
             </>
@@ -347,7 +485,7 @@ export default function LoginPage() {
                       {t.sending}
                     </>
                   ) : (
-                    t.sendRegisterLink
+                    '認証コードを送信'
                   )}
                 </button>
 
@@ -366,22 +504,72 @@ export default function LoginPage() {
             </>
           )}
 
-          {/* 新規登録 - ステップ3: 送信完了 */}
-          {mode === 'register' && registerStep === 'sent' && (
-            <div className="text-center py-4">
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+          {/* 新規登録 - ステップ3: 認証コード入力 */}
+          {mode === 'register' && registerStep === 'code' && (
+            <>
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-medium text-white mb-2">認証コードを入力</h2>
+                <p className="text-sm text-zinc-400">
+                  <strong className="text-white">{registerEmail}</strong> に送信されたコードを入力してください
+                </p>
               </div>
-              <h2 className="text-xl font-medium text-white mb-2">{t.checkEmailForRegister}</h2>
-              <p className="text-zinc-400 text-sm mb-2">
-                {t.registerLinkSent} <strong className="text-white">{registerEmail}</strong>
-              </p>
-              <p className="text-zinc-500 text-xs">
-                {t.clickLinkToComplete}
-              </p>
-            </div>
+
+              <form onSubmit={handleVerifyRegister} className="space-y-4">
+                <div>
+                  <label htmlFor="register-code" className="block text-sm font-medium text-zinc-300 mb-1">
+                    認証コード（6桁）
+                  </label>
+                  <input
+                    id="register-code"
+                    type="text"
+                    required
+                    value={registerCode}
+                    onChange={(e) => setRegisterCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent font-mono text-center text-2xl tracking-[0.5em]"
+                    maxLength={6}
+                    autoFocus
+                  />
+                </div>
+
+                {registerError && (
+                  <div className="p-3 rounded-lg text-sm bg-red-500/20 text-red-300 border border-red-500/30">
+                    {registerError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={registerLoading || registerCode.length !== 6}
+                  className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {registerLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      確認中...
+                    </>
+                  ) : (
+                    '登録する'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setRegisterStep('email'); setRegisterCode(''); setRegisterError(''); }}
+                  className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
+                >
+                  メールアドレスを変更する
+                </button>
+              </form>
+            </>
           )}
         </div>
 
