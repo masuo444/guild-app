@@ -412,11 +412,11 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                   </button>
                 </div>
                 <p className="text-xs text-zinc-400 mb-2">マップをタップしてピンの位置を調整できます</p>
-                <div className="w-full h-[200px] rounded-lg overflow-hidden border border-zinc-500/30">
+                <div className="w-full h-[350px] rounded-lg overflow-hidden border border-zinc-500/30">
                   <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
                     <GoogleMap
                       center={formData.lat && formData.lng ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
-                      zoom={formData.lat && formData.lng ? 12 : 3}
+                      zoom={formData.lat && formData.lng ? 14 : 3}
                       style={{ width: '100%', height: '100%' }}
                       gestureHandling="greedy"
                       disableDefaultUI={true}
