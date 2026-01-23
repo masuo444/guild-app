@@ -145,46 +145,51 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     setSaving(true)
     setMessage(null)
 
-    let lat = formData.lat
-    let lng = formData.lng
+    try {
+      let lat = formData.lat
+      let lng = formData.lng
 
-    // lat/lngが未設定で市/国がある場合のみジオコーディング
-    if (lat === 0 && lng === 0 && (formData.home_city || formData.home_country)) {
-      try {
-        const query = [formData.home_city, formData.home_country].filter(Boolean).join(', ')
-        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-        const response = await fetch(geocodeUrl)
-        const data = await response.json()
-        if (data.results && data.results[0]) {
-          lat = data.results[0].geometry.location.lat
-          lng = data.results[0].geometry.location.lng
+      // lat/lngが未設定で市/国がある場合のみジオコーディング
+      if (lat === 0 && lng === 0 && (formData.home_city || formData.home_country)) {
+        try {
+          const query = [formData.home_city, formData.home_country].filter(Boolean).join(', ')
+          const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+          const response = await fetch(geocodeUrl)
+          const data = await response.json()
+          if (data.results && data.results[0]) {
+            lat = data.results[0].geometry.location.lat
+            lng = data.results[0].geometry.location.lng
+          }
+        } catch {
+          // Geocoding failed - continue with current coordinates
         }
-      } catch {
-        // Geocoding failed - continue with current coordinates
       }
+
+      // Server Actionを使用してプロフィールを更新（マップページのキャッシュも無効化される）
+      const result = await updateProfile({
+        userId: profile.id,
+        display_name: formData.display_name,
+        instagram_id: formData.instagram_id || null,
+        avatar_url: formData.avatar_url || null,
+        home_country: formData.home_country,
+        home_city: formData.home_city,
+        lat,
+        lng,
+        show_location_on_map: formData.show_location_on_map,
+      })
+
+      if (!result.success) {
+        setMessage({ type: 'error', text: result.error || 'Failed to update profile' })
+      } else {
+        setMessage({ type: 'success', text: 'Profile updated successfully' })
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Profile update error:', error)
+      setMessage({ type: 'error', text: 'An error occurred while saving' })
+    } finally {
+      setSaving(false)
     }
-
-    // Server Actionを使用してプロフィールを更新（マップページのキャッシュも無効化される）
-    const result = await updateProfile({
-      userId: profile.id,
-      display_name: formData.display_name,
-      instagram_id: formData.instagram_id || null,
-      avatar_url: formData.avatar_url || null,
-      home_country: formData.home_country,
-      home_city: formData.home_city,
-      lat,
-      lng,
-      show_location_on_map: formData.show_location_on_map,
-    })
-
-    if (!result.success) {
-      setMessage({ type: 'error', text: result.error || 'Failed to update profile' })
-    } else {
-      setMessage({ type: 'success', text: 'Profile updated successfully' })
-      router.refresh()
-    }
-
-    setSaving(false)
   }
 
   const handleSignOut = async () => {
@@ -406,7 +411,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                     {geocoding ? '取得中...' : '住所から再取得'}
                   </button>
                 </div>
-                <p className="text-xs text-zinc-400 mb-2">ピンをドラッグして位置を調整できます</p>
+                <p className="text-xs text-zinc-400 mb-2">マップをタップしてピンの位置を調整できます</p>
                 <div className="w-full h-[200px] rounded-lg overflow-hidden border border-zinc-500/30">
                   <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
                     <GoogleMap
@@ -416,20 +421,19 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                       gestureHandling="greedy"
                       disableDefaultUI={true}
                       zoomControl={true}
+                      onClick={(e) => {
+                        if (e.detail.latLng) {
+                          setFormData(prev => ({
+                            ...prev,
+                            lat: e.detail.latLng!.lat,
+                            lng: e.detail.latLng!.lng,
+                          }))
+                        }
+                      }}
                     >
                       {formData.lat !== 0 && formData.lng !== 0 && (
                         <Marker
                           position={{ lat: formData.lat, lng: formData.lng }}
-                          draggable={true}
-                          onDragEnd={(e) => {
-                            if (e.latLng) {
-                              setFormData(prev => ({
-                                ...prev,
-                                lat: e.latLng!.lat(),
-                                lng: e.latLng!.lng(),
-                              }))
-                            }
-                          }}
                         />
                       )}
                     </GoogleMap>
