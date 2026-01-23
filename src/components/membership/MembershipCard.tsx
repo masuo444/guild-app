@@ -284,31 +284,12 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
             }}
           />
 
-          {/* テクスチャ */}
-          <div
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-            }}
-          />
-
-          {/* ゴールドのグロー効果 */}
-          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#d4af37] via-transparent to-transparent" />
-
-          {/* コーナーフレーム */}
-          <CornerFrame position="tl" />
-          <CornerFrame position="tr" />
-          <CornerFrame position="bl" />
-          <CornerFrame position="br" />
-
-          {/* 内側のゴールドボーダー */}
-          <div className="absolute inset-3 rounded-lg border border-[#d4af37]/30" />
-
-          {/* 裏面コンテンツ */}
-          <div className="relative z-10 h-full" />
-
-          {/* カードエッジのハイライト */}
-          <div className="absolute inset-0 rounded-xl border border-[#d4af37]/20" />
+          {/* 招待数のみ表示 */}
+          <div className="relative z-10 h-full flex items-center justify-center">
+            <p className="text-[#d4af37] text-7xl font-light" style={{ fontFamily: 'serif' }}>
+              {inviteCount}
+            </p>
+          </div>
         </div>
       </div>
 
