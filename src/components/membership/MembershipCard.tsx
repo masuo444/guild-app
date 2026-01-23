@@ -304,12 +304,8 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
           {/* 内側のゴールドボーダー */}
           <div className="absolute inset-3 rounded-lg border border-[#d4af37]/30" />
 
-          {/* 裏面コンテンツ - 招待数のみ */}
-          <div className="relative z-10 h-full flex items-center justify-center">
-            <p className="text-[#d4af37] text-7xl font-light" style={{ fontFamily: 'serif' }}>
-              {inviteCount}
-            </p>
-          </div>
+          {/* 裏面コンテンツ */}
+          <div className="relative z-10 h-full" />
 
           {/* カードエッジのハイライト */}
           <div className="absolute inset-0 rounded-xl border border-[#d4af37]/20" />
