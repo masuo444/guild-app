@@ -186,7 +186,8 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       }
     } catch (error) {
       console.error('Profile update error:', error)
-      setMessage({ type: 'error', text: 'An error occurred while saving' })
+      const msg = error instanceof Error ? error.message : 'Unknown error'
+      setMessage({ type: 'error', text: `Save failed: ${msg}` })
     } finally {
       setSaving(false)
     }
@@ -421,13 +422,15 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                       gestureHandling="greedy"
                       disableDefaultUI={true}
                       zoomControl={true}
+                      clickableIcons={false}
                       onClick={(e) => {
-                        if (e.detail.latLng) {
-                          setFormData(prev => ({
-                            ...prev,
-                            lat: e.detail.latLng!.lat,
-                            lng: e.detail.latLng!.lng,
-                          }))
+                        const latLng = e.detail?.latLng
+                        if (latLng) {
+                          const lat = typeof latLng.lat === 'function' ? (latLng.lat as () => number)() : latLng.lat
+                          const lng = typeof latLng.lng === 'function' ? (latLng.lng as () => number)() : latLng.lng
+                          if (typeof lat === 'number' && typeof lng === 'number') {
+                            setFormData(prev => ({ ...prev, lat, lng }))
+                          }
                         }
                       }}
                     >
