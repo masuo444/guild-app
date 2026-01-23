@@ -113,6 +113,14 @@ const translations = {
     profile: 'プロフィール',
     admin: '管理',
 
+    // Dashboard
+    dashboard: 'ダッシュボード',
+    masuPoints: 'MASU ポイント',
+    noActivity: 'まだアクティビティがありません',
+    maxRank: '最高ランク',
+    notSet: '未設定',
+    ptsToNext: '次まで',
+
     // Recent Activity
     recentActivity: '最近のアクティビティ',
     hubCheckin: 'Hub チェックイン',
@@ -283,6 +291,14 @@ const translations = {
     offers: 'Offers',
     profile: 'Profile',
     admin: 'Admin',
+
+    // Dashboard
+    dashboard: 'Dashboard',
+    masuPoints: 'MASU Points',
+    noActivity: 'No activity yet',
+    maxRank: 'Max Rank',
+    notSet: 'Not set',
+    ptsToNext: 'pts to next',
 
     // Recent Activity
     recentActivity: 'Recent Activity',
