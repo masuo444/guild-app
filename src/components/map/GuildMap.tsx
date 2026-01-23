@@ -5,6 +5,36 @@ import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
+// Apply offset to members sharing the same coordinates
+function applyCoordinateOffset(members: MemberMapData[]): (MemberMapData & { offsetLat: number; offsetLng: number })[] {
+  // Group members by exact coordinates
+  const groups: Record<string, MemberMapData[]> = {}
+  for (const member of members) {
+    if (!member.lat || !member.lng) continue
+    const key = `${member.lat},${member.lng}`
+    if (!groups[key]) groups[key] = []
+    groups[key].push(member)
+  }
+
+  const result: (MemberMapData & { offsetLat: number; offsetLng: number })[] = []
+  for (const group of Object.values(groups)) {
+    if (group.length === 1) {
+      // No offset needed for single members
+      result.push({ ...group[0], offsetLat: group[0].lat!, offsetLng: group[0].lng! })
+    } else {
+      // Spread members in a circle around the original point
+      const radius = 0.006 // ~600m offset
+      for (let i = 0; i < group.length; i++) {
+        const angle = (2 * Math.PI * i) / group.length
+        const offsetLat = group[i].lat! + radius * Math.cos(angle)
+        const offsetLng = group[i].lng! + radius * Math.sin(angle)
+        result.push({ ...group[i], offsetLat, offsetLng })
+      }
+    }
+  }
+  return result
+}
+
 // Calculate marker size based on zoom level (emoji-style small markers)
 function getMarkerSize(zoom: number): { base: number; avatar: number } {
   if (zoom <= 3) {
@@ -152,9 +182,9 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
     setSelected({ type, data })
   }, [])
 
-  // Filtered members
+  // Filtered members with coordinate offset applied
   const filteredMembers = useMemo(() => {
-    return members.filter(m => {
+    const filtered = members.filter(m => {
       if (!m.lat || !m.lng) return false
       const query = searchQuery.toLowerCase()
       const matchesSearch = !searchQuery ||
@@ -163,6 +193,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
         m.home_country?.toLowerCase().includes(query)
       return matchesSearch
     })
+    return applyCoordinateOffset(filtered)
   }, [members, searchQuery])
 
   // Filtered hubs
@@ -214,7 +245,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
                   return (
                     <Marker
                       key={member.id}
-                      position={{ lat: member.lat!, lng: member.lng! }}
+                      position={{ lat: member.offsetLat, lng: member.offsetLng }}
                       onClick={() => handleMarkerClick('member', member)}
                       title={member.display_name || 'Member'}
                       icon={{
@@ -468,7 +499,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
                   return (
                     <Marker
                       key={member.id}
-                      position={{ lat: member.lat!, lng: member.lng! }}
+                      position={{ lat: member.offsetLat, lng: member.offsetLng }}
                       onClick={() => handleMarkerClick('member', member)}
                       title={member.display_name || 'Member'}
                       icon={{

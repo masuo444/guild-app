@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
 import { generateInviteCode } from '@/lib/utils'
 import { updateProfile } from './actions'
+import { APIProvider, Map as GoogleMap, Marker } from '@vis.gl/react-google-maps'
 
 interface ProfileFormProps {
   profile: Profile
@@ -36,8 +37,31 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     avatar_url: profile.avatar_url || '',
     home_country: profile.home_country || '',
     home_city: profile.home_city || '',
+    lat: profile.lat || 0,
+    lng: profile.lng || 0,
     show_location_on_map: profile.show_location_on_map ?? true,
   })
+  const [geocoding, setGeocoding] = useState(false)
+
+  // 市/国からジオコーディングしてマップを更新
+  const geocodeLocation = useCallback(async () => {
+    if (!formData.home_city && !formData.home_country) return
+    setGeocoding(true)
+    try {
+      const query = [formData.home_city, formData.home_country].filter(Boolean).join(', ')
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+      const response = await fetch(geocodeUrl)
+      const data = await response.json()
+      if (data.results && data.results[0]) {
+        const { lat, lng } = data.results[0].geometry.location
+        setFormData(prev => ({ ...prev, lat, lng }))
+      }
+    } catch {
+      // Geocoding failed
+    } finally {
+      setGeocoding(false)
+    }
+  }, [formData.home_city, formData.home_country])
 
   // 画像アップロード処理
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,25 +145,22 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     setSaving(true)
     setMessage(null)
 
-    // 都市・国が設定されている場合は Geocoding で座標を取得
-    let lat = profile.lat || 0
-    let lng = profile.lng || 0
+    let lat = formData.lat
+    let lng = formData.lng
 
-    if (formData.home_city && formData.home_country) {
+    // lat/lngが未設定で市/国がある場合のみジオコーディング
+    if (lat === 0 && lng === 0 && (formData.home_city || formData.home_country)) {
       try {
-        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-          `${formData.home_city}, ${formData.home_country}`
-        )}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-
+        const query = [formData.home_city, formData.home_country].filter(Boolean).join(', ')
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
         const response = await fetch(geocodeUrl)
         const data = await response.json()
-
         if (data.results && data.results[0]) {
           lat = data.results[0].geometry.location.lat
           lng = data.results[0].geometry.location.lng
         }
       } catch {
-        // Geocoding failed - continue with default coordinates
+        // Geocoding failed - continue with current coordinates
       }
     }
 
@@ -370,6 +391,52 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                 placeholder="e.g., Tokyo"
               />
             </div>
+
+            {/* ミニマップ: ピン位置調整 */}
+            {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (formData.home_city || formData.home_country) && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm text-zinc-300">Pin Location</label>
+                  <button
+                    type="button"
+                    onClick={geocodeLocation}
+                    disabled={geocoding}
+                    className="text-xs text-[#c0c0c0] hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {geocoding ? '取得中...' : '住所から再取得'}
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-400 mb-2">ピンをドラッグして位置を調整できます</p>
+                <div className="w-full h-[200px] rounded-lg overflow-hidden border border-zinc-500/30">
+                  <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
+                    <GoogleMap
+                      center={formData.lat && formData.lng ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
+                      zoom={formData.lat && formData.lng ? 12 : 3}
+                      style={{ width: '100%', height: '100%' }}
+                      gestureHandling="greedy"
+                      disableDefaultUI={true}
+                      zoomControl={true}
+                    >
+                      {formData.lat !== 0 && formData.lng !== 0 && (
+                        <Marker
+                          position={{ lat: formData.lat, lng: formData.lng }}
+                          draggable={true}
+                          onDragEnd={(e) => {
+                            if (e.latLng) {
+                              setFormData(prev => ({
+                                ...prev,
+                                lat: e.latLng!.lat(),
+                                lng: e.latLng!.lng(),
+                              }))
+                            }
+                          }}
+                        />
+                      )}
+                    </GoogleMap>
+                  </APIProvider>
+                </div>
+              </div>
+            )}
 
             {/* 位置公開設定 */}
             <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-zinc-500/30">
