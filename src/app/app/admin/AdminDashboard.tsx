@@ -654,10 +654,13 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
   }
 
   const rankColors: Record<Rank, string> = {
+    E: 'bg-gray-500/20 text-gray-300',
     D: 'bg-zinc-500/20 text-zinc-300',
     C: 'bg-green-500/20 text-green-300',
     B: 'bg-blue-500/20 text-blue-300',
     A: 'bg-amber-500/20 text-amber-300',
+    S: 'bg-purple-500/20 text-purple-300',
+    SS: 'bg-rose-500/20 text-rose-300',
   }
 
   const statusColors: Record<string, string> = {
@@ -845,10 +848,13 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                         disabled={isUpdating}
                         className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${rankColors[currentRank]} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <option value="D" className="bg-zinc-900">D (0pt〜)</option>
+                        <option value="E" className="bg-zinc-900">E (0pt〜)</option>
+                        <option value="D" className="bg-zinc-900">D (30pt〜)</option>
                         <option value="C" className="bg-zinc-900">C (100pt〜)</option>
                         <option value="B" className="bg-zinc-900">B (300pt〜)</option>
                         <option value="A" className="bg-zinc-900">A (800pt〜)</option>
+                        <option value="S" className="bg-zinc-900">S (2000pt〜)</option>
+                        <option value="SS" className="bg-zinc-900">SS (5000pt〜)</option>
                       </select>
                     </div>
 
@@ -1686,10 +1692,13 @@ function OffersTab() {
   ]
 
   const ranks = [
-    { value: 'D', label: 'D (全メンバー)' },
+    { value: 'E', label: 'E (全メンバー)' },
+    { value: 'D', label: 'D (30pt以上)' },
     { value: 'C', label: 'C (100pt以上)' },
     { value: 'B', label: 'B (300pt以上)' },
     { value: 'A', label: 'A (800pt以上)' },
+    { value: 'S', label: 'S (2000pt以上)' },
+    { value: 'SS', label: 'SS (5000pt以上)' },
   ]
 
   return (

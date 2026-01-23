@@ -2,7 +2,7 @@ export type MembershipStatus = 'inactive' | 'active' | 'suspended'
 export type SubscriptionStatus = 'inactive' | 'active' | 'past_due' | 'canceled' | 'free' | 'free_tier'
 export type MembershipType = 'standard' | 'model' | 'ambassador' | 'staff' | 'partner'
 export type UserRole = 'admin' | 'member'
-export type Rank = 'D' | 'C' | 'B' | 'A'
+export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'SS'
 export type QuestType = 'photo' | 'checkin' | 'action'
 export type QuestSubmissionStatus = 'pending' | 'approved' | 'rejected'
 

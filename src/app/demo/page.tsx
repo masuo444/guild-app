@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MembershipCard } from '@/components/membership/MembershipCard'
 import type { Profile } from '@/types/database'
+import { calculateRank } from '@/config/rank'
 import { LanguageProvider, useLanguage, Language } from '@/lib/i18n'
 
 // 言語切り替えボタン（ギルドテーマ）
@@ -222,10 +223,12 @@ function DemoPageContent() {
   ]
 
   const offerItems = [
-    { title: t.partnerCafeDiscount, minRank: 'D', description: t.showMemberCard },
+    { title: t.partnerCafeDiscount, minRank: 'E', description: t.showMemberCard },
     { title: t.freeCoworkingPass, minRank: 'C', description: t.validAtAllHubs },
     { title: t.exclusiveEventAccess, minRank: 'B', description: t.priorityAccess },
     { title: t.vipLoungeAccess, minRank: 'A', description: t.premiumFacilities },
+    { title: language === 'ja' ? 'プレミアムメンタリング' : 'Premium Mentoring', minRank: 'S', description: language === 'ja' ? '1on1セッション予約可能' : 'Book 1-on-1 sessions' },
+    { title: language === 'ja' ? 'ギルドマスター特典' : 'Guild Master Benefits', minRank: 'SS', description: language === 'ja' ? '全特典無制限アクセス' : 'Unlimited access to all benefits' },
   ]
 
   return (
@@ -252,7 +255,7 @@ function DemoPageContent() {
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
             <span className="text-xs bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-[#1a1614] px-3 py-1 rounded-full font-medium">
-              {t.rank} C
+              {t.rank} {calculateRank(mockPoints)}
             </span>
           </div>
         </div>
@@ -318,7 +321,7 @@ function DemoPageContent() {
                     <p className="text-sm text-[#6b5b4f] mt-1">{offer.description}</p>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    ['D', 'C'].includes(offer.minRank)
+                    ['E', 'D', 'C', 'B'].includes(offer.minRank)
                       ? 'bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30'
                       : 'bg-[#3a332e] text-[#6b5b4f] border border-[#3a332e]'
                   }`}>
@@ -335,7 +338,7 @@ function DemoPageContent() {
             {/* プロフィールヘッダー */}
             <div className="bg-[#2a2420] rounded-xl p-6 border border-[#d4af37]/20 text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-[#b8860b] to-[#d4af37] rounded-full mx-auto mb-3 flex items-center justify-center border-2 border-[#d4af37]">
-                <span className="text-2xl font-bold text-[#1a1614]">D</span>
+                <span className="text-2xl font-bold text-[#1a1614]">{calculateRank(mockPoints)}</span>
               </div>
               <h2 className="font-semibold text-[#f5e6d3]" style={{ fontFamily: 'serif' }}>{mockProfile.display_name}</h2>
               <p className="text-sm text-[#6b5b4f]">{mockProfile.home_city}, {mockProfile.home_country}</p>
@@ -346,13 +349,13 @@ function DemoPageContent() {
             <div className="bg-[#2a2420] rounded-xl p-4 border border-[#d4af37]/20">
               <SectionHeader title={t.rankProgress} />
               <div className="flex justify-between text-xs text-[#6b5b4f] mb-2">
-                <span>{t.rank} C</span>
-                <span>{t.rank} B (300 pts)</span>
+                <span>{t.rank} {calculateRank(mockPoints)}</span>
+                <span>{t.rank} A (800 pts)</span>
               </div>
               <div className="h-2 bg-[#3a332e] rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#b8860b] to-[#d4af37] rounded-full" style={{ width: '75%' }} />
+                <div className="h-full bg-gradient-to-r from-[#b8860b] to-[#d4af37] rounded-full" style={{ width: `${((mockPoints - 300) / (800 - 300)) * 100}%` }} />
               </div>
-              <p className="text-xs text-[#6b5b4f] mt-2 text-center">150 {t.pointsToNextRank}</p>
+              <p className="text-xs text-[#6b5b4f] mt-2 text-center">{800 - mockPoints} {t.pointsToNextRank}</p>
             </div>
 
             {/* アクション */}

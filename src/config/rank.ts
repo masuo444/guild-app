@@ -1,19 +1,25 @@
 import { Rank } from '@/types/database'
 
 export const RANK_THRESHOLDS: Record<Rank, number> = {
-  D: 0,
+  E: 0,
+  D: 30,
   C: 100,
   B: 300,
   A: 800,
+  S: 2000,
+  SS: 5000,
 }
 
-export const RANK_ORDER: Rank[] = ['D', 'C', 'B', 'A']
+export const RANK_ORDER: Rank[] = ['E', 'D', 'C', 'B', 'A', 'S', 'SS']
 
 export function calculateRank(points: number): Rank {
+  if (points >= RANK_THRESHOLDS.SS) return 'SS'
+  if (points >= RANK_THRESHOLDS.S) return 'S'
   if (points >= RANK_THRESHOLDS.A) return 'A'
   if (points >= RANK_THRESHOLDS.B) return 'B'
   if (points >= RANK_THRESHOLDS.C) return 'C'
-  return 'D'
+  if (points >= RANK_THRESHOLDS.D) return 'D'
+  return 'E'
 }
 
 export function getNextRank(currentRank: Rank): Rank | null {

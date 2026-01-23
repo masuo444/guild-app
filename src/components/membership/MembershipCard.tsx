@@ -337,6 +337,12 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
 // シールド型ランクバッジ
 function ShieldRankBadge({ rank, label }: { rank: Rank; label: string }) {
   const styles = {
+    E: {
+      bgGradient: 'from-[#5a5a5a] to-[#3a3a3a]',
+      borderColor: '#6a6a6a',
+      textColor: '#b0b0b0',
+      glowColor: 'rgba(100, 100, 100, 0.3)',
+    },
     D: {
       bgGradient: 'from-[#4a4540] to-[#3a3530]',
       borderColor: '#6b5b4f',
@@ -361,6 +367,18 @@ function ShieldRankBadge({ rank, label }: { rank: Rank; label: string }) {
       textColor: '#1a1614',
       glowColor: 'rgba(244, 208, 63, 0.5)',
     },
+    S: {
+      bgGradient: 'from-[#9b59b6] to-[#6c3483]',
+      borderColor: '#a569bd',
+      textColor: '#f5e6ff',
+      glowColor: 'rgba(155, 89, 182, 0.5)',
+    },
+    SS: {
+      bgGradient: 'from-[#ff6b6b] to-[#ee5a24]',
+      borderColor: '#ff7979',
+      textColor: '#fff5f0',
+      glowColor: 'rgba(255, 107, 107, 0.6)',
+    },
   }
 
   const style = styles[rank]
@@ -378,8 +396,8 @@ function ShieldRankBadge({ rank, label }: { rank: Rank; label: string }) {
         <svg viewBox="0 0 50 60" className="w-12 h-14">
           <defs>
             <linearGradient id={`rankGradient-${rank}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={rank === 'D' ? '#4a4540' : rank === 'C' ? '#b8860b' : rank === 'B' ? '#c0c0c0' : '#f4d03f'} />
-              <stop offset="100%" stopColor={rank === 'D' ? '#3a3530' : rank === 'C' ? '#8b6914' : rank === 'B' ? '#808080' : '#d4af37'} />
+              <stop offset="0%" stopColor={rank === 'E' ? '#5a5a5a' : rank === 'D' ? '#4a4540' : rank === 'C' ? '#b8860b' : rank === 'B' ? '#c0c0c0' : rank === 'A' ? '#f4d03f' : rank === 'S' ? '#9b59b6' : '#ff6b6b'} />
+              <stop offset="100%" stopColor={rank === 'E' ? '#3a3a3a' : rank === 'D' ? '#3a3530' : rank === 'C' ? '#8b6914' : rank === 'B' ? '#808080' : rank === 'A' ? '#d4af37' : rank === 'S' ? '#6c3483' : '#ee5a24'} />
             </linearGradient>
           </defs>
 
