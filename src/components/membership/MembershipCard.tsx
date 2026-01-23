@@ -137,12 +137,13 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
   }
 
   return (
-    <div className="w-full max-w-md mx-auto" style={{ perspective: '1000px' }}>
+    <div className="w-full max-w-md mx-auto" style={{ perspective: '1000px', WebkitPerspective: '1000px' }}>
       <div
         onClick={handleFlip}
         className="relative aspect-[1.586/1] cursor-pointer"
         style={{
           transformStyle: 'preserve-3d',
+          WebkitTransformStyle: 'preserve-3d',
           transition: 'transform 0.6s',
           transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
         }}
@@ -153,6 +154,7 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
+            transform: 'rotateY(0deg)',
           }}
         >
           {/* メイン背景（ダーク革風） */}
