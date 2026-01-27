@@ -434,14 +434,14 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                     ? 'マップをタップ/ピンチでズームしてピンの位置を調整'
                     : '住所から位置を取得中...マップをタップしてピンを設置'}
                 </p>
-                <div className="w-full h-[400px] rounded-lg overflow-hidden border border-zinc-500/30" style={{ touchAction: 'none' }}>
+                <div className="w-full h-[400px] rounded-lg overflow-hidden border border-zinc-500/30">
                   <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
                     <GoogleMap
-                      center={formData.lat !== 0 || formData.lng !== 0 ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
-                      zoom={formData.lat !== 0 || formData.lng !== 0 ? 15 : 5}
-                      style={{ width: '100%', height: '100%', touchAction: 'none' }}
+                      defaultCenter={formData.lat !== 0 || formData.lng !== 0 ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
+                      defaultZoom={formData.lat !== 0 || formData.lng !== 0 ? 12 : 3}
+                      style={{ width: '100%', height: '100%' }}
                       gestureHandling="greedy"
-                      disableDefaultUI={true}
+                      disableDefaultUI={false}
                       zoomControl={true}
                       fullscreenControl={false}
                       streetViewControl={false}
