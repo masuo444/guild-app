@@ -135,6 +135,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (inviteCode) {
+      console.log('Processing invite code:', inviteCode)
       // 招待コードを取得（Service Roleで確実に取得）
       const { data: invite, error: inviteError } = await supabaseAdmin
         .from('invites')
@@ -146,9 +147,12 @@ export async function GET(request: NextRequest) {
         console.error('Failed to fetch invite:', inviteError)
       }
 
+      console.log('Invite data:', invite)
+
       if (invite && !invite.used) {
         invitedBy = invite.invited_by
         membershipType = (invite.membership_type || 'standard') as MembershipType
+        console.log('Setting membershipType from invite:', membershipType)
 
         // 無料メンバータイプの場合はfreeに
         if (isFreeMembershipType(membershipType)) {
@@ -188,7 +192,7 @@ export async function GET(request: NextRequest) {
     }
 
     // プロフィール作成（Service Roleで確実に挿入）
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+    const profileData = {
       id: user.id,
       display_name: user.email?.split('@')[0] || null,
       role: isAdmin ? 'admin' : 'member',
@@ -199,7 +203,9 @@ export async function GET(request: NextRequest) {
       invited_by: invitedBy,
       stripe_customer_id: stripeCustomerId,
       stripe_subscription_id: stripeSubscriptionId,
-    })
+    }
+    console.log('Creating profile with data:', profileData)
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData)
 
     if (profileError) {
       console.error('Failed to create profile:', profileError)
