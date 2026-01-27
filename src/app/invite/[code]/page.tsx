@@ -11,7 +11,7 @@ import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
 const LANGUAGE_KEY = 'fomus-guild-language'
 
-type InviteStatus = 'loading' | 'valid' | 'invalid' | 'used' | 'submitting' | 'sent' | 'redirecting'
+type InviteStatus = 'loading' | 'valid' | 'invalid' | 'used' | 'submitting' | 'sent' | 'verifying' | 'redirecting'
 
 export default function InvitePage() {
   const params = useParams()
@@ -22,6 +22,7 @@ export default function InvitePage() {
   const [status, setStatus] = useState<InviteStatus>('loading')
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
+  const [otpCode, setOtpCode] = useState('')
   const [membershipType, setMembershipType] = useState<MembershipType>('standard')
   const [isFree, setIsFree] = useState(false)
   const [language, setLanguageState] = useState<Language>('en')
@@ -134,6 +135,94 @@ export default function InvitePage() {
     }
   }
 
+  // OTPコード検証
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setStatus('verifying')
+
+    const supabase = createClient()
+
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: otpCode,
+      type: 'email',
+    })
+
+    if (verifyError) {
+      setError(language === 'ja'
+        ? 'コードが正しくありません。もう一度お試しください。'
+        : 'Invalid code. Please try again.')
+      setStatus('sent')
+      return
+    }
+
+    // 認証成功 - 招待コード処理
+    if (data.user) {
+      setStatus('redirecting')
+
+      // 招待コードを使用済みにして、プロフィールを設定
+      const { data: invite } = await supabase
+        .from('invites')
+        .select('id, invited_by, membership_type, used')
+        .eq('code', code)
+        .single()
+
+      if (invite && !invite.used) {
+        // 招待コードを使用済みにマーク
+        await supabase
+          .from('invites')
+          .update({ used: true, used_by: data.user.id })
+          .eq('id', invite.id)
+
+        // 既存プロフィールがあるか確認
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .single()
+
+        if (!existingProfile) {
+          // 新規プロフィール作成
+          const membershipId = `FG${Date.now().toString(36).toUpperCase()}`
+          await supabase.from('profiles').insert({
+            id: data.user.id,
+            display_name: email.split('@')[0],
+            role: 'member',
+            membership_status: 'active',
+            membership_type: invite.membership_type || 'standard',
+            membership_id: membershipId,
+            subscription_status: isFreeMembershipType(invite.membership_type as MembershipType) ? 'free' : 'free_tier',
+            invited_by: invite.invited_by,
+          })
+
+          // Welcome Bonus
+          await supabase.from('activity_logs').insert({
+            user_id: data.user.id,
+            type: 'Welcome Bonus',
+            points: 100,
+          })
+        }
+
+        // 招待者にボーナスポイント
+        if (invite.invited_by) {
+          await supabase.from('activity_logs').insert({
+            user_id: invite.invited_by,
+            type: 'Invite Bonus',
+            points: 100,
+          })
+        }
+      }
+
+      // リダイレクト
+      if (isFree) {
+        window.location.href = '/app'
+      } else {
+        window.location.href = '/auth/subscribe'
+      }
+    }
+  }
+
   if (status === 'loading' || status === 'redirecting') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50">
@@ -199,7 +288,7 @@ export default function InvitePage() {
     )
   }
 
-  if (status === 'sent') {
+  if (status === 'sent' || status === 'verifying') {
     return (
       <div className="min-h-screen flex flex-col bg-zinc-50">
         <div className="absolute top-4 right-4">
@@ -210,29 +299,75 @@ export default function InvitePage() {
           />
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
-          <div className="max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg
-                className="w-8 h-8 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <div className="max-w-md w-full">
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg
+                    className="w-8 h-8 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-bold text-zinc-900 mb-2">
+                  {language === 'ja' ? '認証コードを入力' : 'Enter Verification Code'}
+                </h1>
+                <p className="text-zinc-600 text-sm">
+                  <strong>{email}</strong> {language === 'ja' ? 'に送信されたコードを入力してください' : 'Enter the code sent to your email'}
+                </p>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm text-center">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <div>
+                  <label htmlFor="otp-code" className="block text-sm font-medium text-zinc-700 mb-1">
+                    {language === 'ja' ? '認証コード' : 'Verification Code'}
+                  </label>
+                  <input
+                    id="otp-code"
+                    type="text"
+                    required
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="00000000"
+                    className="w-full px-4 py-3 border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent font-mono text-center text-2xl tracking-[0.3em]"
+                    maxLength={8}
+                    autoFocus
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  loading={status === 'verifying'}
+                  disabled={otpCode.length !== 6 && otpCode.length !== 8}
+                >
+                  {language === 'ja' ? '認証して登録' : 'Verify & Register'}
+                </Button>
+              </form>
+
+              <button
+                type="button"
+                onClick={() => { setStatus('valid'); setOtpCode(''); setError(''); }}
+                className="w-full mt-4 text-sm text-zinc-500 hover:text-zinc-700 transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+                {language === 'ja' ? 'メールアドレスを変更する' : 'Change email address'}
+              </button>
             </div>
-            <h1 className="text-2xl font-bold text-zinc-900 mb-4">{t.checkYourEmail}</h1>
-            <p className="text-zinc-600 mb-2">
-              {t.magicLinkSent} <strong>{email}</strong>
-            </p>
-            <p className="text-zinc-500 text-sm">
-              {t.clickLinkToRegister}
-            </p>
           </div>
         </div>
       </div>
