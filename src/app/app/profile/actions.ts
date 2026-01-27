@@ -39,9 +39,13 @@ export async function updateProfile(data: UpdateProfileData) {
   }
 
   // キャッシュを無効化（即時反映のため）
-  revalidatePath('/app/map', 'page')
-  revalidatePath('/app/profile', 'page')
-  revalidatePath('/app', 'page')
+  try {
+    revalidatePath('/app/map')
+    revalidatePath('/app/profile')
+    revalidatePath('/app')
+  } catch {
+    // revalidatePath errors are non-critical
+  }
 
   return { success: true }
 }

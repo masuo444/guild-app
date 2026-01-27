@@ -67,7 +67,6 @@ export default async function MapPage(props: Props) {
           role:custom_roles (id, name, color, description, created_at)
         )
       `)
-      .eq('membership_status', 'active')
       .eq('show_location_on_map', true)
       .not('lat', 'is', null)
       .not('lng', 'is', null)
