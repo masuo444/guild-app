@@ -36,10 +36,10 @@ export async function updateProfile(data: UpdateProfileData) {
     return { success: false, error: error.message }
   }
 
-  // マップページのキャッシュを無効化
-  revalidatePath('/app/map')
-  // プロフィールページも更新
-  revalidatePath('/app/profile')
+  // キャッシュを無効化（即時反映のため）
+  revalidatePath('/app/map', 'page')
+  revalidatePath('/app/profile', 'page')
+  revalidatePath('/app', 'page')
 
   return { success: true }
 }

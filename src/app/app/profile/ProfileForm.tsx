@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
@@ -44,8 +44,8 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
   const [geocoding, setGeocoding] = useState(false)
 
   // 市/国からジオコーディングしてマップを更新
-  const geocodeLocation = useCallback(async () => {
-    if (!formData.home_city && !formData.home_country) return
+  const geocodeLocation = useCallback(async (): Promise<{ lat: number; lng: number } | null> => {
+    if (!formData.home_city && !formData.home_country) return null
     setGeocoding(true)
     try {
       const query = [formData.home_city, formData.home_country].filter(Boolean).join(', ')
@@ -55,13 +55,28 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       if (data.results && data.results[0]) {
         const { lat, lng } = data.results[0].geometry.location
         setFormData(prev => ({ ...prev, lat, lng }))
+        return { lat, lng }
       }
+      return null
     } catch {
-      // Geocoding failed
+      return null
     } finally {
       setGeocoding(false)
     }
   }, [formData.home_city, formData.home_country])
+
+  // 国/市が変更されたら自動でジオコーディング（デバウンス付き）
+  useEffect(() => {
+    if (!formData.home_city && !formData.home_country) return
+    // 既にピンが設定されている場合はスキップ
+    if (formData.lat !== 0 || formData.lng !== 0) return
+
+    const timer = setTimeout(() => {
+      geocodeLocation()
+    }, 800) // 800ms待ってから実行
+
+    return () => clearTimeout(timer)
+  }, [formData.home_city, formData.home_country, formData.lat, formData.lng, geocodeLocation])
 
   // 画像アップロード処理
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,17 +166,14 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
 
       // lat/lngが未設定で市/国がある場合のみジオコーディング
       if (lat === 0 && lng === 0 && (formData.home_city || formData.home_country)) {
-        try {
-          const query = [formData.home_city, formData.home_country].filter(Boolean).join(', ')
-          const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-          const response = await fetch(geocodeUrl)
-          const data = await response.json()
-          if (data.results && data.results[0]) {
-            lat = data.results[0].geometry.location.lat
-            lng = data.results[0].geometry.location.lng
-          }
-        } catch {
-          // Geocoding failed - continue with current coordinates
+        const result = await geocodeLocation()
+        if (result) {
+          lat = result.lat
+          lng = result.lng
+        } else {
+          setMessage({ type: 'error', text: '住所から位置情報を取得できませんでした。マップをタップしてピンを設置してください。' })
+          setSaving(false)
+          return
         }
       }
 
@@ -405,23 +417,30 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                   <label className="block text-sm text-zinc-300">Pin Location</label>
                   <button
                     type="button"
-                    onClick={geocodeLocation}
+                    onClick={() => geocodeLocation()}
                     disabled={geocoding}
                     className="text-xs text-[#c0c0c0] hover:text-white transition-colors disabled:opacity-50"
                   >
                     {geocoding ? '取得中...' : '住所から再取得'}
                   </button>
                 </div>
-                <p className="text-xs text-zinc-400 mb-2">マップをタップしてピンの位置を調整できます</p>
-                <div className="w-full h-[350px] rounded-lg overflow-hidden border border-zinc-500/30">
+                <p className="text-xs text-zinc-400 mb-2">
+                  {formData.lat !== 0 || formData.lng !== 0
+                    ? 'マップをタップ/ピンチでズームしてピンの位置を調整'
+                    : '住所から位置を取得中...マップをタップしてピンを設置'}
+                </p>
+                <div className="w-full h-[400px] rounded-lg overflow-hidden border border-zinc-500/30">
                   <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
                     <GoogleMap
-                      center={formData.lat && formData.lng ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
-                      zoom={formData.lat && formData.lng ? 14 : 3}
+                      center={formData.lat !== 0 || formData.lng !== 0 ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
+                      zoom={formData.lat !== 0 || formData.lng !== 0 ? 15 : 5}
                       style={{ width: '100%', height: '100%' }}
                       gestureHandling="greedy"
-                      disableDefaultUI={true}
+                      disableDefaultUI={false}
                       zoomControl={true}
+                      fullscreenControl={true}
+                      streetViewControl={false}
+                      mapTypeControl={false}
                       clickableIcons={false}
                       onClick={(e) => {
                         const latLng = e.detail?.latLng
@@ -434,7 +453,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                         }
                       }}
                     >
-                      {formData.lat !== 0 && formData.lng !== 0 && (
+                      {(formData.lat !== 0 || formData.lng !== 0) && (
                         <Marker
                           position={{ lat: formData.lat, lng: formData.lng }}
                         />
