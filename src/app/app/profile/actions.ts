@@ -1,6 +1,5 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 
 interface UpdateProfileData {
@@ -36,15 +35,6 @@ export async function updateProfile(data: UpdateProfileData) {
 
   if (error) {
     return { success: false, error: error.message }
-  }
-
-  // キャッシュを無効化（即時反映のため）
-  try {
-    revalidatePath('/app/map')
-    revalidatePath('/app/profile')
-    revalidatePath('/app')
-  } catch {
-    // revalidatePath errors are non-critical
   }
 
   return { success: true }

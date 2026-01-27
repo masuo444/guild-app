@@ -197,7 +197,11 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         setMessage({ type: 'error', text: result.error || 'Failed to update profile' })
       } else {
         setMessage({ type: 'success', text: 'Profile updated successfully' })
-        router.refresh()
+        try {
+          router.refresh()
+        } catch {
+          // Refresh error is non-critical
+        }
       }
     } catch (error) {
       console.error('Profile update error:', error)
