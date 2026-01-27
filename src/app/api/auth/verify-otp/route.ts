@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,93 +13,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Service Role Key を使用してSupabase Admin Clientを作成
-    const supabaseAdmin = createClient(
+    const cookieStore = await cookies()
+
+    // レスポンスを作成してCookieを設定できるようにする
+    const response = NextResponse.json({ success: true })
+
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options)
+            })
+          },
+        },
+      }
     )
 
-    // ユーザーを取得
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-
-    if (listError) {
-      console.error('List users error:', listError)
-      return NextResponse.json(
-        { error: 'ユーザー情報の取得に失敗しました' },
-        { status: 500 }
-      )
-    }
-
-    const user = users.users.find(u => u.email === email)
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'ユーザーが見つかりません' },
-        { status: 404 }
-      )
-    }
-
-    // プロフィールからOTPを取得して検証
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('otp_code, otp_expires_at')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      console.error('Profile fetch error:', profileError)
-      return NextResponse.json(
-        { error: 'プロフィールの取得に失敗しました' },
-        { status: 500 }
-      )
-    }
-
-    // OTP検証
-    if (!profile.otp_code || profile.otp_code !== otp) {
-      return NextResponse.json(
-        { error: '認証コードが正しくありません' },
-        { status: 400 }
-      )
-    }
-
-    // 有効期限チェック
-    if (profile.otp_expires_at && new Date(profile.otp_expires_at) < new Date()) {
-      return NextResponse.json(
-        { error: '認証コードの有効期限が切れています' },
-        { status: 400 }
-      )
-    }
-
-    // OTPをクリア
-    await supabaseAdmin
-      .from('profiles')
-      .update({
-        otp_code: null,
-        otp_expires_at: null,
-      })
-      .eq('id', user.id)
-
-    // マジックリンクを生成してログイン
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+    // SupabaseのOTP検証を使用
+    const { error } = await supabase.auth.verifyOtp({
       email,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin}/api/auth/callback`,
-      },
+      token: otp,
+      type: 'email',
     })
 
-    if (linkError || !linkData) {
-      console.error('Generate link error:', linkError)
+    if (error) {
+      console.error('Verify OTP error:', error)
       return NextResponse.json(
-        { error: 'ログインリンクの生成に失敗しました' },
-        { status: 500 }
+        { error: 'コードが正しくありません' },
+        { status: 400 }
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      redirectUrl: linkData.properties.action_link,
-    })
+    // 成功 - Cookieが設定されたレスポンスを返す
+    return response
 
   } catch (error) {
     console.error('Verify OTP error:', error)
