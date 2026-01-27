@@ -862,25 +862,6 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                       </select>
                     </div>
 
-                    {/* ギルドランク */}
-                    <div>
-                      <label className="block text-xs text-zinc-500 mb-1">ランク</label>
-                      <select
-                        value={currentRank}
-                        onChange={(e) => handleRankChange(member.id, currentPoints, e.target.value as Rank)}
-                        disabled={isUpdating}
-                        className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${rankColors[currentRank]} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <option value="E" className="bg-zinc-900">E (0pt〜)</option>
-                        <option value="D" className="bg-zinc-900">D (30pt〜)</option>
-                        <option value="C" className="bg-zinc-900">C (100pt〜)</option>
-                        <option value="B" className="bg-zinc-900">B (300pt〜)</option>
-                        <option value="A" className="bg-zinc-900">A (800pt〜)</option>
-                        <option value="S" className="bg-zinc-900">S (2000pt〜)</option>
-                        <option value="SS" className="bg-zinc-900">SS (5000pt〜)</option>
-                      </select>
-                    </div>
-
                     {/* ポイント */}
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">ポイント</label>
@@ -899,6 +880,20 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                           className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 bg-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                       </div>
+                    </div>
+
+                    {/* ギルドランク（自動計算） */}
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">ランク</label>
+                      {(() => {
+                        const displayPoints = editingPoints[member.id] !== undefined ? parseInt(editingPoints[member.id]) || 0 : currentPoints
+                        const displayRank = calculateRank(displayPoints)
+                        return (
+                          <div className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 text-center ${rankColors[displayRank]}`}>
+                            {displayRank} ({displayPoints}pt)
+                          </div>
+                        )
+                      })()}
                     </div>
 
                     {/* メンバータイプ */}
