@@ -446,19 +446,33 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
     if (!selectedMember || !points) return
     setAdding(true)
 
-    const supabase = createClient()
-    await supabase.from('activity_logs').insert({
-      user_id: selectedMember.id,
-      type: 'Admin Award',
-      points: parseInt(points),
-      note: note || null,
-    })
+    try {
+      const res = await fetch('/api/admin/update-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedMember.id,
+          points: parseInt(points),
+          note: note || null,
+          type: 'Admin Award',
+        }),
+      })
 
-    setSelectedMember(null)
-    setPoints('')
-    setNote('')
-    router.refresh()
-    setAdding(false)
+      if (!res.ok) {
+        const data = await res.json()
+        alert(`エラー: ${data.error}`)
+        return
+      }
+
+      setSelectedMember(null)
+      setPoints('')
+      setNote('')
+      router.refresh()
+    } catch (err) {
+      alert('ポイント付与に失敗しました')
+    } finally {
+      setAdding(false)
+    }
   }
 
   const handleRoleChange = async (memberId: string, newRole: 'member' | 'admin') => {
@@ -521,20 +535,25 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
       const pointsDiff = targetPoints - currentPoints
 
       if (pointsDiff === 0) {
+        setUpdatingMember(null)
         return
       }
 
-      const supabase = createClient()
-      const { error } = await supabase.from('activity_logs').insert({
-        user_id: memberId,
-        type: 'Rank Adjustment',
-        points: pointsDiff,
-        note: `ランク${targetRank}に調整`,
+      const res = await fetch('/api/admin/update-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: memberId,
+          points: pointsDiff,
+          note: `ランク${targetRank}に調整`,
+          type: 'Rank Adjustment',
+        }),
       })
 
-      if (error) {
-        console.error('Rank update error:', error)
-        alert(`更新エラー: ${error.message}`)
+      if (!res.ok) {
+        const data = await res.json()
+        console.error('Rank update error:', data.error)
+        alert(`更新エラー: ${data.error}`)
       } else {
         router.refresh()
       }
@@ -609,16 +628,20 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
 
     setUpdatingMember(memberId)
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from('activity_logs').insert({
-        user_id: memberId,
-        type: 'Admin Adjustment',
-        points: pointsDiff,
-        note: `ポイントを${currentPoints}から${newPoints}に調整`,
+      const res = await fetch('/api/admin/update-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: memberId,
+          points: pointsDiff,
+          note: `ポイントを${currentPoints}から${newPoints}に調整`,
+          type: 'Admin Adjustment',
+        }),
       })
 
-      if (error) {
-        alert(`更新エラー: ${error.message}`)
+      if (!res.ok) {
+        const data = await res.json()
+        alert(`更新エラー: ${data.error}`)
       } else {
         setEditingPoints(prev => {
           const updated = { ...prev }
