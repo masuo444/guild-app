@@ -6,13 +6,12 @@ import { ADMIN_EMAILS } from '@/lib/access'
 import { isFreeMembershipType, MembershipType } from '@/types/database'
 import { stripe } from '@/lib/stripe/server'
 
-// Service Role クライアント（RLS回避用）
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function GET(request: NextRequest) {
+  // Service Role クライアント（RLS回避用）- ランタイムで作成
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   const token_hash = requestUrl.searchParams.get('token_hash')
