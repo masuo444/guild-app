@@ -378,7 +378,7 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
   )
 }
 
-function MembersTab({ members, memberPoints, customRoles, memberRoles }: { members: Profile[]; memberPoints: Record<string, number>; customRoles: CustomRole[]; memberRoles: MemberRole[] }) {
+function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, memberRoles }: { members: Profile[]; memberPoints: Record<string, number>; customRoles: CustomRole[]; memberRoles: MemberRole[] }) {
   const router = useRouter()
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null)
   const [points, setPoints] = useState('')
@@ -387,6 +387,7 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
   const [updatingMember, setUpdatingMember] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [editingPoints, setEditingPoints] = useState<Record<string, string>>({})
+  const [localMemberPoints, setLocalMemberPoints] = useState<Record<string, number>>(initialMemberPoints)
 
   // メンバーに割り当てられたロールを取得
   const getMemberRoles = (memberId: string) => {
@@ -464,10 +465,16 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
         return
       }
 
+      // ローカル状態を更新
+      const addedPoints = parseInt(points)
+      setLocalMemberPoints(prev => ({
+        ...prev,
+        [selectedMember.id]: (prev[selectedMember.id] || 0) + addedPoints
+      }))
+
       setSelectedMember(null)
       setPoints('')
       setNote('')
-      router.refresh()
     } catch (err) {
       alert('ポイント付与に失敗しました')
     } finally {
@@ -643,12 +650,16 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
         const data = await res.json()
         alert(`更新エラー: ${data.error}`)
       } else {
+        // ローカル状態を更新
+        setLocalMemberPoints(prev => ({
+          ...prev,
+          [memberId]: newPoints
+        }))
         setEditingPoints(prev => {
           const updated = { ...prev }
           delete updated[memberId]
           return updated
         })
-        router.refresh()
       }
     } catch (err) {
       alert('更新に失敗しました')
@@ -778,7 +789,7 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
           <div className="space-y-3">
             {filteredMembers.map((member) => {
               const memberType = member.membership_type || 'standard'
-              const currentPoints = memberPoints[member.id] || 0
+              const currentPoints = localMemberPoints[member.id] || 0
               const currentRank = calculateRank(currentPoints)
               const isUpdating = updatingMember === member.id
 
@@ -868,17 +879,27 @@ function MembersTab({ members, memberPoints, customRoles, memberRoles }: { membe
                       <div className="flex gap-1">
                         <input
                           type="number"
-                          value={editingPoints[member.id] ?? currentPoints}
+                          value={editingPoints[member.id] !== undefined ? editingPoints[member.id] : currentPoints}
                           onChange={(e) => setEditingPoints(prev => ({ ...prev, [member.id]: e.target.value }))}
-                          onBlur={() => handleDirectPointsChange(member.id, currentPoints)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
+                              e.currentTarget.blur()
                               handleDirectPointsChange(member.id, currentPoints)
                             }
                           }}
                           disabled={isUpdating}
-                          className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 bg-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 bg-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
+                        {editingPoints[member.id] !== undefined && editingPoints[member.id] !== String(currentPoints) && (
+                          <button
+                            type="button"
+                            onClick={() => handleDirectPointsChange(member.id, currentPoints)}
+                            disabled={isUpdating}
+                            className="px-2 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded-lg disabled:opacity-50"
+                          >
+                            保存
+                          </button>
+                        )}
                       </div>
                     </div>
 
