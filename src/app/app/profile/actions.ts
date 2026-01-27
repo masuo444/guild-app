@@ -9,6 +9,7 @@ interface UpdateProfileData {
   instagram_id: string | null
   avatar_url: string | null
   home_country: string
+  home_state: string
   home_city: string
   lat: number
   lng: number
@@ -25,6 +26,7 @@ export async function updateProfile(data: UpdateProfileData) {
       instagram_id: data.instagram_id,
       avatar_url: data.avatar_url,
       home_country: data.home_country,
+      home_state: data.home_state,
       home_city: data.home_city,
       lat: data.lat,
       lng: data.lng,

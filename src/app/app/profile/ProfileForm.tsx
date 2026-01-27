@@ -36,6 +36,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     instagram_id: profile.instagram_id || '',
     avatar_url: profile.avatar_url || '',
     home_country: profile.home_country || '',
+    home_state: profile.home_state || '',
     home_city: profile.home_city || '',
     lat: profile.lat || 0,
     lng: profile.lng || 0,
@@ -43,12 +44,13 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
   })
   const [geocoding, setGeocoding] = useState(false)
 
-  // 市/国からジオコーディングしてマップを更新
+  // 住所からジオコーディングしてマップを更新（日本語/英語対応）
   const geocodeLocation = useCallback(async (): Promise<{ lat: number; lng: number } | null> => {
-    if (!formData.home_city && !formData.home_country) return null
+    if (!formData.home_city && !formData.home_state && !formData.home_country) return null
     setGeocoding(true)
     try {
-      const query = [formData.home_city, formData.home_country].filter(Boolean).join(', ')
+      // 市, 県, 国の順で結合（Google Geocoding APIは日本語/英語どちらも対応）
+      const query = [formData.home_city, formData.home_state, formData.home_country].filter(Boolean).join(', ')
       const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
       const response = await fetch(geocodeUrl)
       const data = await response.json()
@@ -63,11 +65,11 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     } finally {
       setGeocoding(false)
     }
-  }, [formData.home_city, formData.home_country])
+  }, [formData.home_city, formData.home_state, formData.home_country])
 
-  // 国/市が変更されたら自動でジオコーディング（デバウンス付き）
+  // 住所が変更されたら自動でジオコーディング（デバウンス付き）
   useEffect(() => {
-    if (!formData.home_city && !formData.home_country) return
+    if (!formData.home_city && !formData.home_state && !formData.home_country) return
     // 既にピンが設定されている場合はスキップ
     if (formData.lat !== 0 || formData.lng !== 0) return
 
@@ -76,7 +78,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     }, 800) // 800ms待ってから実行
 
     return () => clearTimeout(timer)
-  }, [formData.home_city, formData.home_country, formData.lat, formData.lng, geocodeLocation])
+  }, [formData.home_city, formData.home_state, formData.home_country, formData.lat, formData.lng, geocodeLocation])
 
   // 画像アップロード処理
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,8 +166,8 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       let lat = formData.lat
       let lng = formData.lng
 
-      // lat/lngが未設定で市/国がある場合のみジオコーディング
-      if (lat === 0 && lng === 0 && (formData.home_city || formData.home_country)) {
+      // lat/lngが未設定で住所がある場合のみジオコーディング
+      if (lat === 0 && lng === 0 && (formData.home_city || formData.home_state || formData.home_country)) {
         const result = await geocodeLocation()
         if (result) {
           lat = result.lat
@@ -184,6 +186,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         instagram_id: formData.instagram_id || null,
         avatar_url: formData.avatar_url || null,
         home_country: formData.home_country,
+        home_state: formData.home_state,
         home_city: formData.home_city,
         lat,
         lng,
@@ -391,27 +394,38 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Country"
-                value={formData.home_country}
-                onChange={(e) =>
-                  setFormData({ ...formData, home_country: e.target.value })
-                }
-                placeholder="e.g., Japan"
-              />
-              <Input
-                label="City"
-                value={formData.home_city}
-                onChange={(e) =>
-                  setFormData({ ...formData, home_city: e.target.value })
-                }
-                placeholder="e.g., Tokyo"
-              />
+            <div className="space-y-3">
+              <p className="text-xs text-zinc-400">日本語または英語で入力できます（例: 日本 / Japan, 東京都 / Tokyo）</p>
+              <div className="grid grid-cols-3 gap-3">
+                <Input
+                  label="Country / 国"
+                  value={formData.home_country}
+                  onChange={(e) =>
+                    setFormData({ ...formData, home_country: e.target.value, lat: 0, lng: 0 })
+                  }
+                  placeholder="Japan / 日本"
+                />
+                <Input
+                  label="State / 県"
+                  value={formData.home_state}
+                  onChange={(e) =>
+                    setFormData({ ...formData, home_state: e.target.value, lat: 0, lng: 0 })
+                  }
+                  placeholder="Tokyo / 東京都"
+                />
+                <Input
+                  label="City / 市"
+                  value={formData.home_city}
+                  onChange={(e) =>
+                    setFormData({ ...formData, home_city: e.target.value, lat: 0, lng: 0 })
+                  }
+                  placeholder="Shibuya / 渋谷区"
+                />
+              </div>
             </div>
 
             {/* ミニマップ: ピン位置調整 */}
-            {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (formData.home_city || formData.home_country) && (
+            {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (formData.home_city || formData.home_state || formData.home_country) && (
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm text-zinc-300">Pin Location</label>

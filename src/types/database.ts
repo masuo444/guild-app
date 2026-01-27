@@ -43,6 +43,7 @@ export interface Profile {
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   home_country: string | null
+  home_state: string | null
   home_city: string | null
   lat: number | null
   lng: number | null
