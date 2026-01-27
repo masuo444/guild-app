@@ -52,6 +52,35 @@ export default function LoginPage() {
 
   const t = getTranslations(language)
 
+  // 管理者直接ログイン（レート制限回避）
+  const handleAdminLogin = async () => {
+    setLoginLoading(true)
+    setLoginMessage(null)
+
+    try {
+      const response = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setLoginMessage({ type: 'error', text: data.error || 'Login failed' })
+        setLoginLoading(false)
+        return
+      }
+
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl
+      }
+    } catch {
+      setLoginMessage({ type: 'error', text: 'Network error' })
+      setLoginLoading(false)
+    }
+  }
+
   // 既存ユーザーログイン - OTPコード送信
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,6 +95,12 @@ export default function LoginPage() {
     })
 
     if (error) {
+      // レート制限エラーの場合は管理者ログインを試行
+      if (error.message.includes('rate limit')) {
+        setLoginMessage({ type: 'error', text: 'Rate limit exceeded. Trying admin login...' })
+        await handleAdminLogin()
+        return
+      }
       setLoginMessage({ type: 'error', text: error.message })
       setLoginLoading(false)
       return
