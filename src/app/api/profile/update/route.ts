@@ -1,22 +1,10 @@
-'use server'
-
 import { createServiceClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-interface UpdateProfileData {
-  userId: string
-  display_name: string
-  instagram_id: string | null
-  avatar_url: string | null
-  home_country: string
-  home_state: string
-  home_city: string
-  lat: number
-  lng: number
-  show_location_on_map: boolean
-}
-
-export async function updateProfile(data: UpdateProfileData) {
+export async function POST(request: NextRequest) {
   try {
+    const data = await request.json()
+
     const supabase = createServiceClient()
 
     const { error } = await supabase
@@ -36,12 +24,15 @@ export async function updateProfile(data: UpdateProfileData) {
 
     if (error) {
       console.error('Supabase update error:', error)
-      return { success: false, error: error.message }
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 })
     }
 
-    return { success: true }
+    return NextResponse.json({ success: true })
   } catch (e) {
-    console.error('updateProfile error:', e)
-    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' }
+    console.error('Profile update error:', e)
+    return NextResponse.json(
+      { success: false, error: e instanceof Error ? e.message : 'Unknown error' },
+      { status: 500 }
+    )
   }
 }

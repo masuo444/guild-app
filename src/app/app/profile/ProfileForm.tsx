@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
 import { generateInviteCode } from '@/lib/utils'
-import { updateProfile } from './actions'
 import { APIProvider, Map as GoogleMap, Marker } from '@vis.gl/react-google-maps'
 
 interface ProfileFormProps {
@@ -179,26 +178,30 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         }
       }
 
-      // Server Actionを使用してプロフィールを更新（マップページのキャッシュも無効化される）
-      const result = await updateProfile({
-        userId: profile.id,
-        display_name: formData.display_name,
-        instagram_id: formData.instagram_id || null,
-        avatar_url: formData.avatar_url || null,
-        home_country: formData.home_country,
-        home_state: formData.home_state,
-        home_city: formData.home_city,
-        lat,
-        lng,
-        show_location_on_map: formData.show_location_on_map,
+      // API routeを使用してプロフィールを更新
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile.id,
+          display_name: formData.display_name,
+          instagram_id: formData.instagram_id || null,
+          avatar_url: formData.avatar_url || null,
+          home_country: formData.home_country,
+          home_state: formData.home_state,
+          home_city: formData.home_city,
+          lat,
+          lng,
+          show_location_on_map: formData.show_location_on_map,
+        }),
       })
+
+      const result = await response.json()
 
       if (!result.success) {
         setMessage({ type: 'error', text: result.error || 'Failed to update profile' })
       } else {
         setMessage({ type: 'success', text: 'Profile updated successfully' })
-        // router.refreshはServer Componentエラーを引き起こす可能性があるため削除
-        // ページのキャッシュは次回アクセス時に自動的に更新される
       }
     } catch (error) {
       console.error('Profile update error:', error)
