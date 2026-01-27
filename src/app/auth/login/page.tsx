@@ -52,13 +52,14 @@ export default function LoginPage() {
 
   const t = getTranslations(language)
 
-  // 管理者直接ログイン（レート制限回避）
-  const handleAdminLogin = async () => {
+  // 既存ユーザーログイン - OTPコード送信（自前のメール送信、レート制限なし）
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
     setLoginLoading(true)
     setLoginMessage(null)
 
     try {
-      const response = await fetch('/api/auth/admin-login', {
+      const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail }),
@@ -67,7 +68,40 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setLoginMessage({ type: 'error', text: data.error || 'Login failed' })
+        setLoginMessage({ type: 'error', text: data.error || 'Failed to send code' })
+        setLoginLoading(false)
+        return
+      }
+
+      setLoginStep('code')
+      setLoginMessage({
+        type: 'success',
+        text: '認証コードをメールに送信しました。',
+      })
+    } catch {
+      setLoginMessage({ type: 'error', text: 'Network error' })
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
+  // OTPコード検証（自前の検証API）
+  const handleVerifyLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginLoading(true)
+    setLoginMessage(null)
+
+    try {
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail, otp: loginCode }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setLoginMessage({ type: 'error', text: data.error || 'コードが正しくありません' })
         setLoginLoading(false)
         return
       }
@@ -79,61 +113,6 @@ export default function LoginPage() {
       setLoginMessage({ type: 'error', text: 'Network error' })
       setLoginLoading(false)
     }
-  }
-
-  // 既存ユーザーログイン - OTPコード送信
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoginLoading(true)
-    setLoginMessage(null)
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: loginEmail,
-      options: {
-        shouldCreateUser: false,
-      },
-    })
-
-    if (error) {
-      // レート制限エラーの場合は管理者ログインを試行
-      if (error.message.includes('rate limit')) {
-        setLoginMessage({ type: 'error', text: 'Rate limit exceeded. Trying admin login...' })
-        await handleAdminLogin()
-        return
-      }
-      setLoginMessage({ type: 'error', text: error.message })
-      setLoginLoading(false)
-      return
-    }
-
-    setLoginStep('code')
-    setLoginMessage({
-      type: 'success',
-      text: '認証コードをメールに送信しました。',
-    })
-    setLoginLoading(false)
-  }
-
-  // OTPコード検証
-  const handleVerifyLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoginLoading(true)
-    setLoginMessage(null)
-
-    const { error } = await supabase.auth.verifyOtp({
-      email: loginEmail,
-      token: loginCode,
-      type: 'email',
-    })
-
-    if (error) {
-      setLoginMessage({ type: 'error', text: 'コードが正しくありません。もう一度お試しください。' })
-      setLoginLoading(false)
-      return
-    }
-
-    // ログイン成功 - リダイレクト
-    window.location.href = '/app'
   }
 
   // 招待コード確認
@@ -364,10 +343,10 @@ export default function LoginPage() {
                     type="text"
                     required
                     value={loginCode}
-                    onChange={(e) => setLoginCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="00000000"
+                    onChange={(e) => setLoginCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
                     className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent font-mono text-center text-2xl tracking-[0.5em]"
-                    maxLength={8}
+                    maxLength={6}
                     autoFocus
                   />
                 </div>
@@ -386,7 +365,7 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  disabled={loginLoading || loginCode.length !== 8}
+                  disabled={loginLoading || loginCode.length !== 6}
                   className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {loginLoading ? (

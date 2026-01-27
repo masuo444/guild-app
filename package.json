@@ -19,6 +19,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-qrcode-logo": "^4.0.0",
+    "resend": "^6.9.0",
     "stripe": "^20.2.0",
     "uuid": "^13.0.0"
   },

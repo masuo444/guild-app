@@ -3,11 +3,11 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const { email, otp } = await request.json()
 
-    if (!email) {
+    if (!email || !otp) {
       return NextResponse.json(
-        { error: 'メールアドレスが必要です' },
+        { error: 'メールアドレスとOTPが必要です' },
         { status: 400 }
       )
     }
@@ -15,13 +15,7 @@ export async function POST(request: NextRequest) {
     // Service Role Key を使用してSupabase Admin Clientを作成
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
     // ユーザーを取得
@@ -38,14 +32,53 @@ export async function POST(request: NextRequest) {
     const user = users.users.find(u => u.email === email)
 
     if (!user) {
-      // 既存ユーザーのみ許可（新規登録は招待コード経由で）
       return NextResponse.json(
-        { error: 'このメールアドレスは登録されていません' },
+        { error: 'ユーザーが見つかりません' },
         { status: 404 }
       )
     }
 
-    // マジックリンクを生成（管理者APIを使用、メール送信なし）
+    // プロフィールからOTPを取得して検証
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('otp_code, otp_expires_at')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      console.error('Profile fetch error:', profileError)
+      return NextResponse.json(
+        { error: 'プロフィールの取得に失敗しました' },
+        { status: 500 }
+      )
+    }
+
+    // OTP検証
+    if (!profile.otp_code || profile.otp_code !== otp) {
+      return NextResponse.json(
+        { error: '認証コードが正しくありません' },
+        { status: 400 }
+      )
+    }
+
+    // 有効期限チェック
+    if (profile.otp_expires_at && new Date(profile.otp_expires_at) < new Date()) {
+      return NextResponse.json(
+        { error: '認証コードの有効期限が切れています' },
+        { status: 400 }
+      )
+    }
+
+    // OTPをクリア
+    await supabaseAdmin
+      .from('profiles')
+      .update({
+        otp_code: null,
+        otp_expires_at: null,
+      })
+      .eq('id', user.id)
+
+    // マジックリンクを生成してログイン
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email,
@@ -62,14 +95,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // リダイレクトURLを返す（クライアント側でリダイレクト）
     return NextResponse.json({
       success: true,
       redirectUrl: linkData.properties.action_link,
     })
 
   } catch (error) {
-    console.error('Admin login error:', error)
+    console.error('Verify OTP error:', error)
     return NextResponse.json(
       { error: '予期しないエラーが発生しました' },
       { status: 500 }
