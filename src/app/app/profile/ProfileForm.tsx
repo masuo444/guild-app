@@ -166,71 +166,37 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
 
     // lat/lngが未設定で住所がある場合のみジオコーディング
     if (lat === 0 && lng === 0 && (formData.home_city || formData.home_state || formData.home_country)) {
-      try {
-        const result = await geocodeLocation()
-        if (result) {
-          lat = result.lat
-          lng = result.lng
-        } else {
-          setMessage({ type: 'error', text: '住所から位置情報を取得できませんでした。マップをタップしてピンを設置してください。' })
-          setSaving(false)
-          return
-        }
-      } catch (error) {
-        setMessage({ type: 'error', text: `Geocoding error: ${error instanceof Error ? error.message : 'Unknown'}` })
-        setSaving(false)
-        return
+      const result = await geocodeLocation()
+      if (result) {
+        lat = result.lat
+        lng = result.lng
       }
     }
 
-    // API routeを使用してプロフィールを更新
-    let response: Response
-    try {
-      response = await fetch('/api/profile/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: profile.id,
-          display_name: formData.display_name,
-          instagram_id: formData.instagram_id || null,
-          avatar_url: formData.avatar_url || null,
-          home_country: formData.home_country,
-          home_state: formData.home_state,
-          home_city: formData.home_city,
-          lat,
-          lng,
-          show_location_on_map: formData.show_location_on_map,
-        }),
+    // 直接Supabaseで更新（シンプル）
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        display_name: formData.display_name,
+        instagram_id: formData.instagram_id || null,
+        avatar_url: formData.avatar_url || null,
+        home_country: formData.home_country,
+        home_state: formData.home_state,
+        home_city: formData.home_city,
+        lat,
+        lng,
+        show_location_on_map: formData.show_location_on_map,
       })
-    } catch (error) {
-      setMessage({ type: 'error', text: `Network error: ${error instanceof Error ? error.message : 'Unknown'}` })
-      setSaving(false)
-      return
-    }
-
-    if (!response.ok) {
-      try {
-        const text = await response.text()
-        setMessage({ type: 'error', text: `API error (${response.status}): ${text.slice(0, 100)}` })
-      } catch {
-        setMessage({ type: 'error', text: `API error (${response.status})` })
-      }
-      setSaving(false)
-      return
-    }
-
-    try {
-      const result = await response.json()
-      if (!result.success) {
-        setMessage({ type: 'error', text: result.error || 'Failed to update profile' })
-      } else {
-        setMessage({ type: 'success', text: 'Profile updated successfully' })
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: `Parse error: ${error instanceof Error ? error.message : 'Unknown'}` })
-    }
+      .eq('id', profile.id)
 
     setSaving(false)
+
+    if (error) {
+      setMessage({ type: 'error', text: error.message })
+    } else {
+      setMessage({ type: 'success', text: 'Profile updated successfully' })
+    }
   }
 
   const handleSignOut = async () => {
