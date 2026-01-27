@@ -197,11 +197,8 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         setMessage({ type: 'error', text: result.error || 'Failed to update profile' })
       } else {
         setMessage({ type: 'success', text: 'Profile updated successfully' })
-        try {
-          router.refresh()
-        } catch {
-          // Refresh error is non-critical
-        }
+        // router.refreshはServer Componentエラーを引き起こす可能性があるため削除
+        // ページのキャッシュは次回アクセス時に自動的に更新される
       }
     } catch (error) {
       console.error('Profile update error:', error)
