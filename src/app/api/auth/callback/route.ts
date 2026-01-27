@@ -1,9 +1,16 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { ADMIN_EMAILS } from '@/lib/access'
 import { isFreeMembershipType, MembershipType } from '@/types/database'
 import { stripe } from '@/lib/stripe/server'
+
+// Service Role クライアント（RLS回避用）
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -129,12 +136,16 @@ export async function GET(request: NextRequest) {
     }
 
     if (inviteCode) {
-      // 招待コードを取得
-      const { data: invite } = await supabase
+      // 招待コードを取得（Service Roleで確実に取得）
+      const { data: invite, error: inviteError } = await supabaseAdmin
         .from('invites')
         .select('id, invited_by, membership_type, used')
         .eq('code', inviteCode)
         .single()
+
+      if (inviteError) {
+        console.error('Failed to fetch invite:', inviteError)
+      }
 
       if (invite && !invite.used) {
         invitedBy = invite.invited_by
@@ -149,8 +160,8 @@ export async function GET(request: NextRequest) {
           subscriptionStatus = 'free_tier'
         }
 
-        // 招待コードを使用済みにマーク
-        await supabase
+        // 招待コードを使用済みにマーク（Service Roleで確実に更新）
+        const { error: updateInviteError } = await supabaseAdmin
           .from('invites')
           .update({
             used: true,
@@ -158,20 +169,27 @@ export async function GET(request: NextRequest) {
           })
           .eq('id', invite.id)
 
-        // 招待者に100ポイント（Invite Bonus）を付与
+        if (updateInviteError) {
+          console.error('Failed to update invite:', updateInviteError)
+        }
+
+        // 招待者に100ポイント（Invite Bonus）を付与（Service Roleで確実に挿入）
         if (invitedBy) {
-          await supabase.from('activity_logs').insert({
+          const { error: inviteBonusError } = await supabaseAdmin.from('activity_logs').insert({
             user_id: invitedBy,
             type: 'Invite Bonus',
-            description: '新メンバーを招待しました',
+            note: '新メンバーを招待しました',
             points: 100,
           })
+          if (inviteBonusError) {
+            console.error('Failed to insert invite bonus:', inviteBonusError)
+          }
         }
       }
     }
 
-    // プロフィール作成
-    await supabase.from('profiles').insert({
+    // プロフィール作成（Service Roleで確実に挿入）
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
       id: user.id,
       display_name: user.email?.split('@')[0] || null,
       role: isAdmin ? 'admin' : 'member',
@@ -184,27 +202,41 @@ export async function GET(request: NextRequest) {
       stripe_subscription_id: stripeSubscriptionId,
     })
 
-    // 新規ユーザーに100ポイント（Welcome Bonus）を付与
-    await supabase.from('activity_logs').insert({
+    if (profileError) {
+      console.error('Failed to create profile:', profileError)
+      // プロフィール作成失敗はクリティカル - エラーページにリダイレクト
+      return NextResponse.redirect(`${origin}/auth/login?error=profile_creation_failed`)
+    }
+
+    // 新規ユーザーに100ポイント（Welcome Bonus）を付与（Service Roleで確実に挿入）
+    const { error: welcomeBonusError } = await supabaseAdmin.from('activity_logs').insert({
       user_id: user.id,
       type: 'Welcome Bonus',
-      description: 'ギルドへようこそ！',
+      note: 'ギルドへようこそ！',
       points: 100,
     })
+
+    if (welcomeBonusError) {
+      console.error('Failed to insert welcome bonus:', welcomeBonusError)
+    }
 
     // スタンダード会員（有料）で未決済の場合は決済ページへリダイレクト
     if (!isAdmin && !isFreeMembershipType(membershipType) && !stripeSessionId) {
       redirectTo = `${origin}/auth/subscribe`
     }
   } else if (isAdmin && profile.subscription_status !== 'active') {
-    // 既存プロフィールで管理者の場合、ステータスを更新
-    await supabase
+    // 既存プロフィールで管理者の場合、ステータスを更新（Service Roleで確実に更新）
+    const { error: adminUpdateError } = await supabaseAdmin
       .from('profiles')
       .update({
         role: 'admin',
         subscription_status: 'active',
       })
       .eq('id', user.id)
+
+    if (adminUpdateError) {
+      console.error('Failed to update admin profile:', adminUpdateError)
+    }
   } else if (profile.subscription_status === 'free_tier') {
     // 既存ユーザーで未課金の場合は決済ページへ
     redirectTo = `${origin}/auth/subscribe`

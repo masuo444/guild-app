@@ -143,7 +143,7 @@ export default function InvitePage() {
 
     const supabase = createClient()
 
-    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+    const { error: verifyError } = await supabase.auth.verifyOtp({
       email,
       token: otpCode,
       type: 'email',
@@ -157,70 +157,9 @@ export default function InvitePage() {
       return
     }
 
-    // 認証成功 - 招待コード処理
-    if (data.user) {
-      setStatus('redirecting')
-
-      // 招待コードを使用済みにして、プロフィールを設定
-      const { data: invite } = await supabase
-        .from('invites')
-        .select('id, invited_by, membership_type, used')
-        .eq('code', code)
-        .single()
-
-      if (invite && !invite.used) {
-        // 招待コードを使用済みにマーク
-        await supabase
-          .from('invites')
-          .update({ used: true, used_by: data.user.id })
-          .eq('id', invite.id)
-
-        // 既存プロフィールがあるか確認
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', data.user.id)
-          .single()
-
-        if (!existingProfile) {
-          // 新規プロフィール作成
-          const membershipId = `FG${Date.now().toString(36).toUpperCase()}`
-          await supabase.from('profiles').insert({
-            id: data.user.id,
-            display_name: email.split('@')[0],
-            role: 'member',
-            membership_status: 'active',
-            membership_type: invite.membership_type || 'standard',
-            membership_id: membershipId,
-            subscription_status: isFreeMembershipType(invite.membership_type as MembershipType) ? 'free' : 'free_tier',
-            invited_by: invite.invited_by,
-          })
-
-          // Welcome Bonus
-          await supabase.from('activity_logs').insert({
-            user_id: data.user.id,
-            type: 'Welcome Bonus',
-            points: 100,
-          })
-        }
-
-        // 招待者にボーナスポイント
-        if (invite.invited_by) {
-          await supabase.from('activity_logs').insert({
-            user_id: invite.invited_by,
-            type: 'Invite Bonus',
-            points: 100,
-          })
-        }
-      }
-
-      // リダイレクト
-      if (isFree) {
-        window.location.href = '/app'
-      } else {
-        window.location.href = '/auth/subscribe'
-      }
-    }
+    // 認証成功 → callbackにリダイレクト（プロフィール作成・招待処理はサーバー側で統一）
+    setStatus('redirecting')
+    window.location.href = `/api/auth/callback?invite_code=${code}&next=/app`
   }
 
   if (status === 'loading' || status === 'redirecting') {
