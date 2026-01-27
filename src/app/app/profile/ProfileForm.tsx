@@ -196,6 +196,13 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         }),
       })
 
+      if (!response.ok) {
+        const text = await response.text()
+        console.error('API error:', response.status, text)
+        setMessage({ type: 'error', text: `Save failed (${response.status}): ${text.slice(0, 100)}` })
+        return
+      }
+
       const result = await response.json()
 
       if (!result.success) {
