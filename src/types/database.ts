@@ -29,6 +29,8 @@ export interface Invite {
   used: boolean
   used_by: string | null
   membership_type: MembershipType
+  reusable: boolean
+  use_count: number
   created_at: string
 }
 

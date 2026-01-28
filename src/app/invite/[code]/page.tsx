@@ -49,7 +49,7 @@ export default function InvitePage() {
     async function checkInvite() {
       const { data, error } = await supabase
         .from('invites')
-        .select('used, membership_type')
+        .select('used, membership_type, reusable')
         .eq('code', code)
         .single()
 
@@ -58,7 +58,9 @@ export default function InvitePage() {
         return
       }
 
-      if (data.used) {
+      // reusable の場合は used フラグを無視
+      const isValid = data.reusable ? true : !data.used
+      if (!isValid) {
         setStatus('used')
         return
       }

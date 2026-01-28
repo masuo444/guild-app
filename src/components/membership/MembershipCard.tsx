@@ -28,8 +28,26 @@ const MEMBERSHIP_TYPE_STYLES: Record<MembershipType, { bgColor: string; textColo
   partner: { bgColor: '#b45309', textColor: '#fef3c7' },    // Amber
 }
 
+// ランク別カラーテーマ定義
+const RANK_THEMES: Record<Rank, {
+  primary: string
+  secondary: string
+  bgFrom: string
+  bgTo: string
+  glow: string
+  shimmer: string
+}> = {
+  E: { primary: '#4a6fa5', secondary: '#3d5a80', bgFrom: '#1a2a4a', bgTo: '#0d1a2d', glow: 'rgba(74,111,165,0.4)', shimmer: 'rgba(74,111,165,0.5)' },
+  D: { primary: '#6b5b4f', secondary: '#5a4a3f', bgFrom: '#3a3530', bgTo: '#2a2420', glow: 'rgba(107,91,79,0.2)', shimmer: 'rgba(107,91,79,0.3)' },
+  C: { primary: '#cd7f32', secondary: '#b87333', bgFrom: '#4a3828', bgTo: '#2a2018', glow: 'rgba(205,127,50,0.3)', shimmer: 'rgba(205,127,50,0.4)' },
+  B: { primary: '#c0c0c0', secondary: '#a8a8a8', bgFrom: '#4a4a4a', bgTo: '#2a2a2a', glow: 'rgba(192,192,192,0.4)', shimmer: 'rgba(192,192,192,0.5)' },
+  A: { primary: '#d4af37', secondary: '#c9a227', bgFrom: '#4a3a28', bgTo: '#2a2418', glow: 'rgba(212,175,55,0.4)', shimmer: 'rgba(212,175,55,0.5)' },
+  S: { primary: '#9b59b6', secondary: '#8e44ad', bgFrom: '#3a2a4a', bgTo: '#2a1a3a', glow: 'rgba(155,89,182,0.5)', shimmer: 'rgba(155,89,182,0.6)' },
+  SS: { primary: '#a8e6ff', secondary: '#7dd3fc', bgFrom: '#0c1929', bgTo: '#030a12', glow: 'rgba(168,230,255,0.7)', shimmer: 'rgba(168,230,255,0.8)' },
+}
+
 // 装飾コーナーフレームSVG
-function CornerFrame({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) {
+function CornerFrame({ position, primary, secondary }: { position: 'tl' | 'tr' | 'bl' | 'br'; primary: string; secondary: string }) {
   const rotations = {
     tl: '',
     tr: 'scale(-1, 1)',
@@ -54,26 +72,26 @@ function CornerFrame({ position }: { position: 'tl' | 'tr' | 'bl' | 'br' }) {
         <path
           d="M2 12 L2 2 L12 2"
           fill="none"
-          stroke="#d4af37"
+          stroke={primary}
           strokeWidth="2"
           strokeLinecap="round"
         />
         <path
           d="M2 8 L2 2 L8 2"
           fill="none"
-          stroke="#f4d03f"
+          stroke={secondary}
           strokeWidth="1"
           strokeLinecap="round"
           opacity="0.5"
         />
-        <circle cx="2" cy="2" r="1.5" fill="#d4af37" />
+        <circle cx="2" cy="2" r="1.5" fill={primary} />
       </svg>
     </div>
   )
 }
 
 // ギルドエンブレム（盾型シンボル）
-function GuildEmblem() {
+function GuildEmblem({ primary, bgFrom, bgTo }: { primary: string; bgFrom: string; bgTo: string }) {
   return (
     <div className="relative w-10 h-10">
       <svg viewBox="0 0 40 40" className="w-full h-full">
@@ -81,14 +99,14 @@ function GuildEmblem() {
         <path
           d="M20 2 L36 8 L36 20 C36 30 20 38 20 38 C20 38 4 30 4 20 L4 8 L20 2 Z"
           fill="url(#shieldGradient)"
-          stroke="#d4af37"
+          stroke={primary}
           strokeWidth="1.5"
         />
         {/* 内側の装飾 */}
         <path
           d="M20 6 L32 10 L32 19 C32 27 20 33 20 33 C20 33 8 27 8 19 L8 10 L20 6 Z"
           fill="none"
-          stroke="#d4af37"
+          stroke={primary}
           strokeWidth="0.5"
           opacity="0.5"
         />
@@ -97,7 +115,7 @@ function GuildEmblem() {
           x="20"
           y="23"
           textAnchor="middle"
-          fill="#d4af37"
+          fill={primary}
           fontSize="10"
           fontWeight="bold"
           fontFamily="serif"
@@ -106,9 +124,9 @@ function GuildEmblem() {
         </text>
         <defs>
           <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2a2420" />
-            <stop offset="50%" stopColor="#3a332e" />
-            <stop offset="100%" stopColor="#1a1614" />
+            <stop offset="0%" stopColor={bgFrom} />
+            <stop offset="50%" stopColor={bgTo} />
+            <stop offset="100%" stopColor={bgFrom} />
           </linearGradient>
         </defs>
       </svg>
@@ -122,6 +140,7 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
   const membershipType = profile.membership_type || 'standard'
   const isFree = isFreeMembershipType(membershipType)
   const typeStyle = MEMBERSHIP_TYPE_STYLES[membershipType]
+  const theme = RANK_THEMES[rank]
 
   const t = translations || {
     guildMember: 'Guild Member',
@@ -157,11 +176,11 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
             transform: 'rotateY(0deg)',
           }}
         >
-          {/* メイン背景（ダーク革風） */}
+          {/* メイン背景（ランク別） */}
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(135deg, #2a2420 0%, #1a1614 50%, #2a2420 100%)',
+              background: `linear-gradient(135deg, ${theme.bgFrom} 0%, ${theme.bgTo} 50%, ${theme.bgFrom} 100%)`,
             }}
           />
 
@@ -173,21 +192,39 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
             }}
           />
 
-          {/* ゴールドのグロー効果 */}
-          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#d4af37] via-transparent to-transparent" />
-          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#b8860b] via-transparent to-transparent" />
+          {/* グロー効果（ランク別） */}
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              background: `radial-gradient(ellipse at top right, ${theme.primary}, transparent, transparent)`,
+            }}
+          />
+          <div
+            className="absolute inset-0 opacity-10"
+            style={{
+              background: `radial-gradient(ellipse at bottom left, ${theme.secondary}, transparent, transparent)`,
+            }}
+          />
 
-          {/* シマー効果（アニメーション） */}
-          <div className="absolute inset-0 opacity-5 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent -translate-x-full animate-[shimmer_4s_infinite]" />
+          {/* シマー効果（アニメーション・ランク別） */}
+          <div
+            className="absolute inset-0 opacity-5 -translate-x-full animate-[shimmer_4s_infinite]"
+            style={{
+              background: `linear-gradient(to right, transparent, ${theme.shimmer}, transparent)`,
+            }}
+          />
 
-          {/* コーナーフレーム */}
-          <CornerFrame position="tl" />
-          <CornerFrame position="tr" />
-          <CornerFrame position="bl" />
-          <CornerFrame position="br" />
+          {/* コーナーフレーム（ランク別） */}
+          <CornerFrame position="tl" primary={theme.primary} secondary={theme.secondary} />
+          <CornerFrame position="tr" primary={theme.primary} secondary={theme.secondary} />
+          <CornerFrame position="bl" primary={theme.primary} secondary={theme.secondary} />
+          <CornerFrame position="br" primary={theme.primary} secondary={theme.secondary} />
 
-          {/* 内側のゴールドボーダー */}
-          <div className="absolute inset-3 rounded-lg border border-[#d4af37]/30" />
+          {/* 内側のボーダー（ランク別） */}
+          <div
+            className="absolute inset-3 rounded-lg"
+            style={{ border: `1px solid ${theme.primary}30` }}
+          />
 
           {/* メインコンテンツ */}
           <div className="relative z-10 h-full p-5 flex flex-col justify-between">
@@ -195,7 +232,7 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <GuildEmblem />
+                  <GuildEmblem primary={theme.primary} bgFrom={theme.bgFrom} bgTo={theme.bgTo} />
                   <div>
                     <h2 className="text-[#f5e6d3] font-bold text-lg tracking-wider" style={{ fontFamily: 'serif' }}>
                       FOMUS GUILD
@@ -230,7 +267,10 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="w-12 h-px bg-gradient-to-r from-[#d4af37]/60 to-transparent" />
+                  <div
+                    className="w-12 h-px"
+                    style={{ background: `linear-gradient(to right, ${theme.primary}99, transparent)` }}
+                  />
                   <p className="text-[#6b5b4f] font-mono text-xs tracking-wider">
                     {profile.membership_id}
                   </p>
@@ -240,12 +280,12 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
 
             {/* ボトムセクション */}
             <div className="flex justify-between items-end">
-              {/* ポイント */}
+              {/* ポイント（ランク別カラー） */}
               <div>
                 <p className="text-[#6b5b4f] text-[10px] uppercase tracking-[0.15em] mb-0.5">
                   {t.points}
                 </p>
-                <p className="text-[#d4af37] text-3xl font-light" style={{ fontFamily: 'serif' }}>
+                <p className="text-3xl font-light" style={{ fontFamily: 'serif', color: theme.primary }}>
                   {points.toLocaleString()}
                   <span className="text-[#6b5b4f] text-sm ml-1">pt</span>
                 </p>
@@ -263,13 +303,22 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
             </div>
           </div>
 
-          {/* カードエッジのハイライト */}
-          <div className="absolute inset-0 rounded-xl border border-[#d4af37]/20" />
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4af37]/20 to-transparent" />
+          {/* カードエッジのハイライト（ランク別） */}
+          <div
+            className="absolute inset-0 rounded-xl"
+            style={{ border: `1px solid ${theme.primary}33` }}
+          />
+          <div
+            className="absolute top-0 left-0 right-0 h-px"
+            style={{ background: `linear-gradient(to right, transparent, ${theme.primary}66, transparent)` }}
+          />
+          <div
+            className="absolute bottom-0 left-0 right-0 h-px"
+            style={{ background: `linear-gradient(to right, transparent, ${theme.primary}33, transparent)` }}
+          />
         </div>
 
-        {/* 裏面（バック） */}
+        {/* 裏面（バック）- ランク別 */}
         <div
           className="absolute inset-0 rounded-xl overflow-hidden shadow-2xl"
           style={{
@@ -278,17 +327,25 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
             transform: 'rotateY(180deg)',
           }}
         >
-          {/* 背景 */}
+          {/* 背景（ランク別） */}
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(135deg, #1a1614 0%, #2a2420 50%, #1a1614 100%)',
+              background: `linear-gradient(135deg, ${theme.bgTo} 0%, ${theme.bgFrom} 50%, ${theme.bgTo} 100%)`,
             }}
           />
 
-          {/* 招待数のみ表示 */}
+          {/* グロー効果（ランク別） */}
+          <div
+            className="absolute inset-0"
+            style={{
+              boxShadow: `inset 0 0 60px ${theme.glow}`,
+            }}
+          />
+
+          {/* 招待数のみ表示（ランク別カラー） */}
           <div className="relative z-10 h-full flex items-center justify-center">
-            <p className="text-[#d4af37] text-7xl font-light" style={{ fontFamily: 'serif' }}>
+            <p className="text-7xl font-light" style={{ fontFamily: 'serif', color: theme.primary }}>
               {inviteCount}
             </p>
           </div>
@@ -353,10 +410,10 @@ function ShieldRankBadge({ rank, label }: { rank: Rank; label: string }) {
       glowColor: 'rgba(155, 89, 182, 0.5)',
     },
     SS: {
-      bgGradient: 'from-[#ff6b6b] to-[#ee5a24]',
-      borderColor: '#ff7979',
-      textColor: '#fff5f0',
-      glowColor: 'rgba(255, 107, 107, 0.6)',
+      bgGradient: 'from-[#a8e6ff] to-[#38bdf8]',
+      borderColor: '#7dd3fc',
+      textColor: '#0c1929',
+      glowColor: 'rgba(168, 230, 255, 0.7)',
     },
   }
 
@@ -375,8 +432,8 @@ function ShieldRankBadge({ rank, label }: { rank: Rank; label: string }) {
         <svg viewBox="0 0 50 60" className="w-12 h-14">
           <defs>
             <linearGradient id={`rankGradient-${rank}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={rank === 'E' ? '#5a5a5a' : rank === 'D' ? '#4a4540' : rank === 'C' ? '#b8860b' : rank === 'B' ? '#c0c0c0' : rank === 'A' ? '#f4d03f' : rank === 'S' ? '#9b59b6' : '#ff6b6b'} />
-              <stop offset="100%" stopColor={rank === 'E' ? '#3a3a3a' : rank === 'D' ? '#3a3530' : rank === 'C' ? '#8b6914' : rank === 'B' ? '#808080' : rank === 'A' ? '#d4af37' : rank === 'S' ? '#6c3483' : '#ee5a24'} />
+              <stop offset="0%" stopColor={rank === 'E' ? '#5a5a5a' : rank === 'D' ? '#4a4540' : rank === 'C' ? '#b8860b' : rank === 'B' ? '#c0c0c0' : rank === 'A' ? '#f4d03f' : rank === 'S' ? '#9b59b6' : '#a8e6ff'} />
+              <stop offset="100%" stopColor={rank === 'E' ? '#3a3a3a' : rank === 'D' ? '#3a3530' : rank === 'C' ? '#8b6914' : rank === 'B' ? '#808080' : rank === 'A' ? '#d4af37' : rank === 'S' ? '#6c3483' : '#38bdf8'} />
             </linearGradient>
           </defs>
 

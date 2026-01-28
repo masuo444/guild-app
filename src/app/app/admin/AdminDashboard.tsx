@@ -79,7 +79,10 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
 
   // 承認待ちの投稿数
   const pendingCount = questSubmissions.filter(s => s.status === 'pending').length
-  const unusedInviteCount = invites.filter(i => !i.used).length
+  // 未使用招待 = 再利用可能 + 通常の未使用
+  const reusableInviteCount = invites.filter(i => i.reusable).length
+  const unusedRegularInviteCount = invites.filter(i => !i.reusable && !i.used).length
+  const unusedInviteCount = reusableInviteCount + unusedRegularInviteCount
 
   return (
     <div>
@@ -142,16 +145,27 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
   const [invites, setInvites] = useState(initialInvites)
   const [creating, setCreating] = useState(false)
   const [selectedType, setSelectedType] = useState<MembershipType>('standard')
+  const [isReusable, setIsReusable] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [lastCreatedCode, setLastCreatedCode] = useState<string | null>(null)
 
   // 無料招待を発行できるか
   const canCreateFreeInvite = canIssueFreeInvite(adminEmail)
 
-  // 利用可能なメンバータイプ
-  const availableMembershipTypes: MembershipType[] = canCreateFreeInvite
-    ? ['standard', ...FREE_MEMBERSHIP_TYPES]
-    : ['standard']
+  // 利用可能なメンバータイプ（再利用可能な場合は standard のみ）
+  const availableMembershipTypes: MembershipType[] = isReusable
+    ? ['standard']
+    : canCreateFreeInvite
+      ? ['standard', ...FREE_MEMBERSHIP_TYPES]
+      : ['standard']
+
+  // 再利用可能に変更したときに membership_type を standard に強制
+  const handleReusableChange = (checked: boolean) => {
+    setIsReusable(checked)
+    if (checked) {
+      setSelectedType('standard')
+    }
+  }
 
   const handleCreateInvite = async () => {
     setCreating(true)
@@ -163,6 +177,8 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
       invited_by: adminId,
       used: false,
       membership_type: selectedType,
+      reusable: isReusable,
+      use_count: 0,
     }).select().single()
 
     setCreating(false)
@@ -192,8 +208,10 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
     setTimeout(() => setCopiedCode(null), 2000)
   }
 
-  const unusedInvites = invites.filter((i) => !i.used)
-  const usedInvites = invites.filter((i) => i.used)
+  // 再利用可能な招待は常に「有効」として扱う
+  const reusableInvites = invites.filter((i) => i.reusable)
+  const unusedInvites = invites.filter((i) => !i.reusable && !i.used)
+  const usedInvites = invites.filter((i) => !i.reusable && i.used)
 
   // メンバータイプに応じた背景色を取得
   const getTypeBgColor = (type: MembershipType) => {
@@ -221,6 +239,7 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
                 className="w-full px-4 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value as MembershipType)}
+                disabled={isReusable}
               >
                 {availableMembershipTypes.map((type) => (
                   <option key={type} value={type} className="bg-zinc-900">
@@ -235,7 +254,26 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
               </Button>
             </div>
           </div>
-          {!canCreateFreeInvite && (
+          {/* 再利用可能チェックボックス */}
+          <div className="mt-4">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={isReusable}
+                onChange={(e) => handleReusableChange(e.target.checked)}
+                className="w-5 h-5 rounded border-zinc-500/30 bg-white/10 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <div>
+                <span className="text-sm font-medium text-white group-hover:text-cyan-300 transition-colors">
+                  永久リンク（再利用可能）
+                </span>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  外部サイト掲載用。何度でも使える招待リンクを作成します（有料メンバーのみ）
+                </p>
+              </div>
+            </label>
+          </div>
+          {!canCreateFreeInvite && !isReusable && (
             <p className="text-xs text-zinc-500 mt-3">
               ※ 無料招待コードはスーパー管理者のみ発行可能です
             </p>
@@ -252,6 +290,52 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
           )}
         </CardContent>
       </Card>
+
+      {/* 永久リンク（再利用可能） */}
+      {reusableInvites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold text-white">永久リンク ({reusableInvites.length})</h2>
+            <p className="text-xs text-zinc-400 mt-1">何度でも使える招待リンク</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {reusableInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="flex items-center justify-between p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono font-bold text-white text-lg">{invite.code}</p>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
+                          永久
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400">
+                        {formatDate(invite.created_at)} 作成 ・ <span className="text-cyan-400 font-medium">{invite.use_count || 0}回使用</span>
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => copyToClipboard(invite.code)}
+                    className="min-w-[100px]"
+                  >
+                    {copiedCode === invite.code ? 'コピー完了!' : 'URLをコピー'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 未使用の招待コード */}
       <Card>
@@ -465,12 +549,8 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
         return
       }
 
-      // ローカル状態を更新
-      const addedPoints = parseInt(points)
-      setLocalMemberPoints(prev => ({
-        ...prev,
-        [selectedMember.id]: (prev[selectedMember.id] || 0) + addedPoints
-      }))
+      // ページを更新してサーバーから最新データを取得
+      router.refresh()
 
       setSelectedMember(null)
       setPoints('')
@@ -650,16 +730,13 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
         const data = await res.json()
         alert(`更新エラー: ${data.error}`)
       } else {
-        // ローカル状態を更新
-        setLocalMemberPoints(prev => ({
-          ...prev,
-          [memberId]: newPoints
-        }))
+        // ページを更新してサーバーから最新データを取得
         setEditingPoints(prev => {
           const updated = { ...prev }
           delete updated[memberId]
           return updated
         })
+        router.refresh()
       }
     } catch (err) {
       alert('更新に失敗しました')

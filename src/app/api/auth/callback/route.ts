@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
       // 招待コードを取得（Service Roleで確実に取得）
       const { data: invite, error: inviteError } = await supabaseAdmin
         .from('invites')
-        .select('id, invited_by, membership_type, used')
+        .select('id, invited_by, membership_type, used, reusable, use_count')
         .eq('code', inviteCode)
         .single()
 
@@ -149,7 +149,10 @@ export async function GET(request: NextRequest) {
 
       console.log('Invite data:', invite)
 
-      if (invite && !invite.used) {
+      // reusable の場合は used フラグを無視
+      const isInviteValid = invite && (invite.reusable ? true : !invite.used)
+
+      if (isInviteValid) {
         invitedBy = invite.invited_by
         membershipType = (invite.membership_type || 'standard') as MembershipType
         console.log('Setting membershipType from invite:', membershipType)
@@ -163,17 +166,32 @@ export async function GET(request: NextRequest) {
           subscriptionStatus = 'free_tier'
         }
 
-        // 招待コードを使用済みにマーク（Service Roleで確実に更新）
-        const { error: updateInviteError } = await supabaseAdmin
-          .from('invites')
-          .update({
-            used: true,
-            used_by: user.id,
-          })
-          .eq('id', invite.id)
+        // 招待コードの使用を記録
+        if (invite.reusable) {
+          // 再利用可能な招待：use_count をインクリメント（used は変更しない）
+          const { error: updateInviteError } = await supabaseAdmin
+            .from('invites')
+            .update({
+              use_count: (invite.use_count || 0) + 1,
+            })
+            .eq('id', invite.id)
 
-        if (updateInviteError) {
-          console.error('Failed to update invite:', updateInviteError)
+          if (updateInviteError) {
+            console.error('Failed to update invite use_count:', updateInviteError)
+          }
+        } else {
+          // 通常の招待：used = true に設定
+          const { error: updateInviteError } = await supabaseAdmin
+            .from('invites')
+            .update({
+              used: true,
+              used_by: user.id,
+            })
+            .eq('id', invite.id)
+
+          if (updateInviteError) {
+            console.error('Failed to update invite:', updateInviteError)
+          }
         }
 
         // 招待者に100ポイント（Invite Bonus）を付与（Service Roleで確実に挿入）
