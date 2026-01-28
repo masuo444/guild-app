@@ -18,8 +18,13 @@ export async function POST(request: NextRequest) {
       .eq('code', inviteCode)
       .single()
 
-    if (error || !invite) {
-      return NextResponse.json({ error: 'Invalid invite code' }, { status: 400 })
+    if (error) {
+      console.error('Invite fetch error:', error)
+      return NextResponse.json({ error: `Invalid invite code: ${error.message}` }, { status: 400 })
+    }
+
+    if (!invite) {
+      return NextResponse.json({ error: 'Invite code not found' }, { status: 400 })
     }
 
     // reusable の場合は used フラグを無視
@@ -46,9 +51,10 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ url: session.url })
-  } catch {
+  } catch (err) {
+    console.error('Guest checkout error:', err)
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: `Failed to create checkout session: ${err instanceof Error ? err.message : 'Unknown error'}` },
       { status: 500 }
     )
   }
