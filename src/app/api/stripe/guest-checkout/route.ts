@@ -33,10 +33,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite code already used' }, { status: 400 })
     }
 
-    // Select price based on location
+    // Select price based on location (fall back to STRIPE_PRICE_ID if specific ones not set)
     const priceId = isJapan
-      ? process.env.STRIPE_PRICE_ID_JPY!
-      : process.env.STRIPE_PRICE_ID_USD!
+      ? (process.env.STRIPE_PRICE_ID_JPY || process.env.STRIPE_PRICE_ID)
+      : (process.env.STRIPE_PRICE_ID_USD || process.env.STRIPE_PRICE_ID)
+
+    if (!priceId) {
+      console.error('No Stripe price ID configured')
+      return NextResponse.json({ error: 'Payment configuration error' }, { status: 500 })
+    }
 
     // Create Stripe checkout session (Stripe will collect email)
     const session = await stripe.checkout.sessions.create({
