@@ -101,7 +101,7 @@ export default function LoginPage() {
 
       // レート制限の場合は直接ログイン
       if (data.rateLimited) {
-        setLoginMessage({ type: 'success', text: 'ログイン処理中...' })
+        setLoginMessage({ type: 'success', text: t.loggingIn })
         await handleDirectLogin()
         return
       }
@@ -109,7 +109,7 @@ export default function LoginPage() {
       setLoginStep('code')
       setLoginMessage({
         type: 'success',
-        text: '認証コードをメールに送信しました。',
+        text: t.codeSentSuccess,
       })
     } catch {
       setLoginMessage({ type: 'error', text: 'Network error' })
@@ -134,7 +134,7 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setLoginMessage({ type: 'error', text: data.error || 'コードが正しくありません' })
+        setLoginMessage({ type: 'error', text: data.error || t.invalidCodeError })
         setLoginLoading(false)
         return
       }
@@ -218,7 +218,7 @@ export default function LoginPage() {
     })
 
     if (error) {
-      setRegisterError('コードが正しくありません。もう一度お試しください。')
+      setRegisterError(t.invalidCodeRetry)
       setRegisterLoading(false)
       return
     }
@@ -359,16 +359,16 @@ export default function LoginPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-medium text-white mb-2">認証コードを入力</h2>
+                <h2 className="text-xl font-medium text-white mb-2">{t.enterVerificationCode}</h2>
                 <p className="text-sm text-zinc-400">
-                  <strong className="text-white">{loginEmail}</strong> に送信されたコードを入力してください
+                  <strong className="text-white">{loginEmail}</strong> {t.codeSentTo}
                 </p>
               </div>
 
               <form onSubmit={handleVerifyLogin} className="space-y-4">
                 <div>
                   <label htmlFor="login-code" className="block text-sm font-medium text-zinc-300 mb-1">
-                    認証コード
+                    {t.verificationCode}
                   </label>
                   <input
                     id="login-code"
@@ -406,10 +406,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      確認中...
+                      {t.checking}
                     </>
                   ) : (
-                    'ログイン'
+                    t.verifyAndLogin
                   )}
                 </button>
 
@@ -418,7 +418,7 @@ export default function LoginPage() {
                   onClick={() => { setLoginStep('email'); setLoginCode(''); setLoginMessage(null); }}
                   className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
                 >
-                  メールアドレスを変更する
+                  {t.changeEmail}
                 </button>
               </form>
             </>
@@ -531,7 +531,7 @@ export default function LoginPage() {
                       {t.sending}
                     </>
                   ) : (
-                    '認証コードを送信'
+                    t.sendVerificationCode
                   )}
                 </button>
 
@@ -559,16 +559,16 @@ export default function LoginPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-medium text-white mb-2">認証コードを入力</h2>
+                <h2 className="text-xl font-medium text-white mb-2">{t.enterVerificationCode}</h2>
                 <p className="text-sm text-zinc-400">
-                  <strong className="text-white">{registerEmail}</strong> に送信されたコードを入力してください
+                  <strong className="text-white">{registerEmail}</strong> {t.codeSentTo}
                 </p>
               </div>
 
               <form onSubmit={handleVerifyRegister} className="space-y-4">
                 <div>
                   <label htmlFor="register-code" className="block text-sm font-medium text-zinc-300 mb-1">
-                    認証コード
+                    {t.verificationCode}
                   </label>
                   <input
                     id="register-code"
@@ -600,10 +600,10 @@ export default function LoginPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      確認中...
+                      {t.checking}
                     </>
                   ) : (
-                    '登録する'
+                    t.register
                   )}
                 </button>
 
@@ -612,7 +612,7 @@ export default function LoginPage() {
                   onClick={() => { setRegisterStep('email'); setRegisterCode(''); setRegisterError(''); }}
                   className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
                 >
-                  メールアドレスを変更する
+                  {t.changeEmail}
                 </button>
               </form>
             </>

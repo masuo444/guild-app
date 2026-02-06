@@ -5,6 +5,7 @@ import { GuildQuest, QuestSubmission } from '@/types/database'
 import { Card, CardContent } from '@/components/ui/Card'
 import { QuestCard } from './QuestCard'
 import { QuestSubmitModal } from './QuestSubmitModal'
+import { useLanguage } from '@/lib/i18n'
 
 type Tab = 'services' | 'quests'
 
@@ -17,6 +18,7 @@ interface OffersContentProps {
 export function OffersContent({ quests, submissions, userId }: OffersContentProps) {
   const [activeTab, setActiveTab] = useState<Tab>('services')
   const [selectedQuest, setSelectedQuest] = useState<GuildQuest | null>(null)
+  const { t } = useLanguage()
 
   // アクティブなクエストのみ
   const activeQuests = quests.filter(q => q.is_active)
@@ -33,7 +35,7 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
           }`}
         >
-          FOMUSのサービス
+          {t.fomusServices}
         </button>
         <button
           onClick={() => setActiveTab('quests')}
@@ -43,7 +45,7 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
           }`}
         >
-          クエスト
+          {t.quests}
           {activeQuests.length > 0 && (
             <span className={`px-1.5 py-0.5 rounded text-xs ${
               activeTab === 'quests' ? 'bg-zinc-900/20' : 'bg-amber-500/30 text-amber-300'
@@ -58,30 +60,30 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
       {activeTab === 'services' && (
         <div className="grid gap-4">
           <ServiceCard
-            title="枡フォト / Masu Photo"
-            description="世界中で『枡を持って撮る』アートプロジェクト。【※15ヶ国・2025年12月現在】枡が人と文化をつなぐ表現を可能に。"
+            title="Masu Photo"
+            description={t.masuPhotoDesc}
             link="https://masuphoto.fomusglobal.com/"
             external
           />
           <ServiceCard
             title="FOMUS PARURE"
-            description="世界最小サイズの枡を活用したジュエリーブランド。"
+            description={t.fomusParureDesc}
             link="https://parure.fomus.jp/"
             external
           />
           <ServiceCard
             title="MASUKAME"
-            description="枡（益＝繁栄）と亀（長寿）を一体化した世界で唯一のアート作品。"
+            description={t.masukameDesc}
           />
           <ServiceCard
             title="KUKU"
-            description="精霊と木の神をめぐる物語。絵本・小説・アニメ・グッズへと展開する長編物語。鋭意制作中。"
+            description={t.kukuDesc}
             link="https://kuku.fomusglobal.com/"
             external
           />
           <ServiceCard
             title="SILVA"
-            description="世界初、枡を使って遊べるカードゲーム。子どもからご年配の方まで遊べます。"
+            description={t.silvaDesc}
             link="https://silva.fomus.jp/"
             external
           />
@@ -105,8 +107,8 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
-                <p className="text-zinc-300">現在利用可能なクエストはありません</p>
-                <p className="text-zinc-500 text-sm mt-1">新しいチャレンジをお楽しみに！</p>
+                <p className="text-zinc-300">{t.noQuestsAvailable}</p>
+                <p className="text-zinc-500 text-sm mt-1">{t.stayTuned}</p>
               </CardContent>
             </Card>
           )}

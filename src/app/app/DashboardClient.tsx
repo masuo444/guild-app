@@ -24,7 +24,7 @@ export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount 
     memberSince: t.memberSince,
     points: t.points,
     rank: t.rank,
-    tapToFlip: 'Tap to flip',
+    tapToFlip: t.tapToFlip,
   }
 
   return (

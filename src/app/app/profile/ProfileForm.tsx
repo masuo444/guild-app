@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
 import { generateInviteCode } from '@/lib/utils'
 import { APIProvider, Map as GoogleMap, Marker } from '@vis.gl/react-google-maps'
+import { useLanguage } from '@/lib/i18n'
 
 interface ProfileFormProps {
   profile: Profile
@@ -18,6 +19,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile, email }: ProfileFormProps) {
   const router = useRouter()
+  const { t } = useLanguage()
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -87,13 +89,13 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     // 500MB制限チェック
     const maxSize = 500 * 1024 * 1024 // 500MB
     if (file.size > maxSize) {
-      setMessage({ type: 'error', text: `ファイルサイズが大きすぎます（最大500MB）。現在: ${formatFileSize(file.size)}` })
+      setMessage({ type: 'error', text: `${t.fileTooLarge} (max 500MB). ${formatFileSize(file.size)}` })
       return
     }
 
     // 画像ファイルかチェック
     if (!file.type.startsWith('image/')) {
-      setMessage({ type: 'error', text: '画像ファイルを選択してください' })
+      setMessage({ type: 'error', text: t.selectImageFile })
       return
     }
 
@@ -142,11 +144,11 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
 
       // フォームを更新
       setFormData({ ...formData, avatar_url: publicUrl })
-      setMessage({ type: 'success', text: `画像をアップロードしました（${formatFileSize(compressedBlob.size)}に圧縮）` })
+      setMessage({ type: 'success', text: `${t.imageUploaded} (${formatFileSize(compressedBlob.size)})` })
 
     } catch (error) {
       console.error('Upload error:', error)
-      setMessage({ type: 'error', text: '画像のアップロードに失敗しました' })
+      setMessage({ type: 'error', text: t.imageUploadFailed })
     } finally {
       setUploading(false)
       // ファイル入力をリセット
@@ -195,7 +197,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     if (error) {
       setMessage({ type: 'error', text: error.message })
     } else {
-      setMessage({ type: 'success', text: 'Profile updated successfully' })
+      setMessage({ type: 'success', text: t.profileUpdated })
     }
   }
 
@@ -262,19 +264,19 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       {/* プロフィール編集 */}
       <Card>
         <CardHeader>
-          <h2 className="font-semibold text-white">Personal Information</h2>
+          <h2 className="font-semibold text-white">{t.personalInfo}</h2>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label="Email"
+              label={t.email}
               value={email}
               disabled
               className="bg-white/5"
             />
 
             <Input
-              label="Display Name"
+              label={t.displayName}
               value={formData.display_name}
               onChange={(e) =>
                 setFormData({ ...formData, display_name: e.target.value })
@@ -305,15 +307,15 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                   rel="noopener noreferrer"
                   className="text-xs text-[#c0c0c0] hover:text-white mt-1 inline-block"
                 >
-                  View profile →
+                  {t.viewProfileLink}
                 </a>
               )}
             </div>
 
             {/* Avatar Upload */}
             <div>
-              <label className="block text-sm text-zinc-300 mb-1">Profile Image</label>
-              <p className="text-xs text-zinc-400 mb-3">正方形にクロップされ、マップ上のアイコンとして表示されます（最大500MB、自動圧縮）</p>
+              <label className="block text-sm text-zinc-300 mb-1">{t.profileImage}</label>
+              <p className="text-xs text-zinc-400 mb-3">{t.profileImageDesc}</p>
 
               <div className="flex items-start gap-4">
                 {/* プレビュー */}
@@ -361,14 +363,14 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        圧縮中...
+                        {t.compressing}
                       </>
                     ) : (
                       <>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        画像を選択
+                        {t.selectImage}
                       </>
                     )}
                   </label>
@@ -378,7 +380,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                       onClick={() => setFormData({ ...formData, avatar_url: '' })}
                       className="ml-2 text-xs text-zinc-400 hover:text-red-400 transition-colors"
                     >
-                      削除
+                      {t.removeImage}
                     </button>
                   )}
                 </div>
@@ -386,31 +388,31 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs text-zinc-400">日本語または英語で入力できます（例: 日本 / Japan, 東京都 / Tokyo）</p>
+              <p className="text-xs text-zinc-400">{t.locationInputNote}</p>
               <div className="grid grid-cols-3 gap-3">
                 <Input
-                  label="Country / 国"
+                  label={t.countryLabel}
                   value={formData.home_country}
                   onChange={(e) =>
                     setFormData({ ...formData, home_country: e.target.value, lat: 0, lng: 0 })
                   }
-                  placeholder="Japan / 日本"
+                  placeholder="Japan"
                 />
                 <Input
-                  label="State / 県"
+                  label={t.stateLabel}
                   value={formData.home_state}
                   onChange={(e) =>
                     setFormData({ ...formData, home_state: e.target.value, lat: 0, lng: 0 })
                   }
-                  placeholder="Tokyo / 東京都"
+                  placeholder="Tokyo"
                 />
                 <Input
-                  label="City / 市"
+                  label={t.cityLabel}
                   value={formData.home_city}
                   onChange={(e) =>
                     setFormData({ ...formData, home_city: e.target.value, lat: 0, lng: 0 })
                   }
-                  placeholder="Shibuya / 渋谷区"
+                  placeholder="Shibuya"
                 />
               </div>
             </div>
@@ -419,20 +421,20 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (formData.home_city || formData.home_state || formData.home_country) && (
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm text-zinc-300">Pin Location</label>
+                  <label className="block text-sm text-zinc-300">{t.pinLocation}</label>
                   <button
                     type="button"
                     onClick={() => geocodeLocation()}
                     disabled={geocoding}
                     className="text-xs text-[#c0c0c0] hover:text-white transition-colors disabled:opacity-50"
                   >
-                    {geocoding ? '取得中...' : '住所から再取得'}
+                    {geocoding ? t.geocodingLabel : t.reGeocode}
                   </button>
                 </div>
                 <p className="text-xs text-zinc-400 mb-2">
                   {formData.lat !== 0 || formData.lng !== 0
-                    ? 'マップをタップ/ピンチでズームしてピンの位置を調整'
-                    : '住所から位置を取得中...マップをタップしてピンを設置'}
+                    ? t.adjustPinDesc
+                    : t.setPinDesc}
                 </p>
                 <div className="w-full h-[400px] rounded-lg overflow-hidden border border-zinc-500/30">
                   <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
@@ -472,8 +474,8 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             {/* 位置公開設定 */}
             <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-zinc-500/30">
               <div>
-                <p className="text-sm font-medium text-white">Show location on map</p>
-                <p className="text-xs text-zinc-400">Allow other members to see your location on the Guild Map</p>
+                <p className="text-sm font-medium text-white">{t.showLocationOnMap}</p>
+                <p className="text-xs text-zinc-400">{t.showLocationDesc}</p>
               </div>
               <button
                 type="button"
@@ -503,7 +505,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             )}
 
             <Button type="submit" loading={saving}>
-              Save Changes
+              {t.saveChanges}
             </Button>
           </form>
         </CardContent>
@@ -512,24 +514,24 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       {/* メンバーシップ情報 */}
       <Card>
         <CardHeader>
-          <h2 className="font-semibold text-white">Membership</h2>
+          <h2 className="font-semibold text-white">{t.membership}</h2>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-zinc-300">Membership ID</span>
+              <span className="text-zinc-300">{t.membershipIdLabel}</span>
               <span className="font-mono text-white">{profile.membership_id}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-300">Status</span>
+              <span className="text-zinc-300">{t.statusLabel}</span>
               <span className={`font-medium ${
                 profile.subscription_status === 'active' ? 'text-green-400' : 'text-red-400'
               }`}>
-                {profile.subscription_status === 'active' ? 'Active' : 'Inactive'}
+                {profile.subscription_status === 'active' ? t.active : t.inactive}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-300">Member Since</span>
+              <span className="text-zinc-300">{t.memberSince}</span>
               <span className="text-white">
                 {new Date(profile.created_at).toLocaleDateString()}
               </span>
@@ -541,25 +543,22 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       {/* 招待コード発行 */}
       <Card>
         <CardHeader>
-          <h2 className="font-semibold text-white">友達を招待</h2>
+          <h2 className="font-semibold text-white">{t.inviteFriends}</h2>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-zinc-400 mb-4">
-            招待コードを発行して友達をFOMUS GUILDに招待できます。
-            招待された方は月額会員として参加できます。
-          </p>
+          <p className="text-sm text-zinc-400 mb-4">{t.inviteFriendsDesc}</p>
 
           <Button onClick={handleCreateInvite} loading={creatingInvite} className="w-full mb-4">
-            招待コードを発行
+            {t.generateInviteCode}
           </Button>
 
           {lastCreatedInvite && (
             <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl">
               <p className="text-green-300 text-sm font-medium">
-                招待コード <span className="font-mono">{lastCreatedInvite}</span> を作成しました！
+                {t.inviteCodeCreated} <span className="font-mono">{lastCreatedInvite}</span>
               </p>
               <p className="text-green-400/70 text-xs mt-1">
-                招待URLをクリップボードにコピーしました
+                {t.inviteUrlCopied}
               </p>
             </div>
           )}
@@ -570,7 +569,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
               onClick={loadMyInvites}
               className="text-sm text-[#c0c0c0] hover:text-white transition-colors"
             >
-              {invitesLoaded ? '発行済みコード' : '発行済みコードを表示'}
+              {invitesLoaded ? t.generatedCodes : t.showGeneratedCodes}
             </button>
 
             {invitesLoaded && myInvites.length > 0 && (
@@ -585,7 +584,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                     <div>
                       <span className="font-mono text-sm text-white">{invite.code}</span>
                       <span className={`ml-2 text-xs ${invite.used ? 'text-zinc-500' : 'text-green-400'}`}>
-                        {invite.used ? '使用済み' : '未使用'}
+                        {invite.used ? t.used : t.unused}
                       </span>
                     </div>
                     {!invite.used && (
@@ -593,7 +592,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                         onClick={() => copyInviteUrl(invite.code)}
                         className="text-xs text-[#c0c0c0] hover:text-white transition-colors"
                       >
-                        {copiedInviteCode === invite.code ? 'コピー済み!' : 'URLをコピー'}
+                        {copiedInviteCode === invite.code ? t.copied : t.copyUrl}
                       </button>
                     )}
                   </div>
@@ -602,7 +601,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             )}
 
             {invitesLoaded && myInvites.length === 0 && (
-              <p className="text-zinc-500 text-sm mt-2">まだ招待コードを発行していません</p>
+              <p className="text-zinc-500 text-sm mt-2">{t.noCodesYet}</p>
             )}
           </div>
         </CardContent>
@@ -612,7 +611,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       <Card>
         <CardContent className="py-4">
           <Button variant="outline" onClick={handleSignOut} className="w-full">
-            Sign Out
+            {t.signOut}
           </Button>
         </CardContent>
       </Card>

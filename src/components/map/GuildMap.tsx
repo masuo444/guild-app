@@ -142,7 +142,7 @@ interface SelectedItem {
 }
 
 export function GuildMap({ members, hubs, userId, canViewMembers = true }: GuildMapProps) {
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const [showMembers, setShowMembers] = useState(canViewMembers)
   const [showHubs, setShowHubs] = useState(true)
   const [selected, setSelected] = useState<SelectedItem | null>(null)
@@ -300,7 +300,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
             <div className="flex-1 relative">
               <input
                 type="text"
-                placeholder={language === 'ja' ? '検索...' : 'Search...'}
+                placeholder={t.search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-white rounded-full shadow-lg text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -338,7 +338,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
                 }`}
               >
                 <span className={`w-2 h-2 rounded-full ${showMembers ? 'bg-white' : 'bg-green-500'}`} />
-                Members ({filteredMembers.length})
+                {t.membersCount} ({filteredMembers.length})
               </button>
             )}
             <button
@@ -350,7 +350,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${showHubs ? 'bg-white' : 'bg-orange-500'}`} />
-              Hubs ({filteredHubs.length})
+              {t.hubsCount} ({filteredHubs.length})
             </button>
           </div>
         </div>
@@ -422,7 +422,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
           </svg>
           <input
             type="text"
-            placeholder="Search by name, city, country..."
+            placeholder={t.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white/10 backdrop-blur border border-zinc-500/30 rounded-lg text-sm text-white placeholder-zinc-300/50 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent"
@@ -440,7 +440,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
                   : 'bg-white/5 text-zinc-300 hover:bg-white/10'
               }`}
             >
-              Members
+              {t.membersCount}
             </button>
           )}
           <button
@@ -451,7 +451,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
                 : 'bg-white/5 text-zinc-300 hover:bg-white/10'
             }`}
           >
-            MASU Hubs
+            {t.masuHubs}
           </button>
           {/* Fullscreen button */}
           <button
@@ -461,7 +461,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
-            <span className="hidden sm:inline">Fullscreen</span>
+            <span className="hidden sm:inline">{t.fullscreen}</span>
           </button>
         </div>
       </div>
@@ -470,13 +470,13 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
       {searchQuery && (
         <div className="flex items-center gap-2 mb-3 text-sm text-zinc-300">
           <span>
-            Showing: {filteredMembers.length} members, {filteredHubs.length} hubs
+            {t.showingResults}: {filteredMembers.length} {t.membersCount}, {filteredHubs.length} {t.hubsCount}
           </span>
           <button
             onClick={() => setSearchQuery('')}
             className="text-zinc-200 hover:text-white underline"
           >
-            Clear
+            {t.clear}
           </button>
         </div>
       )}
@@ -545,7 +545,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>
-          {language === 'ja' ? '全画面で表示' : 'View fullscreen'}
+          {t.viewFullscreen}
         </button>
       </div>
 

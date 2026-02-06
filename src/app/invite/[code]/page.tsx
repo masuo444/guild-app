@@ -97,9 +97,7 @@ export default function InvitePage() {
       // より分かりやすいエラーメッセージに変換
       let errorMessage = authError.message
       if (authError.message.includes('Database error')) {
-        errorMessage = language === 'ja'
-          ? 'サーバーエラーが発生しました。しばらく待ってから再度お試しください。'
-          : 'A server error occurred. Please try again in a moment.'
+        errorMessage = t.serverError
       }
       setError(errorMessage)
       setStatus('valid')
@@ -152,9 +150,7 @@ export default function InvitePage() {
     })
 
     if (verifyError) {
-      setError(language === 'ja'
-        ? 'コードが正しくありません。もう一度お試しください。'
-        : 'Invalid code. Please try again.')
+      setError(t.invalidCodeRetry)
       setStatus('sent')
       return
     }
@@ -259,10 +255,10 @@ export default function InvitePage() {
                   </svg>
                 </div>
                 <h1 className="text-2xl font-bold text-zinc-900 mb-2">
-                  {language === 'ja' ? '認証コードを入力' : 'Enter Verification Code'}
+                  {t.enterVerificationCode}
                 </h1>
                 <p className="text-zinc-600 text-sm">
-                  <strong>{email}</strong> {language === 'ja' ? 'に送信されたコードを入力してください' : 'Enter the code sent to your email'}
+                  <strong>{email}</strong> {t.codeSentTo}
                 </p>
               </div>
 
@@ -275,7 +271,7 @@ export default function InvitePage() {
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div>
                   <label htmlFor="otp-code" className="block text-sm font-medium text-zinc-700 mb-1">
-                    {language === 'ja' ? '認証コード' : 'Verification Code'}
+                    {t.verificationCode}
                   </label>
                   <input
                     id="otp-code"
@@ -297,7 +293,7 @@ export default function InvitePage() {
                   loading={status === 'verifying'}
                   disabled={otpCode.length !== 6 && otpCode.length !== 8}
                 >
-                  {language === 'ja' ? '認証して登録' : 'Verify & Register'}
+                  {t.verifyAndRegister}
                 </Button>
               </form>
 
@@ -306,7 +302,7 @@ export default function InvitePage() {
                 onClick={() => { setStatus('valid'); setOtpCode(''); setError(''); }}
                 className="w-full mt-4 text-sm text-zinc-500 hover:text-zinc-700 transition-colors"
               >
-                {language === 'ja' ? 'メールアドレスを変更する' : 'Change email address'}
+                {t.changeEmail}
               </button>
             </div>
           </div>

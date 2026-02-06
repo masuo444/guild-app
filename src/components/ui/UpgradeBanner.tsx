@@ -42,9 +42,6 @@ export function UpgradeBanner({
           >
             {buttonText}
           </Link>
-          <p className="text-sm text-zinc-400 mt-4">
-            Free members can view MASU Hub locations on the map
-          </p>
         </div>
       </div>
     )

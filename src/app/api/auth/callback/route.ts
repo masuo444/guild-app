@@ -210,6 +210,8 @@ export async function GET(request: NextRequest) {
     }
 
     // プロフィール作成（Service Roleで確実に挿入）
+    // 無料メンバー（ambassador, model, staff, partner）はadmin承認不要で即マップ表示
+    const showOnMap = true
     const profileData = {
       id: user.id,
       display_name: user.email?.split('@')[0] || null,
@@ -221,6 +223,7 @@ export async function GET(request: NextRequest) {
       invited_by: invitedBy,
       stripe_customer_id: stripeCustomerId,
       stripe_subscription_id: stripeSubscriptionId,
+      show_location_on_map: showOnMap,
     }
     console.log('Creating profile with data:', profileData)
     const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData)

@@ -27,29 +27,29 @@ export function isPaidMember(status: SubscriptionStatus): boolean {
   return PAID_STATUSES.includes(status)
 }
 
-// メンバー位置を閲覧できるか
+// メンバー位置を閲覧できるか（登録済みユーザーは全員閲覧可能）
 export function canViewMembers(status: SubscriptionStatus): boolean {
-  return FULL_ACCESS_STATUSES.includes(status)
+  return true
 }
 
-// オファーを閲覧できるか
+// オファーを閲覧できるか（登録済みユーザーは全員閲覧可能）
 export function canViewOffers(status: SubscriptionStatus): boolean {
-  return FULL_ACCESS_STATUSES.includes(status)
+  return true
 }
 
-// 拠点を登録できるか
+// 拠点を登録できるか（登録済みユーザーは全員登録可能）
 export function canRegisterHub(status: SubscriptionStatus): boolean {
-  return FULL_ACCESS_STATUSES.includes(status)
+  return true
 }
 
-// ダッシュボードの詳細を閲覧できるか
+// ダッシュボードの詳細を閲覧できるか（登録済みユーザーは全員閲覧可能）
 export function canViewDashboardDetails(status: SubscriptionStatus): boolean {
-  return FULL_ACCESS_STATUSES.includes(status)
+  return true
 }
 
-// フル機能にアクセスできるか
+// フル機能にアクセスできるか（登録済みユーザーは全員アクセス可能）
 export function hasFullAccess(status: SubscriptionStatus): boolean {
-  return FULL_ACCESS_STATUSES.includes(status)
+  return true
 }
 
 // 管理者メールアドレスかどうか
