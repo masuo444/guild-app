@@ -109,7 +109,7 @@ const translations = {
     // Navigation
     card: 'カード',
     map: 'マップ',
-    offers: '特典',
+    offers: 'クエスト',
     profile: 'プロフィール',
     admin: '管理',
 
@@ -396,7 +396,7 @@ const translations = {
     // Navigation
     card: 'Card',
     map: 'Map',
-    offers: 'Offers',
+    offers: 'Quests',
     profile: 'Profile',
     admin: 'Admin',
 

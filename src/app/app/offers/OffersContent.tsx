@@ -16,7 +16,7 @@ interface OffersContentProps {
 }
 
 export function OffersContent({ quests, submissions, userId }: OffersContentProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('services')
+  const [activeTab, setActiveTab] = useState<Tab>('quests')
   const [selectedQuest, setSelectedQuest] = useState<GuildQuest | null>(null)
   const { t } = useLanguage()
 
@@ -27,16 +27,6 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
     <div>
       {/* タブ */}
       <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setActiveTab('services')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'services'
-              ? 'bg-[#c0c0c0] text-zinc-900'
-              : 'bg-white/10 text-zinc-300 hover:bg-white/20'
-          }`}
-        >
-          {t.fomusServices}
-        </button>
         <button
           onClick={() => setActiveTab('quests')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
@@ -54,7 +44,42 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('services')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'services'
+              ? 'bg-[#c0c0c0] text-zinc-900'
+              : 'bg-white/10 text-zinc-300 hover:bg-white/20'
+          }`}
+        >
+          {t.fomusServices}
+        </button>
       </div>
+
+      {/* クエストタブ */}
+      {activeTab === 'quests' && (
+        <div>
+          {activeQuests.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {activeQuests.map((quest) => (
+                <QuestCard
+                  key={quest.id}
+                  quest={quest}
+                  submissions={submissions.filter(s => s.quest_id === quest.id)}
+                  onSubmit={setSelectedQuest}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-zinc-300">{t.noQuestsAvailable}</p>
+                <p className="text-zinc-500 text-sm mt-1">{t.stayTuned}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* FOMUSのサービスタブ */}
       {activeTab === 'services' && (
@@ -87,31 +112,6 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
             link="https://silva.fomus.jp/"
             external
           />
-        </div>
-      )}
-
-      {/* クエストタブ */}
-      {activeTab === 'quests' && (
-        <div>
-          {activeQuests.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {activeQuests.map((quest) => (
-                <QuestCard
-                  key={quest.id}
-                  quest={quest}
-                  submissions={submissions.filter(s => s.quest_id === quest.id)}
-                  onSubmit={setSelectedQuest}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-zinc-300">{t.noQuestsAvailable}</p>
-                <p className="text-zinc-500 text-sm mt-1">{t.stayTuned}</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
 
