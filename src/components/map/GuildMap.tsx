@@ -5,15 +5,29 @@ import { APIProvider, Map, Marker, useMap } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
-// Apply offset to all markers (members + hubs) sharing the same coordinates
-type OffsetItem = { type: 'member'; data: MemberMapData } | { type: 'hub'; data: MasuHub }
+// Pending invite data for map markers
+interface PendingInviteMapData {
+  id: string
+  code: string
+  target_name: string | null
+  target_country: string | null
+  target_city: string | null
+  target_lat: number
+  target_lng: number
+  membership_type: string
+}
+
+// Apply offset to all markers (members + hubs + pending invites) sharing the same coordinates
+type OffsetItem = { type: 'member'; data: MemberMapData } | { type: 'hub'; data: MasuHub } | { type: 'pending'; data: PendingInviteMapData }
 
 function applyAllCoordinateOffsets(
   members: MemberMapData[],
-  hubs: MasuHub[]
+  hubs: MasuHub[],
+  pendingInvites: PendingInviteMapData[] = []
 ): {
   members: (MemberMapData & { offsetLat: number; offsetLng: number })[]
   hubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
+  pending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
 } {
   // Group all markers by exact coordinates
   const groups: Record<string, OffsetItem[]> = {}
@@ -29,17 +43,25 @@ function applyAllCoordinateOffsets(
     if (!groups[key]) groups[key] = []
     groups[key].push({ type: 'hub', data: hub })
   }
+  for (const invite of pendingInvites) {
+    const key = `${invite.target_lat},${invite.target_lng}`
+    if (!groups[key]) groups[key] = []
+    groups[key].push({ type: 'pending', data: invite })
+  }
 
   const resultMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[] = []
   const resultHubs: (MasuHub & { offsetLat: number; offsetLng: number })[] = []
+  const resultPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[] = []
 
   for (const group of Object.values(groups)) {
     if (group.length === 1) {
       const item = group[0]
       if (item.type === 'member') {
         resultMembers.push({ ...item.data, offsetLat: item.data.lat!, offsetLng: item.data.lng! })
-      } else {
+      } else if (item.type === 'hub') {
         resultHubs.push({ ...item.data, offsetLat: item.data.lat, offsetLng: item.data.lng })
+      } else {
+        resultPending.push({ ...item.data, offsetLat: item.data.target_lat, offsetLng: item.data.target_lng })
       }
     } else {
       const radius = 0.006 // ~600m offset
@@ -52,17 +74,23 @@ function applyAllCoordinateOffsets(
             offsetLat: item.data.lat! + radius * Math.cos(angle),
             offsetLng: item.data.lng! + radius * Math.sin(angle),
           })
-        } else {
+        } else if (item.type === 'hub') {
           resultHubs.push({
             ...item.data,
             offsetLat: item.data.lat + radius * Math.cos(angle),
             offsetLng: item.data.lng + radius * Math.sin(angle),
           })
+        } else {
+          resultPending.push({
+            ...item.data,
+            offsetLat: item.data.target_lat + radius * Math.cos(angle),
+            offsetLng: item.data.target_lng + radius * Math.sin(angle),
+          })
         }
       }
     }
   }
-  return { members: resultMembers, hubs: resultHubs }
+  return { members: resultMembers, hubs: resultHubs, pending: resultPending }
 }
 
 // Calculate marker size based on zoom level (drop pin style)
@@ -145,6 +173,25 @@ function getHubMarkerSvg(size: number): string {
   `
 }
 
+// Generate drop-pin SVG for pending invites (purple)
+function getPendingMarkerSvg(size: number): string {
+  const w = size
+  const h = Math.round(size * 1.3)
+  const r = w / 2
+  const innerR = r * 0.45
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+      <defs>
+        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
+        </filter>
+      </defs>
+      <path d="M${r},${h} C${r},${h} ${w * 0.15},${r * 1.3} ${w * 0.15},${r} A${r * 0.85},${r * 0.85} 0 1,1 ${w * 0.85},${r} C${w * 0.85},${r * 1.3} ${r},${h} ${r},${h}Z" fill="#a855f7" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
+    </svg>
+  `
+}
+
 interface MemberRole {
   role_id: string
   role: CustomRole
@@ -165,32 +212,37 @@ interface MemberMapData {
 interface GuildMapProps {
   members: MemberMapData[]
   hubs: MasuHub[]
+  pendingInvites?: PendingInviteMapData[]
   userId?: string
   canViewMembers?: boolean
 }
 
-type MarkerType = 'member' | 'hub'
+type MarkerType = 'member' | 'hub' | 'pending'
 
 interface SelectedItem {
   type: MarkerType
-  data: MemberMapData | MasuHub
+  data: MemberMapData | MasuHub | PendingInviteMapData
 }
 
 // Inner component that can use useMap() hook inside <Map>
 function MapMarkers({
   showMembers,
   showHubs,
+  showPending,
   filteredMembers,
   filteredHubs,
+  filteredPending,
   markerSizes,
   onMarkerClick,
 }: {
   showMembers: boolean
   showHubs: boolean
+  showPending: boolean
   filteredMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[]
   filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
+  filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
   markerSizes: { base: number; avatar: number }
-  onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub, lat: number, lng: number) => void
+  onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
 }) {
   return (
     <>
@@ -234,14 +286,33 @@ function MapMarkers({
             />
           )
         })}
+      {showPending &&
+        filteredPending.map((invite) => {
+          const size = markerSizes.base
+          const h = Math.round(size * 1.3)
+          return (
+            <Marker
+              key={`pending-${invite.id}`}
+              position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
+              onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
+              title={invite.target_name || 'Pending'}
+              icon={{
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(getPendingMarkerSvg(size)),
+                scaledSize: { width: size, height: h, equals: () => false },
+                anchor: { x: size / 2, y: h, equals: () => false },
+              }}
+            />
+          )
+        })}
     </>
   )
 }
 
-export function GuildMap({ members, hubs, userId, canViewMembers = true }: GuildMapProps) {
+export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMembers = true }: GuildMapProps) {
   const { language, t } = useLanguage()
   const [showMembers, setShowMembers] = useState(canViewMembers)
   const [showHubs, setShowHubs] = useState(true)
+  const [showPending, setShowPending] = useState(true)
   const [selected, setSelected] = useState<SelectedItem | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -276,7 +347,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
     }
   }, [isFullscreen])
 
-  const handleMarkerClick = useCallback((type: MarkerType, data: MemberMapData | MasuHub, lat: number, lng: number) => {
+  const handleMarkerClick = useCallback((type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => {
     setSelected({ type, data })
     // ピンクリック時にズームイン
     const map = isFullscreen ? fullscreenMapRef.current : mapRef.current
@@ -289,8 +360,8 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
     }
   }, [isFullscreen])
 
-  // Filtered members and hubs with coordinate offset applied (unified to avoid member-hub overlap)
-  const { filteredMembers, filteredHubs } = useMemo(() => {
+  // Filtered members, hubs, and pending invites with coordinate offset applied
+  const { filteredMembers, filteredHubs, filteredPending } = useMemo(() => {
     const mFiltered = members.filter(m => {
       if (!m.lat || !m.lng) return false
       const query = searchQuery.toLowerCase()
@@ -309,9 +380,17 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
         h.country.toLowerCase().includes(query)
       return matchesSearch
     })
-    const offsets = applyAllCoordinateOffsets(mFiltered, hFiltered)
-    return { filteredMembers: offsets.members, filteredHubs: offsets.hubs }
-  }, [members, hubs, searchQuery])
+    const pFiltered = pendingInvites.filter(p => {
+      const query = searchQuery.toLowerCase()
+      const matchesSearch = !searchQuery ||
+        p.target_name?.toLowerCase().includes(query) ||
+        p.target_city?.toLowerCase().includes(query) ||
+        p.target_country?.toLowerCase().includes(query)
+      return matchesSearch
+    })
+    const offsets = applyAllCoordinateOffsets(mFiltered, hFiltered, pFiltered)
+    return { filteredMembers: offsets.members, filteredHubs: offsets.hubs, filteredPending: offsets.pending }
+  }, [members, hubs, pendingInvites, searchQuery])
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -346,8 +425,10 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
               <MapMarkers
                 showMembers={showMembers}
                 showHubs={showHubs}
+                showPending={showPending}
                 filteredMembers={filteredMembers}
                 filteredHubs={filteredHubs}
+                filteredPending={filteredPending}
                 markerSizes={markerSizes}
                 onMarkerClick={handleMarkerClick}
               />
@@ -424,6 +505,19 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
               <span className={`w-2 h-2 rounded-full ${showHubs ? 'bg-white' : 'bg-orange-500'}`} />
               {t.hubsCount} ({filteredHubs.length})
             </button>
+            {canViewMembers && filteredPending.length > 0 && (
+              <button
+                onClick={() => setShowPending(!showPending)}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap shadow-md transition-all flex items-center gap-1.5 ${
+                  showPending
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-white text-zinc-700'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${showPending ? 'bg-white' : 'bg-purple-500'}`} />
+                {t.pendingInvites} ({filteredPending.length})
+              </button>
+            )}
           </div>
         </div>
 
@@ -466,8 +560,10 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
               <div className="px-4 pb-4">
                 {selected.type === 'member' ? (
                   <MemberBottomSheet member={selected.data as MemberMapData} />
-                ) : (
+                ) : selected.type === 'hub' ? (
                   <HubBottomSheet hub={selected.data as MasuHub} />
+                ) : (
+                  <PendingBottomSheet invite={selected.data as PendingInviteMapData} />
                 )}
               </div>
             </div>
@@ -525,6 +621,18 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
           >
             {t.masuHubs}
           </button>
+          {canViewMembers && filteredPending.length > 0 && (
+            <button
+              onClick={() => setShowPending(!showPending)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                showPending
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+              }`}
+            >
+              {t.pendingInvites}
+            </button>
+          )}
           {/* Fullscreen button */}
           <button
             onClick={() => setIsFullscreen(true)}
@@ -542,7 +650,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
       {searchQuery && (
         <div className="flex items-center gap-2 mb-3 text-sm text-zinc-300">
           <span>
-            {t.showingResults}: {filteredMembers.length} {t.membersCount}, {filteredHubs.length} {t.hubsCount}
+            {t.showingResults}: {filteredMembers.length} {t.membersCount}, {filteredHubs.length} {t.hubsCount}{filteredPending.length > 0 ? `, ${filteredPending.length} ${t.pendingInvites}` : ''}
           </span>
           <button
             onClick={() => setSearchQuery('')}
@@ -568,8 +676,10 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
               <MapMarkers
                 showMembers={showMembers}
                 showHubs={showHubs}
+                showPending={showPending}
                 filteredMembers={filteredMembers}
                 filteredHubs={filteredHubs}
+                filteredPending={filteredPending}
                 markerSizes={markerSizes}
                 onMarkerClick={handleMarkerClick}
               />
@@ -596,8 +706,10 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
             <div className="flex-1">
               {selected.type === 'member' ? (
                 <MemberInfoCard member={selected.data as MemberMapData} />
-              ) : (
+              ) : selected.type === 'hub' ? (
                 <HubInfoCard hub={selected.data as MasuHub} />
+              ) : (
+                <PendingInfoCard invite={selected.data as PendingInviteMapData} />
               )}
             </div>
             <button
@@ -855,6 +967,54 @@ function HubInfoCard({ hub }: { hub: MasuHub }) {
             Website
           </a>
         )}
+      </div>
+    </div>
+  )
+}
+
+// Pending invite bottom sheet for fullscreen mode
+function PendingBottomSheet({ invite }: { invite: PendingInviteMapData }) {
+  return (
+    <div className="flex items-start gap-4">
+      <div className="w-16 h-16 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+        <span className="text-2xl text-white font-bold">
+          {invite.target_name?.[0]?.toUpperCase() || '?'}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="text-lg font-semibold text-zinc-900 truncate">
+          {invite.target_name || 'Pending Member'}
+        </h3>
+        <p className="text-sm text-zinc-500">
+          {[invite.target_city, invite.target_country].filter(Boolean).join(', ')}
+        </p>
+        <span className="mt-2 inline-block px-3 py-1 text-xs font-medium text-purple-700 bg-purple-100 rounded-full">
+          {invite.membership_type.charAt(0).toUpperCase() + invite.membership_type.slice(1)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// Pending invite info card for non-fullscreen mode
+function PendingInfoCard({ invite }: { invite: PendingInviteMapData }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+        <span className="text-lg text-white font-bold">
+          {invite.target_name?.[0]?.toUpperCase() || '?'}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-white truncate">
+          {invite.target_name || 'Pending Member'}
+        </p>
+        <p className="text-sm text-zinc-400">
+          {[invite.target_city, invite.target_country].filter(Boolean).join(', ')}
+        </p>
+        <span className="mt-1 inline-block px-2 py-0.5 text-xs font-medium text-purple-300 bg-purple-500/20 rounded-full border border-purple-500/30">
+          {invite.membership_type.charAt(0).toUpperCase() + invite.membership_type.slice(1)}
+        </span>
       </div>
     </div>
   )

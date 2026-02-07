@@ -151,6 +151,9 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
   const [targetName, setTargetName] = useState('')
   const [targetCountry, setTargetCountry] = useState('')
   const [targetCity, setTargetCity] = useState('')
+  const [targetLat, setTargetLat] = useState<number | null>(null)
+  const [targetLng, setTargetLng] = useState<number | null>(null)
+  const [geocodeStatus, setGeocodeStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
   // 無料招待を発行できるか
   const canCreateFreeInvite = canIssueFreeInvite(adminEmail)
@@ -170,10 +173,64 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
     }
   }
 
+  // ジオコーディング（国・都市から座標取得）
+  const geocodeInviteTarget = async (city: string, country: string): Promise<{ lat: number; lng: number } | null> => {
+    if (!city && !country) return null
+    const query = [city, country].filter(Boolean).join(', ')
+    try {
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        query
+      )}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+      const response = await fetch(geocodeUrl)
+      const data = await response.json()
+      if (data.results && data.results[0]) {
+        return {
+          lat: data.results[0].geometry.location.lat,
+          lng: data.results[0].geometry.location.lng,
+        }
+      }
+    } catch {
+      // Geocoding failed
+    }
+    return null
+  }
+
+  // 国・都市変更時にジオコーディング実行
+  const handleGeocodePreview = async (city: string, country: string) => {
+    if (!city.trim() && !country.trim()) {
+      setTargetLat(null)
+      setTargetLng(null)
+      setGeocodeStatus('idle')
+      return
+    }
+    setGeocodeStatus('loading')
+    const result = await geocodeInviteTarget(city.trim(), country.trim())
+    if (result) {
+      setTargetLat(result.lat)
+      setTargetLng(result.lng)
+      setGeocodeStatus('success')
+    } else {
+      setTargetLat(null)
+      setTargetLng(null)
+      setGeocodeStatus('error')
+    }
+  }
+
   const handleCreateInvite = async () => {
     setCreating(true)
     const supabase = createClient()
     const code = generateInviteCode()
+
+    // 国・都市が入力されていてまだジオコーディングしていない場合、ここで実行
+    let lat = targetLat
+    let lng = targetLng
+    if ((targetCity.trim() || targetCountry.trim()) && lat === null) {
+      const result = await geocodeInviteTarget(targetCity.trim(), targetCountry.trim())
+      if (result) {
+        lat = result.lat
+        lng = result.lng
+      }
+    }
 
     const { data, error } = await supabase.from('invites').insert({
       code,
@@ -185,6 +242,8 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
       target_name: targetName.trim() || null,
       target_country: targetCountry.trim() || null,
       target_city: targetCity.trim() || null,
+      target_lat: lat,
+      target_lng: lng,
     }).select().single()
 
     setCreating(false)
@@ -204,6 +263,9 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
       setTargetName('')
       setTargetCountry('')
       setTargetCity('')
+      setTargetLat(null)
+      setTargetLng(null)
+      setGeocodeStatus('idle')
       // コードをクリップボードにコピー
       const url = `${window.location.origin}/invite/${code}`
       navigator.clipboard.writeText(url)
@@ -284,6 +346,7 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
                     type="text"
                     value={targetCountry}
                     onChange={(e) => setTargetCountry(e.target.value)}
+                    onBlur={() => handleGeocodePreview(targetCity, targetCountry)}
                     placeholder="例: Japan"
                     className="w-full px-4 py-2.5 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
                   />
@@ -294,11 +357,25 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
                     type="text"
                     value={targetCity}
                     onChange={(e) => setTargetCity(e.target.value)}
+                    onBlur={() => handleGeocodePreview(targetCity, targetCountry)}
                     placeholder="例: Tokyo"
                     className="w-full px-4 py-2.5 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
                   />
                 </div>
               </div>
+              {geocodeStatus !== 'idle' && (
+                <div className="mt-2">
+                  {geocodeStatus === 'loading' && (
+                    <p className="text-xs text-zinc-400">位置情報を取得中...</p>
+                  )}
+                  {geocodeStatus === 'success' && (
+                    <p className="text-xs text-green-400">位置情報を取得しました（マップに表示されます）</p>
+                  )}
+                  {geocodeStatus === 'error' && (
+                    <p className="text-xs text-yellow-400">位置情報の取得に失敗しました（登録後にプロフィールで設定可能）</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {/* 再利用可能チェックボックス */}

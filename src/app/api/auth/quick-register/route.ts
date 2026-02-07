@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   // 招待コードを検証
   const { data: invite, error: inviteError } = await supabaseAdmin
     .from('invites')
-    .select('id, invited_by, membership_type, used, reusable, use_count, target_name, target_country, target_city')
+    .select('id, invited_by, membership_type, used, reusable, use_count, target_name, target_country, target_city, target_lat, target_lng')
     .eq('code', inviteCode)
     .single()
 
@@ -69,6 +69,8 @@ export async function POST(request: NextRequest) {
       show_location_on_map: true,
       home_country: invite.target_country || null,
       home_city: invite.target_city || null,
+      lat: invite.target_lat ?? null,
+      lng: invite.target_lng ?? null,
     })
 
     if (profileError) {

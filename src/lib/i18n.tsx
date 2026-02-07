@@ -217,6 +217,7 @@ const translations = {
     showingResults: '表示中',
     membersCount: 'メンバー',
     hubsCount: 'Hub',
+    pendingInvites: '招待中',
 
     // Guild Member Only
     guildMemberOnly: 'ギルドメンバー限定',
@@ -532,6 +533,7 @@ const translations = {
     showingResults: 'Showing',
     membersCount: 'Members',
     hubsCount: 'Hubs',
+    pendingInvites: 'Pending',
 
     // Guild Member Only
     guildMemberOnly: 'Guild Member Only',

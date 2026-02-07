@@ -34,6 +34,8 @@ export interface Invite {
   target_name: string | null
   target_country: string | null
   target_city: string | null
+  target_lat: number | null
+  target_lng: number | null
   created_at: string
 }
 

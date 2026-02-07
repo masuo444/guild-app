@@ -81,6 +81,40 @@ export default async function MapPage(props: Props) {
     }))
   }
 
+  // 未使用招待（target_lat/lngが設定済み）をフェッチ → マップにpendingピン表示
+  let pendingInvites: Array<{
+    id: string
+    code: string
+    target_name: string | null
+    target_country: string | null
+    target_city: string | null
+    target_lat: number
+    target_lng: number
+    membership_type: string
+  }> = []
+
+  if (canSeeMembers) {
+    const { data: inviteData } = await supabase
+      .from('invites')
+      .select('id, code, target_name, target_country, target_city, target_lat, target_lng, membership_type, used, reusable')
+      .not('target_lat', 'is', null)
+      .not('target_lng', 'is', null)
+
+    // 未使用の招待のみ（reusableは除外：一般公開リンクなので）
+    pendingInvites = (inviteData ?? [])
+      .filter(i => !i.reusable && !i.used)
+      .map(i => ({
+        id: i.id,
+        code: i.code,
+        target_name: i.target_name,
+        target_country: i.target_country,
+        target_city: i.target_city,
+        target_lat: i.target_lat!,
+        target_lng: i.target_lng!,
+        membership_type: i.membership_type,
+      }))
+  }
+
   // 枡拠点は全員取得可能
   const { data: hubs } = await supabase
     .from('masu_hubs')
@@ -103,6 +137,7 @@ export default async function MapPage(props: Props) {
       <GuildMap
         members={members}
         hubs={hubs ?? []}
+        pendingInvites={pendingInvites}
         userId={user?.id}
         canViewMembers={canSeeMembers}
       />

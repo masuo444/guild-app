@@ -218,6 +218,8 @@ export async function GET(request: NextRequest) {
     let targetName: string | null = null
     let targetCountry: string | null = null
     let targetCity: string | null = null
+    let targetLat: number | null = null
+    let targetLng: number | null = null
 
     // Stripe session があれば検証して情報を取得
     if (stripeSessionId) {
@@ -245,7 +247,7 @@ export async function GET(request: NextRequest) {
       // 招待コードを取得（Service Roleで確実に取得）
       const { data: invite, error: inviteError } = await supabaseAdmin
         .from('invites')
-        .select('id, invited_by, membership_type, used, reusable, use_count, target_name, target_country, target_city')
+        .select('id, invited_by, membership_type, used, reusable, use_count, target_name, target_country, target_city, target_lat, target_lng')
         .eq('code', inviteCode)
         .single()
 
@@ -264,6 +266,8 @@ export async function GET(request: NextRequest) {
         targetName = invite.target_name || null
         targetCountry = invite.target_country || null
         targetCity = invite.target_city || null
+        targetLat = invite.target_lat ?? null
+        targetLng = invite.target_lng ?? null
         console.log('Setting membershipType from invite:', membershipType)
 
         // 無料メンバータイプの場合はfreeに
@@ -335,6 +339,8 @@ export async function GET(request: NextRequest) {
       show_location_on_map: showOnMap,
       home_country: targetCountry,
       home_city: targetCity,
+      lat: targetLat,
+      lng: targetLng,
     }
     console.log('Creating profile with data:', profileData)
     const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData)
