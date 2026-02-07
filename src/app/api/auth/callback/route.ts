@@ -71,9 +71,13 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     authError = error
   }
-  // No valid auth params
+  // Already authenticated (client-side OTP verification済み) - cookieからセッションを確認
   else {
-    return NextResponse.redirect(`${origin}/auth/login?error=missing_params`)
+    const { data: { user: existingUser } } = await supabase.auth.getUser()
+    if (!existingUser) {
+      return NextResponse.redirect(`${origin}/auth/login?error=missing_params`)
+    }
+    // 既にクライアント側で認証済み - そのまま続行
   }
 
   if (authError) {

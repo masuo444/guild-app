@@ -351,14 +351,20 @@ export default function InvitePage() {
 
             {isFree ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
-                  type="email"
-                  label={t.emailAddress}
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <div>
+                  <label htmlFor="invite-email" className="block text-sm font-medium text-zinc-700 mb-1">
+                    {t.emailAddress}
+                  </label>
+                  <input
+                    id="invite-email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="w-full px-4 py-3 bg-white border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
+                  />
+                </div>
 
                 <Button
                   type="submit"

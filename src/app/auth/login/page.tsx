@@ -139,8 +139,8 @@ export default function LoginPage() {
         return
       }
 
-      // ログイン成功 - /appにリダイレクト
-      window.location.href = '/app'
+      // ログイン成功 - callbackを経由してプロフィール確認後/appにリダイレクト
+      window.location.href = '/api/auth/callback?next=/app'
     } catch {
       setLoginMessage({ type: 'error', text: 'Network error' })
       setLoginLoading(false)
