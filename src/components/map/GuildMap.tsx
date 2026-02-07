@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { APIProvider, Map, Marker, useMap } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
@@ -65,77 +65,82 @@ function applyAllCoordinateOffsets(
   return { members: resultMembers, hubs: resultHubs }
 }
 
-// Calculate marker size based on zoom level (emoji-style small markers)
+// Calculate marker size based on zoom level (drop pin style)
 function getMarkerSize(zoom: number): { base: number; avatar: number } {
   if (zoom <= 3) {
-    return { base: 14, avatar: 20 }
-  } else if (zoom <= 5) {
-    return { base: 16, avatar: 24 }
-  } else if (zoom <= 8) {
-    return { base: 20, avatar: 28 }
-  } else if (zoom <= 10) {
     return { base: 24, avatar: 32 }
+  } else if (zoom <= 5) {
+    return { base: 28, avatar: 36 }
+  } else if (zoom <= 8) {
+    return { base: 32, avatar: 40 }
+  } else if (zoom <= 10) {
+    return { base: 36, avatar: 44 }
   } else if (zoom <= 13) {
-    return { base: 28, avatar: 38 }
+    return { base: 40, avatar: 48 }
   } else {
-    return { base: 32, avatar: 44 }
+    return { base: 48, avatar: 56 }
   }
 }
 
-// Generate emoji-style circular marker SVG for members with avatar
+// Generate drop-pin SVG for members with avatar
 function getMemberAvatarMarkerSvg(avatarUrl: string, size: number): string {
-  const borderWidth = Math.max(2, size / 10)
+  const w = size
+  const h = Math.round(size * 1.3)
+  const r = w / 2
+  const circleY = r
+  const imgPad = Math.max(3, r * 0.2)
+  const imgR = r - imgPad
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
       <defs>
-        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.3"/>
+        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
         </filter>
         <clipPath id="avatarClip">
-          <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - borderWidth}"/>
+          <circle cx="${r}" cy="${circleY}" r="${imgR}"/>
         </clipPath>
       </defs>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#22c55e" filter="url(#shadow)"/>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - borderWidth}" fill="white"/>
-      <image href="${avatarUrl}" x="${borderWidth}" y="${borderWidth}" width="${size - borderWidth * 2}" height="${size - borderWidth * 2}" clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice"/>
+      <path d="M${r},${h} C${r},${h} ${w * 0.15},${r * 1.3} ${w * 0.15},${r} A${r * 0.85},${r * 0.85} 0 1,1 ${w * 0.85},${r} C${w * 0.85},${r * 1.3} ${r},${h} ${r},${h}Z" fill="#22c55e" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${circleY}" r="${imgR + 1}" fill="white"/>
+      <image href="${avatarUrl}" x="${imgPad}" y="${circleY - imgR}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice"/>
     </svg>
   `
 }
 
-// Generate emoji-style circular marker SVG for members without avatar
+// Generate drop-pin SVG for members without avatar
 function getMemberDotMarkerSvg(size: number): string {
-  const borderWidth = Math.max(2, size / 8)
-  const innerRadius = size / 2 - borderWidth
-  const dotRadius = innerRadius * 0.5
+  const w = size
+  const h = Math.round(size * 1.3)
+  const r = w / 2
+  const innerR = r * 0.45
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
       <defs>
-        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.3"/>
+        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
         </filter>
       </defs>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#22c55e" filter="url(#shadow)"/>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${innerRadius}" fill="white"/>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${dotRadius}" fill="#22c55e"/>
+      <path d="M${r},${h} C${r},${h} ${w * 0.15},${r * 1.3} ${w * 0.15},${r} A${r * 0.85},${r * 0.85} 0 1,1 ${w * 0.85},${r} C${w * 0.85},${r * 1.3} ${r},${h} ${r},${h}Z" fill="#22c55e" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
     </svg>
   `
 }
 
-// Generate emoji-style circular marker SVG for hubs
+// Generate drop-pin SVG for hubs
 function getHubMarkerSvg(size: number): string {
-  const borderWidth = Math.max(2, size / 8)
-  const innerRadius = size / 2 - borderWidth
-  const dotRadius = innerRadius * 0.5
+  const w = size
+  const h = Math.round(size * 1.3)
+  const r = w / 2
+  const innerR = r * 0.45
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
       <defs>
-        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.3"/>
+        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
         </filter>
       </defs>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#f97316" filter="url(#shadow)"/>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${innerRadius}" fill="white"/>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${dotRadius}" fill="#f97316"/>
+      <path d="M${r},${h} C${r},${h} ${w * 0.15},${r * 1.3} ${w * 0.15},${r} A${r * 0.85},${r * 0.85} 0 1,1 ${w * 0.85},${r} C${w * 0.85},${r * 1.3} ${r},${h} ${r},${h}Z" fill="#f97316" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
     </svg>
   `
 }
@@ -171,6 +176,68 @@ interface SelectedItem {
   data: MemberMapData | MasuHub
 }
 
+// Inner component that can use useMap() hook inside <Map>
+function MapMarkers({
+  showMembers,
+  showHubs,
+  filteredMembers,
+  filteredHubs,
+  markerSizes,
+  onMarkerClick,
+}: {
+  showMembers: boolean
+  showHubs: boolean
+  filteredMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[]
+  filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
+  markerSizes: { base: number; avatar: number }
+  onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub, lat: number, lng: number) => void
+}) {
+  return (
+    <>
+      {showMembers &&
+        filteredMembers.map((member) => {
+          const size = member.avatar_url ? markerSizes.avatar : markerSizes.base
+          const h = Math.round(size * 1.3)
+          return (
+            <Marker
+              key={member.id}
+              position={{ lat: member.offsetLat, lng: member.offsetLng }}
+              onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
+              title={member.display_name || 'Member'}
+              icon={{
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+                  member.avatar_url
+                    ? getMemberAvatarMarkerSvg(member.avatar_url, size)
+                    : getMemberDotMarkerSvg(size)
+                ),
+                scaledSize: { width: size, height: h, equals: () => false },
+                anchor: { x: size / 2, y: h, equals: () => false },
+              }}
+            />
+          )
+        })}
+      {showHubs &&
+        filteredHubs.map((hub) => {
+          const size = markerSizes.base
+          const h = Math.round(size * 1.3)
+          return (
+            <Marker
+              key={hub.id}
+              position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
+              onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
+              title={hub.name}
+              icon={{
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(getHubMarkerSvg(size)),
+                scaledSize: { width: size, height: h, equals: () => false },
+                anchor: { x: size / 2, y: h, equals: () => false },
+              }}
+            />
+          )
+        })}
+    </>
+  )
+}
+
 export function GuildMap({ members, hubs, userId, canViewMembers = true }: GuildMapProps) {
   const { language, t } = useLanguage()
   const [showMembers, setShowMembers] = useState(canViewMembers)
@@ -179,6 +246,8 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
   const [searchQuery, setSearchQuery] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(3)
+  const mapRef = useRef<google.maps.Map | null>(null)
+  const fullscreenMapRef = useRef<google.maps.Map | null>(null)
 
   // Get current marker sizes based on zoom
   const markerSizes = useMemo(() => getMarkerSize(zoomLevel), [zoomLevel])
@@ -187,7 +256,6 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
   useEffect(() => {
     if (isFullscreen) {
       document.body.style.overflow = 'hidden'
-      // Hide bottom navigation if exists
       const bottomNav = document.querySelector('[data-bottom-nav]')
       if (bottomNav) {
         (bottomNav as HTMLElement).style.display = 'none'
@@ -208,9 +276,18 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
     }
   }, [isFullscreen])
 
-  const handleMarkerClick = useCallback((type: MarkerType, data: MemberMapData | MasuHub) => {
+  const handleMarkerClick = useCallback((type: MarkerType, data: MemberMapData | MasuHub, lat: number, lng: number) => {
     setSelected({ type, data })
-  }, [])
+    // ピンクリック時にズームイン
+    const map = isFullscreen ? fullscreenMapRef.current : mapRef.current
+    if (map) {
+      map.panTo({ lat, lng })
+      const currentZoom = map.getZoom() || 3
+      if (currentZoom < 10) {
+        map.setZoom(10)
+      }
+    }
+  }, [isFullscreen])
 
   // Filtered members and hubs with coordinate offset applied (unified to avoid member-hub overlap)
   const { filteredMembers, filteredHubs } = useMemo(() => {
@@ -264,48 +341,16 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
               streetViewControl={false}
               fullscreenControl={false}
               onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
+              onTilesLoaded={(e) => { fullscreenMapRef.current = (e as unknown as { map: google.maps.Map }).map }}
             >
-              {/* Member markers - emoji-style circles */}
-              {showMembers &&
-                filteredMembers.map((member) => {
-                  const size = member.avatar_url ? markerSizes.avatar : markerSizes.base
-                  return (
-                    <Marker
-                      key={member.id}
-                      position={{ lat: member.offsetLat, lng: member.offsetLng }}
-                      onClick={() => handleMarkerClick('member', member)}
-                      title={member.display_name || 'Member'}
-                      icon={{
-                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-                          member.avatar_url
-                            ? getMemberAvatarMarkerSvg(member.avatar_url, size)
-                            : getMemberDotMarkerSvg(size)
-                        ),
-                        scaledSize: { width: size, height: size, equals: () => false },
-                        anchor: { x: size / 2, y: size / 2, equals: () => false },
-                      }}
-                    />
-                  )
-                })}
-
-              {/* Hub markers - emoji-style circles */}
-              {showHubs &&
-                filteredHubs.map((hub) => {
-                  const size = markerSizes.base
-                  return (
-                    <Marker
-                      key={hub.id}
-                      position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
-                      onClick={() => handleMarkerClick('hub', hub)}
-                      title={hub.name}
-                      icon={{
-                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(getHubMarkerSvg(size)),
-                        scaledSize: { width: size, height: size, equals: () => false },
-                        anchor: { x: size / 2, y: size / 2, equals: () => false },
-                      }}
-                    />
-                  )
-                })}
+              <MapMarkers
+                showMembers={showMembers}
+                showHubs={showHubs}
+                filteredMembers={filteredMembers}
+                filteredHubs={filteredHubs}
+                markerSizes={markerSizes}
+                onMarkerClick={handleMarkerClick}
+              />
             </Map>
           </APIProvider>
         </div>
@@ -518,48 +563,16 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
               style={{ width: '100%', height: '100%' }}
               gestureHandling="greedy"
               onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
+              onTilesLoaded={(e) => { mapRef.current = (e as unknown as { map: google.maps.Map }).map }}
             >
-              {/* Member markers - emoji-style circles */}
-              {showMembers &&
-                filteredMembers.map((member) => {
-                  const size = member.avatar_url ? markerSizes.avatar : markerSizes.base
-                  return (
-                    <Marker
-                      key={member.id}
-                      position={{ lat: member.offsetLat, lng: member.offsetLng }}
-                      onClick={() => handleMarkerClick('member', member)}
-                      title={member.display_name || 'Member'}
-                      icon={{
-                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-                          member.avatar_url
-                            ? getMemberAvatarMarkerSvg(member.avatar_url, size)
-                            : getMemberDotMarkerSvg(size)
-                        ),
-                        scaledSize: { width: size, height: size, equals: () => false },
-                        anchor: { x: size / 2, y: size / 2, equals: () => false },
-                      }}
-                    />
-                  )
-                })}
-
-              {/* Hub markers - emoji-style circles */}
-              {showHubs &&
-                filteredHubs.map((hub) => {
-                  const size = markerSizes.base
-                  return (
-                    <Marker
-                      key={hub.id}
-                      position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
-                      onClick={() => handleMarkerClick('hub', hub)}
-                      title={hub.name}
-                      icon={{
-                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(getHubMarkerSvg(size)),
-                        scaledSize: { width: size, height: size, equals: () => false },
-                        anchor: { x: size / 2, y: size / 2, equals: () => false },
-                      }}
-                    />
-                  )
-                })}
+              <MapMarkers
+                showMembers={showMembers}
+                showHubs={showHubs}
+                filteredMembers={filteredMembers}
+                filteredHubs={filteredHubs}
+                markerSizes={markerSizes}
+                onMarkerClick={handleMarkerClick}
+              />
             </Map>
           </APIProvider>
         </div>
