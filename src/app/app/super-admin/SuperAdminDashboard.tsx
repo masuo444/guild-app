@@ -1263,14 +1263,38 @@ function QuestsManagementTab({ quests }: { quests: GuildQuest[] }) {
     is_repeatable: true,
   })
 
+  // テキストを自動翻訳（日本語→英語）
+  const autoTranslate = async (text: string): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, from: 'ja', to: 'en' }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.translated || null
+    } catch {
+      return null
+    }
+  }
+
   const handleAddQuest = async () => {
     if (!newQuest.title || !newQuest.description) return
     setSaving(true)
+
+    // 自動翻訳
+    const [titleEn, descEn] = await Promise.all([
+      autoTranslate(newQuest.title),
+      autoTranslate(newQuest.description),
+    ])
 
     const supabase = createClient()
     await supabase.from('guild_quests').insert({
       title: newQuest.title,
       description: newQuest.description,
+      title_en: titleEn,
+      description_en: descEn,
       image_url: newQuest.image_url || null,
       points_reward: newQuest.points_reward,
       quest_type: newQuest.quest_type,
@@ -1295,12 +1319,20 @@ function QuestsManagementTab({ quests }: { quests: GuildQuest[] }) {
     if (!editingQuest) return
     setSaving(true)
 
+    // 自動翻訳（タイトル・説明文が変更された場合のみ）
+    const [titleEn, descEn] = await Promise.all([
+      autoTranslate(editingQuest.title),
+      autoTranslate(editingQuest.description),
+    ])
+
     const supabase = createClient()
     await supabase
       .from('guild_quests')
       .update({
         title: editingQuest.title,
         description: editingQuest.description,
+        title_en: titleEn,
+        description_en: descEn,
         image_url: editingQuest.image_url,
         points_reward: editingQuest.points_reward,
         quest_type: editingQuest.quest_type,

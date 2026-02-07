@@ -1899,15 +1899,39 @@ function QuestsTab({ submissions, quests, adminId }: { submissions: QuestSubmiss
   const pendingSubmissions = submissions.filter(s => s.status === 'pending')
   const reviewedSubmissions = submissions.filter(s => s.status !== 'pending')
 
+  // テキストを自動翻訳（日本語→英語）
+  const autoTranslate = async (text: string): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, from: 'ja', to: 'en' }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.translated || null
+    } catch {
+      return null
+    }
+  }
+
   // クエスト作成
   const handleCreateQuest = async () => {
     if (!questFormData.title || !questFormData.description) return
     setCreatingQuest(true)
 
+    // 自動翻訳
+    const [titleEn, descEn] = await Promise.all([
+      autoTranslate(questFormData.title),
+      autoTranslate(questFormData.description),
+    ])
+
     const supabase = createClient()
     await supabase.from('guild_quests').insert({
       title: questFormData.title,
       description: questFormData.description,
+      title_en: titleEn,
+      description_en: descEn,
       points_reward: questFormData.points_reward,
       quest_type: questFormData.quest_type,
       is_repeatable: questFormData.is_repeatable,

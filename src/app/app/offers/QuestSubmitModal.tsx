@@ -7,6 +7,7 @@ import { GuildQuest, QuestSubmission } from '@/types/database'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { formatDate } from '@/lib/utils'
+import { useLanguage } from '@/lib/i18n'
 
 interface QuestSubmitModalProps {
   quest: GuildQuest
@@ -17,6 +18,7 @@ interface QuestSubmitModalProps {
 
 export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestSubmitModalProps) {
   const router = useRouter()
+  const { language, t } = useLanguage()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -24,6 +26,10 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
   const [comment, setComment] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // 言語に応じてタイトル・説明文を切り替え
+  const title = (language === 'en' && quest.title_en) ? quest.title_en : quest.title
+  const description = (language === 'en' && quest.description_en) ? quest.description_en : quest.description
 
   // このクエストの自分の過去投稿
   const mySubmissions = submissions.filter(s => s.quest_id === quest.id)
@@ -49,15 +55,13 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
   }, [])
 
   const handleFile = (file: File) => {
-    // 画像ファイルかチェック
     if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file')
+      setError(t.questErrorImageOnly)
       return
     }
 
-    // ファイルサイズチェック (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB')
+      setError(t.questErrorFileSize)
       return
     }
 
@@ -74,7 +78,7 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
 
   const handleSubmit = async () => {
     if (!selectedFile) {
-      setError('Please select an image')
+      setError(t.questErrorSelectImage)
       return
     }
 
@@ -84,7 +88,6 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
     try {
       const supabase = createClient()
 
-      // 1. 画像をStorageにアップロード
       const fileExt = selectedFile.name.split('.').pop()
       const fileName = `${Date.now()}.${fileExt}`
       const filePath = `${userId}/${quest.id}/${fileName}`
@@ -94,15 +97,13 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
         .upload(filePath, selectedFile)
 
       if (uploadError) {
-        throw new Error('Failed to upload image: ' + uploadError.message)
+        throw new Error(t.questErrorUploadFailed + ': ' + uploadError.message)
       }
 
-      // 2. 公開URLを取得
       const { data: { publicUrl } } = supabase.storage
         .from('quest-submissions')
         .getPublicUrl(filePath)
 
-      // 3. quest_submissionsにレコード作成
       const { error: insertError } = await supabase
         .from('quest_submissions')
         .insert({
@@ -114,14 +115,13 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
         })
 
       if (insertError) {
-        throw new Error('Failed to create submission: ' + insertError.message)
+        throw new Error(t.questErrorSubmitFailed + ': ' + insertError.message)
       }
 
-      // 成功
       router.refresh()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : t.questErrorGeneral)
     } finally {
       setUploading(false)
     }
@@ -130,11 +130,11 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <span className="px-2 py-0.5 bg-green-500/20 rounded text-xs font-medium text-green-300">Approved</span>
+        return <span className="px-2 py-0.5 bg-green-500/20 rounded text-xs font-medium text-green-300">{t.questStatusApproved}</span>
       case 'rejected':
-        return <span className="px-2 py-0.5 bg-red-500/20 rounded text-xs font-medium text-red-300">Rejected</span>
+        return <span className="px-2 py-0.5 bg-red-500/20 rounded text-xs font-medium text-red-300">{t.questStatusRejected}</span>
       default:
-        return <span className="px-2 py-0.5 bg-amber-500/20 rounded text-xs font-medium text-amber-300">Pending</span>
+        return <span className="px-2 py-0.5 bg-amber-500/20 rounded text-xs font-medium text-amber-300">{t.questStatusPending}</span>
     }
   }
 
@@ -143,8 +143,8 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
       <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-white">{quest.title}</h3>
-            <p className="text-sm text-zinc-400">{quest.description}</p>
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <p className="text-sm text-zinc-400">{description}</p>
           </div>
           <button
             onClick={onClose}
@@ -162,8 +162,8 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
             <svg className="w-5 h-5 text-[#c0c0c0]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
             </svg>
-            <span className="text-[#c0c0c0] font-bold">+{quest.points_reward} points</span>
-            <span className="text-zinc-400 text-sm">on approval</span>
+            <span className="text-[#c0c0c0] font-bold">+{quest.points_reward} {t.questPoints}</span>
+            <span className="text-zinc-400 text-sm">{t.questOnApproval}</span>
           </div>
 
           {/* 画像アップロードエリア */}
@@ -194,15 +194,15 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
                   alt="Preview"
                   className="max-h-48 mx-auto rounded-lg object-contain"
                 />
-                <p className="text-zinc-300 text-sm">Click or drag to change</p>
+                <p className="text-zinc-300 text-sm">{t.questClickToChange}</p>
               </div>
             ) : (
               <div className="space-y-2">
                 <svg className="w-12 h-12 mx-auto text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <p className="text-zinc-300">Drop image here or click to upload</p>
-                <p className="text-zinc-500 text-xs">Max 5MB, JPG/PNG/GIF</p>
+                <p className="text-zinc-300">{t.questDropImage}</p>
+                <p className="text-zinc-500 text-xs">{t.questMaxFileSize}</p>
               </div>
             )}
           </div>
@@ -210,12 +210,12 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
           {/* コメント入力 */}
           <div>
             <label className="block text-sm font-medium text-zinc-300 mb-1">
-              Comment (Optional)
+              {t.questCommentLabel}
             </label>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Add a comment..."
+              placeholder={t.questCommentPlaceholder}
               rows={2}
               className="w-full px-3 py-2 border border-zinc-500/30 rounded-lg text-sm bg-white/10 text-white placeholder-zinc-400 resize-none"
             />
@@ -231,7 +231,7 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
           {/* 送信ボタン */}
           <div className="flex gap-3">
             <Button variant="outline" onClick={onClose} className="flex-1">
-              Cancel
+              {t.questCancel}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -239,14 +239,14 @@ export function QuestSubmitModal({ quest, submissions, userId, onClose }: QuestS
               disabled={!selectedFile}
               className="flex-1"
             >
-              Submit
+              {t.questSubmit}
             </Button>
           </div>
 
           {/* 過去の投稿履歴 */}
           {mySubmissions.length > 0 && (
             <div className="border-t border-zinc-500/30 pt-4">
-              <h4 className="text-sm font-medium text-zinc-300 mb-3">Your Previous Submissions</h4>
+              <h4 className="text-sm font-medium text-zinc-300 mb-3">{t.questPreviousSubmissions}</h4>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {mySubmissions.map((sub) => (
                   <div key={sub.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">

@@ -128,6 +128,8 @@ export interface GuildQuest {
   id: string
   title: string
   description: string
+  title_en: string | null
+  description_en: string | null
   image_url: string | null
   points_reward: number
   quest_type: QuestType
