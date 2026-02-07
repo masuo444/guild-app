@@ -143,21 +143,46 @@ export default function InvitePage() {
 
     const supabase = createClient()
 
-    const { error: verifyError } = await supabase.auth.verifyOtp({
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
       email,
       token: otpCode,
       type: 'email',
     })
 
-    if (verifyError) {
+    if (verifyError || !data.user) {
       setError(t.invalidCodeRetry)
       setStatus('sent')
       return
     }
 
-    // 認証成功 → callbackにリダイレクト（プロフィール作成・招待処理はサーバー側で統一）
+    // OTP検証成功 → quick-register でプロフィール作成 & magic link token 取得
     setStatus('redirecting')
-    window.location.href = `/api/auth/callback?invite_code=${code}&next=/app`
+
+    try {
+      const res = await fetch('/api/auth/quick-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: data.user.id,
+          email,
+          inviteCode: code,
+        }),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok || !result.callbackUrl) {
+        // quick-register 失敗時は従来のフローにフォールバック
+        window.location.href = `/api/auth/callback?invite_code=${code}&next=/app`
+        return
+      }
+
+      // callback に token_hash 付きでリダイレクト → サーバー側で確実にセッション確立
+      window.location.href = result.callbackUrl
+    } catch {
+      // ネットワークエラー時は従来のフローにフォールバック
+      window.location.href = `/api/auth/callback?invite_code=${code}&next=/app`
+    }
   }
 
   if (status === 'loading' || status === 'redirecting') {
