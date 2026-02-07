@@ -148,6 +148,9 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
   const [isReusable, setIsReusable] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [lastCreatedCode, setLastCreatedCode] = useState<string | null>(null)
+  const [targetName, setTargetName] = useState('')
+  const [targetCountry, setTargetCountry] = useState('')
+  const [targetCity, setTargetCity] = useState('')
 
   // 無料招待を発行できるか
   const canCreateFreeInvite = canIssueFreeInvite(adminEmail)
@@ -179,6 +182,9 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
       membership_type: selectedType,
       reusable: isReusable,
       use_count: 0,
+      target_name: targetName.trim() || null,
+      target_country: targetCountry.trim() || null,
+      target_city: targetCity.trim() || null,
     }).select().single()
 
     setCreating(false)
@@ -195,6 +201,9 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
       }
       setInvites(prev => [newInvite, ...prev])
       setLastCreatedCode(code)
+      setTargetName('')
+      setTargetCountry('')
+      setTargetCity('')
       // コードをクリップボードにコピー
       const url = `${window.location.origin}/invite/${code}`
       navigator.clipboard.writeText(url)
@@ -254,6 +263,44 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
               </Button>
             </div>
           </div>
+          {/* 無料メンバー向けプロフィール事前設定 */}
+          {isFreeMembershipType(selectedType) && !isReusable && (
+            <div className="mt-4 p-4 bg-white/5 border border-zinc-500/20 rounded-xl space-y-3">
+              <p className="text-xs font-medium text-zinc-300">プロフィール事前設定（任意）</p>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">名前</label>
+                <input
+                  type="text"
+                  value={targetName}
+                  onChange={(e) => setTargetName(e.target.value)}
+                  placeholder="例: Yuki"
+                  className="w-full px-4 py-2.5 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-zinc-400 mb-1">国</label>
+                  <input
+                    type="text"
+                    value={targetCountry}
+                    onChange={(e) => setTargetCountry(e.target.value)}
+                    placeholder="例: Japan"
+                    className="w-full px-4 py-2.5 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-zinc-400 mb-1">都市</label>
+                  <input
+                    type="text"
+                    value={targetCity}
+                    onChange={(e) => setTargetCity(e.target.value)}
+                    placeholder="例: Tokyo"
+                    className="w-full px-4 py-2.5 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           {/* 再利用可能チェックボックス */}
           <div className="mt-4">
             <label className="flex items-center gap-3 cursor-pointer group">

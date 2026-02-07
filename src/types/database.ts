@@ -31,6 +31,9 @@ export interface Invite {
   membership_type: MembershipType
   reusable: boolean
   use_count: number
+  target_name: string | null
+  target_country: string | null
+  target_city: string | null
   created_at: string
 }
 
@@ -134,6 +137,7 @@ export interface GuildQuest {
   points_reward: number
   quest_type: QuestType
   is_repeatable: boolean
+  is_auto: boolean
   is_active: boolean
   created_at: string
 }

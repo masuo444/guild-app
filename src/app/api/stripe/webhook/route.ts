@@ -63,24 +63,45 @@ export async function POST(request: Request) {
           })
           .eq('id', userId)
 
-        // 招待者がいる場合、月額会員登録ボーナスを付与
+        // 招待者がいる場合、招待クエストを自動達成
         if (profile?.invited_by) {
-          // 重複付与チェック（同じユーザーからの Subscription Bonus が既にあるか）
-          const { data: existingBonus } = await supabase
-            .from('activity_logs')
-            .select('id')
-            .eq('user_id', profile.invited_by)
-            .eq('type', 'Subscription Bonus')
-            .eq('note', userId)
+          // 招待クエストを取得
+          const { data: inviteQuest } = await supabase
+            .from('guild_quests')
+            .select('id, points_reward')
+            .eq('is_auto', true)
+            .eq('title', '友達をGuildに招待しよう')
+            .eq('is_active', true)
             .single()
 
-          if (!existingBonus) {
-            await supabase.from('activity_logs').insert({
-              user_id: profile.invited_by,
-              type: 'Subscription Bonus',
-              note: userId, // 重複チェック用に新規会員のIDを記録
-              points: 100,
-            })
+          if (inviteQuest) {
+            // 重複チェック（同じ被招待者で既に達成済みか）
+            const { data: existingSubmission } = await supabase
+              .from('quest_submissions')
+              .select('id')
+              .eq('quest_id', inviteQuest.id)
+              .eq('user_id', profile.invited_by)
+              .eq('comment', userId)
+              .single()
+
+            if (!existingSubmission) {
+              // クエスト自動達成（承認済みで作成）
+              await supabase.from('quest_submissions').insert({
+                quest_id: inviteQuest.id,
+                user_id: profile.invited_by,
+                status: 'approved',
+                reviewed_at: new Date().toISOString(),
+                comment: userId, // 重複チェック用に被招待者のIDを記録
+              })
+
+              // クエスト報酬ポイントを付与
+              await supabase.from('activity_logs').insert({
+                user_id: profile.invited_by,
+                type: 'Quest Reward',
+                note: `Quest: ${inviteQuest.id}:${userId}`,
+                points: inviteQuest.points_reward,
+              })
+            }
           }
         }
 

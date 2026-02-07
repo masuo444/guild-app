@@ -5,34 +5,64 @@ import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
-// Apply offset to members sharing the same coordinates
-function applyCoordinateOffset(members: MemberMapData[]): (MemberMapData & { offsetLat: number; offsetLng: number })[] {
-  // Group members by exact coordinates
-  const groups: Record<string, MemberMapData[]> = {}
+// Apply offset to all markers (members + hubs) sharing the same coordinates
+type OffsetItem = { type: 'member'; data: MemberMapData } | { type: 'hub'; data: MasuHub }
+
+function applyAllCoordinateOffsets(
+  members: MemberMapData[],
+  hubs: MasuHub[]
+): {
+  members: (MemberMapData & { offsetLat: number; offsetLng: number })[]
+  hubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
+} {
+  // Group all markers by exact coordinates
+  const groups: Record<string, OffsetItem[]> = {}
   for (const member of members) {
     if (!member.lat || !member.lng) continue
     const key = `${member.lat},${member.lng}`
     if (!groups[key]) groups[key] = []
-    groups[key].push(member)
+    groups[key].push({ type: 'member', data: member })
+  }
+  for (const hub of hubs) {
+    if (!hub.lat || !hub.lng) continue
+    const key = `${hub.lat},${hub.lng}`
+    if (!groups[key]) groups[key] = []
+    groups[key].push({ type: 'hub', data: hub })
   }
 
-  const result: (MemberMapData & { offsetLat: number; offsetLng: number })[] = []
+  const resultMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[] = []
+  const resultHubs: (MasuHub & { offsetLat: number; offsetLng: number })[] = []
+
   for (const group of Object.values(groups)) {
     if (group.length === 1) {
-      // No offset needed for single members
-      result.push({ ...group[0], offsetLat: group[0].lat!, offsetLng: group[0].lng! })
+      const item = group[0]
+      if (item.type === 'member') {
+        resultMembers.push({ ...item.data, offsetLat: item.data.lat!, offsetLng: item.data.lng! })
+      } else {
+        resultHubs.push({ ...item.data, offsetLat: item.data.lat, offsetLng: item.data.lng })
+      }
     } else {
-      // Spread members in a circle around the original point
       const radius = 0.006 // ~600m offset
       for (let i = 0; i < group.length; i++) {
         const angle = (2 * Math.PI * i) / group.length
-        const offsetLat = group[i].lat! + radius * Math.cos(angle)
-        const offsetLng = group[i].lng! + radius * Math.sin(angle)
-        result.push({ ...group[i], offsetLat, offsetLng })
+        const item = group[i]
+        if (item.type === 'member') {
+          resultMembers.push({
+            ...item.data,
+            offsetLat: item.data.lat! + radius * Math.cos(angle),
+            offsetLng: item.data.lng! + radius * Math.sin(angle),
+          })
+        } else {
+          resultHubs.push({
+            ...item.data,
+            offsetLat: item.data.lat + radius * Math.cos(angle),
+            offsetLng: item.data.lng + radius * Math.sin(angle),
+          })
+        }
       }
     }
   }
-  return result
+  return { members: resultMembers, hubs: resultHubs }
 }
 
 // Calculate marker size based on zoom level (emoji-style small markers)
@@ -182,9 +212,9 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
     setSelected({ type, data })
   }, [])
 
-  // Filtered members with coordinate offset applied
-  const filteredMembers = useMemo(() => {
-    const filtered = members.filter(m => {
+  // Filtered members and hubs with coordinate offset applied (unified to avoid member-hub overlap)
+  const { filteredMembers, filteredHubs } = useMemo(() => {
+    const mFiltered = members.filter(m => {
       if (!m.lat || !m.lng) return false
       const query = searchQuery.toLowerCase()
       const matchesSearch = !searchQuery ||
@@ -193,12 +223,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
         m.home_country?.toLowerCase().includes(query)
       return matchesSearch
     })
-    return applyCoordinateOffset(filtered)
-  }, [members, searchQuery])
-
-  // Filtered hubs
-  const filteredHubs = useMemo(() => {
-    return hubs.filter(h => {
+    const hFiltered = hubs.filter(h => {
       if (!h.is_active) return false
       const query = searchQuery.toLowerCase()
       const matchesSearch = !searchQuery ||
@@ -207,7 +232,9 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
         h.country.toLowerCase().includes(query)
       return matchesSearch
     })
-  }, [hubs, searchQuery])
+    const offsets = applyAllCoordinateOffsets(mFiltered, hFiltered)
+    return { filteredMembers: offsets.members, filteredHubs: offsets.hubs }
+  }, [members, hubs, searchQuery])
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -268,7 +295,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
                   return (
                     <Marker
                       key={hub.id}
-                      position={{ lat: hub.lat, lng: hub.lng }}
+                      position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
                       onClick={() => handleMarkerClick('hub', hub)}
                       title={hub.name}
                       icon={{
@@ -522,7 +549,7 @@ export function GuildMap({ members, hubs, userId, canViewMembers = true }: Guild
                   return (
                     <Marker
                       key={hub.id}
-                      position={{ lat: hub.lat, lng: hub.lng }}
+                      position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
                       onClick={() => handleMarkerClick('hub', hub)}
                       title={hub.name}
                       icon={{

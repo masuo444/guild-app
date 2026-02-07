@@ -88,14 +88,25 @@ export function QuestCard({ quest, submissions, onSubmit }: QuestCardProps) {
           </div>
         </div>
 
-        {/* 挑戦ボタン */}
-        <Button
-          onClick={() => onSubmit(quest)}
-          className="w-full"
-          variant="primary"
-        >
-          {quest.quest_type === 'photo' ? t.questSubmitPhoto : t.questChallenge}
-        </Button>
+        {/* 挑戦ボタン / 自動達成バッジ */}
+        {quest.is_auto ? (
+          <div className="w-full py-3 px-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-center">
+            <p className="text-cyan-300 text-sm font-medium">
+              {approvedCount > 0 ? `${approvedCount}${language === 'en' ? 'x Completed' : '回達成'}` : (language === 'en' ? 'Auto-rewarded' : '自動達成')}
+            </p>
+            <p className="text-zinc-400 text-xs mt-0.5">
+              {language === 'en' ? 'Points are awarded automatically' : '条件達成でポイント自動付与'}
+            </p>
+          </div>
+        ) : (
+          <Button
+            onClick={() => onSubmit(quest)}
+            className="w-full"
+            variant="primary"
+          >
+            {quest.quest_type === 'photo' ? t.questSubmitPhoto : t.questChallenge}
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

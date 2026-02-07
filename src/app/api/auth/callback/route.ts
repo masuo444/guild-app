@@ -116,6 +116,9 @@ export async function GET(request: NextRequest) {
     let subscriptionStatus: 'active' | 'free' | 'free_tier' = 'free_tier'
     let stripeCustomerId: string | null = null
     let stripeSubscriptionId: string | null = null
+    let targetName: string | null = null
+    let targetCountry: string | null = null
+    let targetCity: string | null = null
 
     // Stripe session があれば検証して情報を取得
     if (stripeSessionId) {
@@ -143,7 +146,7 @@ export async function GET(request: NextRequest) {
       // 招待コードを取得（Service Roleで確実に取得）
       const { data: invite, error: inviteError } = await supabaseAdmin
         .from('invites')
-        .select('id, invited_by, membership_type, used, reusable, use_count')
+        .select('id, invited_by, membership_type, used, reusable, use_count, target_name, target_country, target_city')
         .eq('code', inviteCode)
         .single()
 
@@ -159,6 +162,9 @@ export async function GET(request: NextRequest) {
       if (isInviteValid) {
         invitedBy = invite.invited_by
         membershipType = (invite.membership_type || 'standard') as MembershipType
+        targetName = invite.target_name || null
+        targetCountry = invite.target_country || null
+        targetCity = invite.target_city || null
         console.log('Setting membershipType from invite:', membershipType)
 
         // 無料メンバータイプの場合はfreeに
@@ -218,7 +224,7 @@ export async function GET(request: NextRequest) {
     const showOnMap = true
     const profileData = {
       id: user.id,
-      display_name: user.email?.split('@')[0] || null,
+      display_name: targetName || user.email?.split('@')[0] || null,
       role: isAdmin ? 'admin' : 'member',
       membership_status: 'active',
       membership_type: isAdmin ? 'standard' : membershipType,
@@ -228,6 +234,8 @@ export async function GET(request: NextRequest) {
       stripe_customer_id: stripeCustomerId,
       stripe_subscription_id: stripeSubscriptionId,
       show_location_on_map: showOnMap,
+      home_country: targetCountry,
+      home_city: targetCity,
     }
     console.log('Creating profile with data:', profileData)
     const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData)
