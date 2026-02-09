@@ -111,7 +111,7 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
                 aria-label={item.ariaLabel}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-lg transition-colors',
+                  'flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-lg transition-colors touch-manipulation',
                   isActive
                     ? 'text-white bg-zinc-500/30'
                     : 'text-zinc-300 hover:text-white hover:bg-zinc-500/20'
