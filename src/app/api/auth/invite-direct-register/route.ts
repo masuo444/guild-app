@@ -3,22 +3,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ADMIN_EMAILS } from '@/lib/access'
 import { isFreeMembershipType, MembershipType } from '@/types/database'
 
+/**
+ * レート制限時のフォールバック: メール送信なしで招待登録を完了する
+ * 1. Admin API でユーザーを作成（存在しない場合）
+ * 2. プロフィール作成 + 招待コード使用記録
+ * 3. Magic link トークンを生成して callback URL を返す
+ */
 export async function POST(request: NextRequest) {
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
   )
 
-  let body: { userId: string; email: string; inviteCode: string }
+  let body: { email: string; inviteCode: string }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { userId, email, inviteCode } = body
+  const { email, inviteCode } = body
 
-  if (!userId || !email || !inviteCode) {
+  if (!email || !inviteCode) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
@@ -45,6 +57,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'This endpoint is for free invitations only' }, { status: 400 })
   }
 
+  // ユーザーを取得または作成
+  let userId: string
+  let isNewUser = false
+
+  // 既存ユーザーを検索
+  const { data: users } = await supabaseAdmin.auth.admin.listUsers()
+  const existingUser = users?.users.find(u => u.email === email)
+
+  if (existingUser) {
+    userId = existingUser.id
+  } else {
+    // 新規ユーザーを Admin API で作成（メール送信なし）
+    // 注意: createUser() により on_auth_user_created トリガーが発火し、
+    // handle_new_user() でデフォルトプロフィールが自動作成される場合がある
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+    })
+
+    if (createError || !newUser.user) {
+      console.error('Failed to create user:', createError)
+      return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+    }
+
+    userId = newUser.user.id
+    isNewUser = true
+
+    // トリガーによるプロフィール作成の完了を待つ
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+
   const isAdmin = ADMIN_EMAILS.includes(email as typeof ADMIN_EMAILS[number])
   const membershipId = `FG${Date.now().toString(36).toUpperCase()}`
 
@@ -63,19 +106,16 @@ export async function POST(request: NextRequest) {
     lng: invite.target_lng ?? null,
   }
 
-  // プロフィールが既に存在するかチェック
-  // （on_auth_user_created トリガーで自動作成されている場合がある）
+  // プロフィールが既に存在するかチェック（トリガーで作成された可能性あり）
   const { data: existingProfile } = await supabaseAdmin
     .from('profiles')
     .select('id, subscription_status')
     .eq('id', userId)
     .single()
 
-  let isNewRegistration = false
-
   if (existingProfile) {
-    // トリガーで作成された不完全なプロフィールを正しい値に更新
-    // 既に 'free' or 'active' なら招待による上書きは不要（再ログイン時）
+    // トリガーで作成された不完全なプロフィール、または既存プロフィールを更新
+    // 既に 'free' or 'active' なら招待による上書きは不要
     if (existingProfile.subscription_status !== 'active' && existingProfile.subscription_status !== 'free') {
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
@@ -86,7 +126,6 @@ export async function POST(request: NextRequest) {
         console.error('Failed to update profile:', updateError)
         return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
       }
-      isNewRegistration = true
     }
   } else {
     // プロフィールが存在しない場合は新規作成
@@ -99,10 +138,9 @@ export async function POST(request: NextRequest) {
       console.error('Failed to create profile:', profileError)
       return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
     }
-    isNewRegistration = true
   }
 
-  if (isNewRegistration) {
+  if (isNewUser) {
     // Welcome Bonus (100pt)
     await supabaseAdmin.from('activity_logs').insert({
       user_id: userId,
@@ -135,7 +173,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Magic link を生成して hashed_token を取得
+  // Magic link を生成して hashed_token を取得（レート制限なし）
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'magiclink',
     email,

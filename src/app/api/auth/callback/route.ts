@@ -205,9 +205,13 @@ export async function GET(request: NextRequest) {
   // 管理者メールかどうかチェック
   const isAdmin = ADMIN_EMAILS.includes(user.email as typeof ADMIN_EMAILS[number])
 
-  // プロフィールがない場合は新規作成
-  if (!profile) {
-    const membershipId = `FG${Date.now().toString(36).toUpperCase()}`
+  // プロフィールが存在しないか、トリガーで作成された不完全なプロフィール（inactive）を検出
+  // on_auth_user_created トリガーで subscription_status='inactive' のプロフィールが自動作成される場合がある
+  // プロフィール未作成、またはトリガーで作成された不完全プロフィール（inactive/free_tier）で招待コードがある場合
+  const needsSetup = !profile || ((profile.subscription_status === 'inactive' || profile.subscription_status === 'free_tier') && inviteCode)
+
+  if (needsSetup) {
+    const membershipId = profile?.id ? undefined : `FG${Date.now().toString(36).toUpperCase()}`
 
     // 招待コードがある場合は処理
     let invitedBy: string | null = null
@@ -322,16 +326,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // プロフィール作成（Service Roleで確実に挿入）
-    // 無料メンバー（ambassador, model, staff, partner）はadmin承認不要で即マップ表示
+    // プロフィール作成または更新（Service Roleで確実に実行）
     const showOnMap = true
-    const profileData = {
-      id: user.id,
+    const profileUpdateData = {
       display_name: targetName || user.email?.split('@')[0] || null,
       role: isAdmin ? 'admin' : 'member',
       membership_status: 'active',
       membership_type: isAdmin ? 'standard' : membershipType,
-      membership_id: membershipId,
       subscription_status: isAdmin ? 'active' : subscriptionStatus,
       invited_by: invitedBy,
       stripe_customer_id: stripeCustomerId,
@@ -342,25 +343,59 @@ export async function GET(request: NextRequest) {
       lat: targetLat,
       lng: targetLng,
     }
-    console.log('Creating profile with data:', profileData)
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData)
 
-    if (profileError) {
-      console.error('Failed to create profile:', profileError)
-      // プロフィール作成失敗はクリティカル - エラーページにリダイレクト
-      return NextResponse.redirect(`${origin}/auth/login?error=profile_creation_failed`)
+    if (profile) {
+      // トリガーで作成された不完全プロフィールを更新
+      console.log('Updating incomplete profile with data:', profileUpdateData)
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          ...profileUpdateData,
+          ...(membershipId ? { membership_id: membershipId } : {}),
+        })
+        .eq('id', user.id)
+
+      if (updateError) {
+        console.error('Failed to update profile:', updateError)
+      }
+    } else {
+      // プロフィールが存在しない場合は新規作成
+      const newMembershipId = `FG${Date.now().toString(36).toUpperCase()}`
+      const profileData = {
+        id: user.id,
+        ...profileUpdateData,
+        membership_id: newMembershipId,
+      }
+      console.log('Creating profile with data:', profileData)
+      const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData)
+
+      if (profileError) {
+        console.error('Failed to create profile:', profileError)
+        // プロフィール作成失敗はクリティカル - エラーページにリダイレクト
+        return NextResponse.redirect(`${origin}/auth/login?error=profile_creation_failed`)
+      }
     }
 
     // 新規ユーザーに100ポイント（Welcome Bonus）を付与（Service Roleで確実に挿入）
-    const { error: welcomeBonusError } = await supabaseAdmin.from('activity_logs').insert({
-      user_id: user.id,
-      type: 'Welcome Bonus',
-      note: 'ギルドへようこそ！',
-      points: 100,
-    })
+    // 既にWelcome Bonusがあるかチェック（重複防止）
+    const { data: existingWelcome } = await supabaseAdmin
+      .from('activity_logs')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('type', 'Welcome Bonus')
+      .single()
 
-    if (welcomeBonusError) {
-      console.error('Failed to insert welcome bonus:', welcomeBonusError)
+    if (!existingWelcome) {
+      const { error: welcomeBonusError } = await supabaseAdmin.from('activity_logs').insert({
+        user_id: user.id,
+        type: 'Welcome Bonus',
+        note: 'ギルドへようこそ！',
+        points: 100,
+      })
+
+      if (welcomeBonusError) {
+        console.error('Failed to insert welcome bonus:', welcomeBonusError)
+      }
     }
 
     // スタンダード会員（有料）で未決済の場合は決済ページへリダイレクト
@@ -380,7 +415,7 @@ export async function GET(request: NextRequest) {
     if (adminUpdateError) {
       console.error('Failed to update admin profile:', adminUpdateError)
     }
-  } else if (profile.subscription_status === 'free_tier') {
+  } else if (profile.subscription_status === 'free_tier' || profile.subscription_status === 'inactive') {
     // 既存ユーザーで未課金の場合は決済ページへ
     redirectTo = `${origin}/auth/subscribe`
   }

@@ -74,6 +74,31 @@ export default function InvitePage() {
     checkInvite()
   }, [code])
 
+  // レート制限時のフォールバック: サーバー側で直接登録＋ログイン
+  const handleDirectRegister = async () => {
+    setStatus('redirecting')
+    try {
+      const res = await fetch('/api/auth/invite-direct-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, inviteCode: code }),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok || !result.callbackUrl) {
+        setError(t.serverError)
+        setStatus('valid')
+        return
+      }
+
+      window.location.href = result.callbackUrl
+    } catch {
+      setError(t.serverError)
+      setStatus('valid')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -94,6 +119,13 @@ export default function InvitePage() {
 
     if (authError) {
       console.error('Auth error:', authError)
+
+      // レート制限エラーの場合は直接登録にフォールバック
+      if (authError.message.includes('rate limit') || authError.message.includes('Rate limit') || authError.message.includes('email rate limit')) {
+        await handleDirectRegister()
+        return
+      }
+
       // より分かりやすいエラーメッセージに変換
       let errorMessage = authError.message
       if (authError.message.includes('Database error')) {
