@@ -191,6 +191,11 @@ export default function LoginPage() {
 
     const { error } = await supabase.auth.signInWithOtp({
       email: registerEmail,
+      options: {
+        data: {
+          invite_code: validatedInvite.code,
+        },
+      },
     })
 
     if (error) {
@@ -223,28 +228,10 @@ export default function LoginPage() {
       return
     }
 
-    // 認証成功 - 招待コード処理
-    if (data.user) {
-      const { error: updateError } = await supabase
-        .from('invites')
-        .update({ used: true, used_by: data.user.id })
-        .eq('code', validatedInvite.code)
-        .eq('used', false)
-
-      if (!updateError) {
-        // プロフィール更新
-        await supabase
-          .from('profiles')
-          .update({
-            membership_status: 'active',
-            membership_type: validatedInvite.membershipType,
-            subscription_status: validatedInvite.isFree ? 'free' : 'free_tier',
-          })
-          .eq('id', data.user.id)
-      }
-    }
-
-    window.location.href = validatedInvite.isFree ? '/app' : '/auth/subscribe'
+    // 認証成功 - callbackを経由してプロフィール設定
+    // callbackルートがinvite_codeを処理してmembership_type, show_location_on_mapを正しく設定する
+    const callbackUrl = `/api/auth/callback?invite_code=${encodeURIComponent(validatedInvite.code)}&next=${validatedInvite.isFree ? '/app' : '/auth/subscribe'}`
+    window.location.href = callbackUrl
   }
 
   return (
