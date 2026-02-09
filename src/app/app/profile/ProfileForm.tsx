@@ -19,7 +19,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile, email }: ProfileFormProps) {
   const router = useRouter()
-  const { t } = useLanguage()
+  const { language, setLanguage, t } = useLanguage()
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -603,6 +603,38 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             {invitesLoaded && myInvites.length === 0 && (
               <p className="text-zinc-500 text-sm mt-2">{t.noCodesYet}</p>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 言語設定 */}
+      <Card>
+        <CardHeader>
+          <h2 className="font-semibold text-white">{t.languageSetting}</h2>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-zinc-400 mb-3">{t.languageSettingDesc}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setLanguage('ja')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                language === 'ja'
+                  ? 'bg-[#c0c0c0] text-zinc-900'
+                  : 'bg-white/5 text-zinc-300 hover:bg-white/10 border border-zinc-500/30'
+              }`}
+            >
+              {t.japanese}
+            </button>
+            <button
+              onClick={() => setLanguage('en')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                language === 'en'
+                  ? 'bg-[#c0c0c0] text-zinc-900'
+                  : 'bg-white/5 text-zinc-300 hover:bg-white/10 border border-zinc-500/30'
+              }`}
+            >
+              {t.english}
+            </button>
           </div>
         </CardContent>
       </Card>

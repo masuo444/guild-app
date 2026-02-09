@@ -295,6 +295,12 @@ const translations = {
     imageUploadFailed: '画像のアップロードに失敗しました',
     profileUpdated: 'プロフィールを更新しました',
 
+    // Language
+    languageSetting: '言語設定',
+    languageSettingDesc: 'ページの表示言語を切り替えます',
+    japanese: '日本語',
+    english: 'English',
+
     // UpgradeBanner
     upgradeToUnlock: 'アップグレードして解除',
     upgradeFeatureDesc: 'この機能は有料メンバー限定です。メンバーシップをアップグレードして全機能にアクセスしましょう。',
@@ -591,6 +597,12 @@ const translations = {
     imageUploaded: 'Image uploaded',
     imageUploadFailed: 'Failed to upload image',
     profileUpdated: 'Profile updated successfully',
+
+    // Language
+    languageSetting: 'Language',
+    languageSettingDesc: 'Switch the display language',
+    japanese: '日本語',
+    english: 'English',
 
     // UpgradeBanner
     upgradeToUnlock: 'Upgrade to Unlock',
