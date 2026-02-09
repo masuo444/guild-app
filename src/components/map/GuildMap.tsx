@@ -93,100 +93,91 @@ function applyAllCoordinateOffsets(
   return { members: resultMembers, hubs: resultHubs, pending: resultPending }
 }
 
-// Calculate marker size based on zoom level (drop pin style)
+// Calculate marker size based on zoom level (circle style)
 function getMarkerSize(zoom: number): { base: number; avatar: number } {
   if (zoom <= 3) {
-    return { base: 24, avatar: 32 }
+    return { base: 20, avatar: 28 }
   } else if (zoom <= 5) {
-    return { base: 28, avatar: 36 }
+    return { base: 24, avatar: 32 }
   } else if (zoom <= 8) {
-    return { base: 32, avatar: 40 }
+    return { base: 28, avatar: 36 }
   } else if (zoom <= 10) {
-    return { base: 36, avatar: 44 }
+    return { base: 32, avatar: 40 }
   } else if (zoom <= 13) {
-    return { base: 40, avatar: 48 }
+    return { base: 36, avatar: 44 }
   } else {
-    return { base: 48, avatar: 56 }
+    return { base: 44, avatar: 52 }
   }
 }
 
-// Generate drop-pin SVG for members with avatar
+// Generate circle SVG for members with avatar
 function getMemberAvatarMarkerSvg(avatarUrl: string, size: number): string {
-  const w = size
-  const h = Math.round(size * 1.3)
-  const r = w / 2
-  const circleY = r
-  const imgPad = Math.max(3, r * 0.2)
-  const imgR = r - imgPad
+  const r = size / 2
+  const border = Math.max(2, r * 0.12)
+  const imgR = r - border
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <defs>
-        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
         </filter>
         <clipPath id="avatarClip">
-          <circle cx="${r}" cy="${circleY}" r="${imgR}"/>
+          <circle cx="${r}" cy="${r}" r="${imgR}"/>
         </clipPath>
       </defs>
-      <path d="M${r},${h} C${r},${h} ${w * 0.15},${r * 1.3} ${w * 0.15},${r} A${r * 0.85},${r * 0.85} 0 1,1 ${w * 0.85},${r} C${w * 0.85},${r * 1.3} ${r},${h} ${r},${h}Z" fill="#22c55e" filter="url(#shadow)"/>
-      <circle cx="${r}" cy="${circleY}" r="${imgR + 1}" fill="white"/>
-      <image href="${avatarUrl}" x="${imgPad}" y="${circleY - imgR}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice"/>
+      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/>
+      <image href="${avatarUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice"/>
     </svg>
   `
 }
 
-// Generate drop-pin SVG for members without avatar
+// Generate circle SVG for members without avatar
 function getMemberDotMarkerSvg(size: number): string {
-  const w = size
-  const h = Math.round(size * 1.3)
-  const r = w / 2
+  const r = size / 2
   const innerR = r * 0.45
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <defs>
-        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
         </filter>
       </defs>
-      <path d="M${r},${h} C${r},${h} ${w * 0.15},${r * 1.3} ${w * 0.15},${r} A${r * 0.85},${r * 0.85} 0 1,1 ${w * 0.85},${r} C${w * 0.85},${r * 1.3} ${r},${h} ${r},${h}Z" fill="#22c55e" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e" filter="url(#shadow)"/>
       <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
     </svg>
   `
 }
 
-// Generate drop-pin SVG for hubs
+// Generate circle SVG for hubs
 function getHubMarkerSvg(size: number): string {
-  const w = size
-  const h = Math.round(size * 1.3)
-  const r = w / 2
+  const r = size / 2
   const innerR = r * 0.45
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <defs>
-        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
         </filter>
       </defs>
-      <path d="M${r},${h} C${r},${h} ${w * 0.15},${r * 1.3} ${w * 0.15},${r} A${r * 0.85},${r * 0.85} 0 1,1 ${w * 0.85},${r} C${w * 0.85},${r * 1.3} ${r},${h} ${r},${h}Z" fill="#f97316" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316" filter="url(#shadow)"/>
       <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
     </svg>
   `
 }
 
-// Generate drop-pin SVG for pending invites (purple)
+// Generate circle SVG for pending invites (purple)
 function getPendingMarkerSvg(size: number): string {
-  const w = size
-  const h = Math.round(size * 1.3)
-  const r = w / 2
+  const r = size / 2
   const innerR = r * 0.45
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <defs>
-        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
         </filter>
       </defs>
-      <path d="M${r},${h} C${r},${h} ${w * 0.15},${r * 1.3} ${w * 0.15},${r} A${r * 0.85},${r * 0.85} 0 1,1 ${w * 0.85},${r} C${w * 0.85},${r * 1.3} ${r},${h} ${r},${h}Z" fill="#a855f7" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#a855f7" filter="url(#shadow)"/>
       <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
     </svg>
   `
@@ -249,7 +240,6 @@ function MapMarkers({
       {showMembers &&
         filteredMembers.map((member) => {
           const size = member.avatar_url ? markerSizes.avatar : markerSizes.base
-          const h = Math.round(size * 1.3)
           return (
             <Marker
               key={member.id}
@@ -262,8 +252,8 @@ function MapMarkers({
                     ? getMemberAvatarMarkerSvg(member.avatar_url, size)
                     : getMemberDotMarkerSvg(size)
                 ),
-                scaledSize: { width: size, height: h, equals: () => false },
-                anchor: { x: size / 2, y: h, equals: () => false },
+                scaledSize: { width: size, height: size, equals: () => false },
+                anchor: { x: size / 2, y: size / 2, equals: () => false },
               }}
             />
           )
@@ -271,7 +261,6 @@ function MapMarkers({
       {showHubs &&
         filteredHubs.map((hub) => {
           const size = markerSizes.base
-          const h = Math.round(size * 1.3)
           return (
             <Marker
               key={hub.id}
@@ -280,8 +269,8 @@ function MapMarkers({
               title={hub.name}
               icon={{
                 url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(getHubMarkerSvg(size)),
-                scaledSize: { width: size, height: h, equals: () => false },
-                anchor: { x: size / 2, y: h, equals: () => false },
+                scaledSize: { width: size, height: size, equals: () => false },
+                anchor: { x: size / 2, y: size / 2, equals: () => false },
               }}
             />
           )
@@ -289,7 +278,6 @@ function MapMarkers({
       {showPending &&
         filteredPending.map((invite) => {
           const size = markerSizes.base
-          const h = Math.round(size * 1.3)
           return (
             <Marker
               key={`pending-${invite.id}`}
@@ -298,8 +286,8 @@ function MapMarkers({
               title={invite.target_name || 'Pending'}
               icon={{
                 url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(getPendingMarkerSvg(size)),
-                scaledSize: { width: size, height: h, equals: () => false },
-                anchor: { x: size / 2, y: h, equals: () => false },
+                scaledSize: { width: size, height: size, equals: () => false },
+                anchor: { x: size / 2, y: size / 2, equals: () => false },
               }}
             />
           )
@@ -349,13 +337,22 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
 
   const handleMarkerClick = useCallback((type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => {
     setSelected({ type, data })
-    // ピンクリック時にズームイン
+    // ピンクリック時にスムーズにズームイン
     const map = isFullscreen ? fullscreenMapRef.current : mapRef.current
     if (map) {
       map.panTo({ lat, lng })
       const currentZoom = map.getZoom() || 3
-      if (currentZoom < 10) {
-        map.setZoom(10)
+      const targetZoom = 10
+      if (currentZoom < targetZoom) {
+        let zoom = currentZoom
+        const step = () => {
+          zoom = Math.min(zoom + 0.5, targetZoom)
+          map.setZoom(zoom)
+          if (zoom < targetZoom) {
+            requestAnimationFrame(step)
+          }
+        }
+        requestAnimationFrame(step)
       }
     }
   }, [isFullscreen])
