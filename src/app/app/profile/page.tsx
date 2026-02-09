@@ -1,22 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ProfileForm } from './ProfileForm'
-import { GuildMemberOnlyPage } from '@/components/ui/LocalizedText'
 import { ProfilePageHeader } from './ProfilePageClient'
 
-interface Props {
-  searchParams: Promise<{ demo?: string }>
-}
-
-export default async function ProfilePage(props: Props) {
-  const searchParams = await props.searchParams
-  const isDemo = searchParams?.demo === 'true'
-
-  // デモモードの場合はギルドメンバー限定表示
-  if (isDemo) {
-    return <GuildMemberOnlyPage titleKey="profileSettings" />
-  }
-
+export default async function ProfilePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

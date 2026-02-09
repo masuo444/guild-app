@@ -1,23 +1,10 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardClient } from './DashboardClient'
-import { DemoDashboard } from './DemoDashboard'
 import { Profile } from '@/types/database'
 
-interface Props {
-  searchParams: Promise<{ demo?: string }>
-}
-
-export default async function DashboardPage(props: Props) {
-  const searchParams = await props.searchParams
-  const isDemo = searchParams?.demo === 'true'
-
-  // デモモードの場合
-  if (isDemo) {
-    return <DemoDashboard />
-  }
-
-  // 本番モード：Supabaseから実データを取得
+export default async function DashboardPage() {
+  // Supabaseから実データを取得
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

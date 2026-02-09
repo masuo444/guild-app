@@ -13,7 +13,6 @@ const translations = {
     landingSubtitle: 'FOMUS GUILDは、世界中の枡愛好家をつなぐ招待制コミュニティです',
     joinGuild: 'ギルドに参加',
     login: 'ログイン',
-    viewDemo: 'デモを見る',
     features: '特徴',
     feature1Title: 'デジタル会員証',
     feature1Desc: 'ユニークなデジタル会員証で特典を受けられます',
@@ -205,8 +204,6 @@ const translations = {
     guildMap: 'ギルドマップ',
     exploreMembers: 'メンバーとMASU Hubを世界中で探索',
     exploreHubs: 'MASU Hubを世界中で探索',
-    demoMode: 'デモモード',
-    demoModeDesc: 'MASU Hubsの場所をプレビューできます。メンバーの場所を見るにはギルドに参加してください。',
     upgradeSeeMembers: 'アップグレードしてメンバーの場所を表示',
     upgradeSeeMembersDesc: '無料メンバーはMASU Hubの場所のみ閲覧できます。アップグレードして全メンバーを表示しましょう。',
     upgrade: 'アップグレード',
@@ -219,22 +216,6 @@ const translations = {
     hubsCount: 'Hub',
     pendingInvites: '招待中',
 
-    // Guild Member Only
-    guildMemberOnly: 'ギルドメンバー限定',
-    guildMemberOnlyDesc: 'この機能はギルドメンバー限定です。ギルドに参加して全機能をご利用ください。',
-
-    // Demo Dashboard
-    fomusGuildPreview: 'FOMUS GUILD プレビュー',
-    demoModeMapOnly: 'デモモードではマップ機能のみご利用いただけます。',
-    viewMasuHubLocations: 'MASU Hubsの場所を確認できます',
-    joinFomusGuild: 'FOMUS GUILDに参加しよう',
-    joinFomusGuildDesc: '全機能にアクセスして、MASU Pointsを獲得しよう。',
-    getStarted: 'はじめる',
-    offersAndQuests: '特典 & クエスト',
-    viewDigitalCard: 'デジタル会員証とランクを確認',
-    trackPointsProgress: 'ポイントとランクの進捗を確認',
-    accessExclusiveOffers: 'メンバー限定の特典とクエストにアクセス',
-    manageProfileSettings: 'プロフィールと設定を管理',
     tapToFlip: 'タップで裏面を見る',
 
     // Offers Page
@@ -329,7 +310,6 @@ const translations = {
     landingSubtitle: 'FOMUS GUILD is an invitation-only community connecting MASU enthusiasts worldwide',
     joinGuild: 'Join Guild',
     login: 'Login',
-    viewDemo: 'View Demo',
     features: 'Features',
     feature1Title: 'Digital Membership Card',
     feature1Desc: 'Get exclusive benefits with your unique digital membership card',
@@ -521,8 +501,6 @@ const translations = {
     guildMap: 'Guild Map',
     exploreMembers: 'Explore members and MASU Hubs around the world',
     exploreHubs: 'Explore MASU Hubs around the world',
-    demoMode: 'Demo Mode',
-    demoModeDesc: 'Preview MASU Hub locations. Join the guild to see member locations.',
     upgradeSeeMembers: 'Upgrade to see member locations',
     upgradeSeeMembersDesc: 'Free members can only view MASU Hub locations. Upgrade to see all guild members on the map.',
     upgrade: 'Upgrade',
@@ -535,22 +513,6 @@ const translations = {
     hubsCount: 'Hubs',
     pendingInvites: 'Pending',
 
-    // Guild Member Only
-    guildMemberOnly: 'Guild Member Only',
-    guildMemberOnlyDesc: 'This feature is for guild members only. Join the guild to access all features.',
-
-    // Demo Dashboard
-    fomusGuildPreview: 'FOMUS GUILD Preview',
-    demoModeMapOnly: 'In demo mode, only the map feature is available.',
-    viewMasuHubLocations: 'View MASU Hub locations',
-    joinFomusGuild: 'Join FOMUS GUILD',
-    joinFomusGuildDesc: 'Access all features and earn MASU Points.',
-    getStarted: 'Get Started',
-    offersAndQuests: 'Offers & Quests',
-    viewDigitalCard: 'View your digital membership card and rank',
-    trackPointsProgress: 'Track your points and rank progress',
-    accessExclusiveOffers: 'Access exclusive offers and complete quests for rewards',
-    manageProfileSettings: 'Manage your profile and settings',
     tapToFlip: 'Tap to flip',
 
     // Offers Page

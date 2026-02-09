@@ -3,41 +3,27 @@ import { redirect } from 'next/navigation'
 import { GuildMap } from '@/components/map/GuildMap'
 import { canViewMembers } from '@/lib/access'
 import { SubscriptionStatus, CustomRole } from '@/types/database'
-import { MapPageHeader, MapDemoBanner, MapUpgradeBanner, MasuHubsSectionHeader } from '@/components/ui/LocalizedText'
+import { MapPageHeader, MapUpgradeBanner, MasuHubsSectionHeader } from '@/components/ui/LocalizedText'
 
-interface Props {
-  searchParams: Promise<{ demo?: string }>
-}
-
-export default async function MapPage(props: Props) {
-  const searchParams = await props.searchParams
-  const isDemo = searchParams?.demo === 'true'
-
+export default async function MapPage() {
   const supabase = await createClient()
 
   // 現在のユーザーを取得
   const { data: { user } } = await supabase.auth.getUser()
 
-  // デモモードでない場合は認証必須
-  if (!isDemo && !user) {
+  if (!user) {
     redirect('/auth/login')
   }
 
-  // デモモードの場合は制限付きアクセス
-  let subscriptionStatus: SubscriptionStatus = 'free_tier'
-  let canSeeMembers = false
+  // ユーザーのプロフィールを取得
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('subscription_status')
+    .eq('id', user.id)
+    .single()
 
-  if (user) {
-    // ユーザーのプロフィールを取得
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_status')
-      .eq('id', user.id)
-      .single()
-
-    subscriptionStatus = (profile?.subscription_status || 'free_tier') as SubscriptionStatus
-    canSeeMembers = canViewMembers(subscriptionStatus)
-  }
+  const subscriptionStatus = (profile?.subscription_status || 'free_tier') as SubscriptionStatus
+  const canSeeMembers = canViewMembers(subscriptionStatus)
 
   // メンバー情報は課金ユーザーのみ取得
   type MemberRole = {
@@ -128,11 +114,8 @@ export default async function MapPage(props: Props) {
         <MapPageHeader canSeeMembers={canSeeMembers} />
       </div>
 
-      {/* デモモードバナー */}
-      {isDemo && <MapDemoBanner />}
-
       {/* 無料ユーザー向けアップグレードバナー */}
-      {!isDemo && !canSeeMembers && <MapUpgradeBanner />}
+      {!canSeeMembers && <MapUpgradeBanner />}
 
       <GuildMap
         members={members}

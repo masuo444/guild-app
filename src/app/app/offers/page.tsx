@@ -3,22 +3,9 @@ import { redirect } from 'next/navigation'
 import { SubscriptionStatus } from '@/types/database'
 import { canViewOffers } from '@/lib/access'
 import { OffersContent } from './OffersContent'
-import { GuildMemberOnlyPage } from '@/components/ui/LocalizedText'
 import { OffersPageHeader, OffersUpgradeView } from './OffersPageClient'
 
-interface Props {
-  searchParams: Promise<{ demo?: string }>
-}
-
-export default async function OffersPage(props: Props) {
-  const searchParams = await props.searchParams
-  const isDemo = searchParams?.demo === 'true'
-
-  // デモモードの場合はギルドメンバー限定表示
-  if (isDemo) {
-    return <GuildMemberOnlyPage titleKey="offersTitle" />
-  }
-
+export default async function OffersPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

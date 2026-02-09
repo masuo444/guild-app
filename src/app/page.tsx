@@ -106,12 +106,6 @@ export default function HomePage() {
                 >
                   {language === 'ja' ? 'ギルドに入る' : 'Enter the Guild'}
                 </Link>
-                <Link
-                  href="/app?demo=true"
-                  className="inline-flex items-center justify-center px-6 py-3 text-stone-600 hover:text-stone-800 transition-colors text-sm"
-                >
-                  {language === 'ja' ? 'デモを見る →' : 'View Demo →'}
-                </Link>
               </div>
             </div>
           </div>

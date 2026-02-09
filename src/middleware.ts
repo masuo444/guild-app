@@ -16,19 +16,15 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/invite') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api') ||
-    pathname.startsWith('/demo') ||
     pathname.startsWith('/_next') ||
     pathname.includes('.')
   ) {
     return supabaseResponse
   }
 
-  // /app 以下は認証必須（デモモードは許可）
+  // /app 以下は認証必須
   if (pathname.startsWith('/app')) {
-    const isDemo = request.nextUrl.searchParams.get('demo') === 'true'
-
-    // デモモードでない場合、認証を要求
-    if (!isDemo && !user) {
+    if (!user) {
       const redirectUrl = new URL('/auth/login', request.url)
       redirectUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(redirectUrl)
