@@ -323,38 +323,40 @@ export async function GET(request: NextRequest) {
             console.error('Failed to insert invite bonus:', inviteBonusError)
           }
 
-          // 招待クエスト自動達成（リピータブル：招待するたびにポイント付与）
-          const { data: inviteQuest } = await supabaseAdmin
-            .from('guild_quests')
-            .select('id, points_reward')
-            .eq('is_auto', true)
-            .eq('title', '友達をGuildに招待しよう')
-            .eq('is_active', true)
-            .single()
-
-          if (inviteQuest) {
-            const { data: existingSub } = await supabaseAdmin
-              .from('quest_submissions')
-              .select('id')
-              .eq('quest_id', inviteQuest.id)
-              .eq('user_id', invitedBy)
-              .eq('comment', user.id)
+          // 招待クエスト自動達成（無料メンバーのみ。有料はStripe webhookで処理）
+          if (isFreeMembershipType(membershipType)) {
+            const { data: inviteQuest } = await supabaseAdmin
+              .from('guild_quests')
+              .select('id, points_reward')
+              .eq('is_auto', true)
+              .eq('title', '友達をGuildに招待しよう')
+              .eq('is_active', true)
               .single()
 
-            if (!existingSub) {
-              await supabaseAdmin.from('quest_submissions').insert({
-                quest_id: inviteQuest.id,
-                user_id: invitedBy,
-                status: 'approved',
-                reviewed_at: new Date().toISOString(),
-                comment: user.id,
-              })
-              await supabaseAdmin.from('activity_logs').insert({
-                user_id: invitedBy,
-                type: 'Quest Reward',
-                note: `Quest: ${inviteQuest.id}:${user.id}`,
-                points: inviteQuest.points_reward,
-              })
+            if (inviteQuest) {
+              const { data: existingSub } = await supabaseAdmin
+                .from('quest_submissions')
+                .select('id')
+                .eq('quest_id', inviteQuest.id)
+                .eq('user_id', invitedBy)
+                .eq('comment', user.id)
+                .single()
+
+              if (!existingSub) {
+                await supabaseAdmin.from('quest_submissions').insert({
+                  quest_id: inviteQuest.id,
+                  user_id: invitedBy,
+                  status: 'approved',
+                  reviewed_at: new Date().toISOString(),
+                  comment: user.id,
+                })
+                await supabaseAdmin.from('activity_logs').insert({
+                  user_id: invitedBy,
+                  type: 'Quest Reward',
+                  note: `Quest: ${inviteQuest.id}:${user.id}`,
+                  points: inviteQuest.points_reward,
+                })
+              }
             }
           }
         }
