@@ -41,6 +41,8 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
     .filter(q => {
       // リピータブルなクエストは常に表示
       if (q.is_repeatable) return true
+      // 招待クエストは常に表示
+      if (q.title === '友達をGuildに招待しよう') return true
       // 非リピータブル: 承認済みの投稿があれば非表示
       const hasApproved = submissions.some(s => s.quest_id === q.id && s.status === 'approved')
       return !hasApproved

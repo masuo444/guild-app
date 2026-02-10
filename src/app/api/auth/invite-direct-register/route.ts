@@ -157,6 +157,42 @@ export async function POST(request: NextRequest) {
         note: '新メンバーを招待しました',
         points: 100,
       })
+
+      // 招待クエスト自動達成（リピータブル：招待するたびにポイント付与）
+      const { data: inviteQuest } = await supabaseAdmin
+        .from('guild_quests')
+        .select('id, points_reward')
+        .eq('is_auto', true)
+        .eq('title', '友達をGuildに招待しよう')
+        .eq('is_active', true)
+        .single()
+
+      if (inviteQuest) {
+        // 重複チェック（同じ被招待者で既に達成済みか）
+        const { data: existing } = await supabaseAdmin
+          .from('quest_submissions')
+          .select('id')
+          .eq('quest_id', inviteQuest.id)
+          .eq('user_id', invite.invited_by)
+          .eq('comment', userId)
+          .single()
+
+        if (!existing) {
+          await supabaseAdmin.from('quest_submissions').insert({
+            quest_id: inviteQuest.id,
+            user_id: invite.invited_by,
+            status: 'approved',
+            reviewed_at: new Date().toISOString(),
+            comment: userId,
+          })
+          await supabaseAdmin.from('activity_logs').insert({
+            user_id: invite.invited_by,
+            type: 'Quest Reward',
+            note: `Quest: ${inviteQuest.id}:${userId}`,
+            points: inviteQuest.points_reward,
+          })
+        }
+      }
     }
 
     // 招待コード使用記録
