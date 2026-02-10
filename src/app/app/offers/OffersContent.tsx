@@ -15,13 +15,37 @@ interface OffersContentProps {
   userId: string
 }
 
+// 優先度順（友達招待が最上位）
+const QUEST_PRIORITY: Record<string, number> = {
+  '友達をGuildに招待しよう': 1,
+  'プロフィールを完成させよう': 2,
+  'マップに自分を表示しよう': 3,
+  '枡で乾杯！': 4,
+  '枡のある日常': 5,
+  'MASU Hubを訪問しよう': 6,
+  'ギルドメンバーと乾杯！': 7,
+  '世界のMASU': 8,
+  'SILVAで遊ぼう': 9,
+  'KUKUの世界を体験しよう': 10,
+  'FOMUS PARUREを身につけよう': 11,
+}
+
 export function OffersContent({ quests, submissions, userId }: OffersContentProps) {
   const [activeTab, setActiveTab] = useState<Tab>('quests')
   const [selectedQuest, setSelectedQuest] = useState<GuildQuest | null>(null)
   const { t } = useLanguage()
 
-  // アクティブなクエストのみ
-  const activeQuests = quests.filter(q => q.is_active)
+  // アクティブなクエストのみ → クリア済み非リピータブルを除外 → 優先度順
+  const activeQuests = quests
+    .filter(q => q.is_active)
+    .filter(q => {
+      // リピータブルなクエストは常に表示
+      if (q.is_repeatable) return true
+      // 非リピータブル: 承認済みの投稿があれば非表示
+      const hasApproved = submissions.some(s => s.quest_id === q.id && s.status === 'approved')
+      return !hasApproved
+    })
+    .sort((a, b) => (QUEST_PRIORITY[a.title] || 99) - (QUEST_PRIORITY[b.title] || 99))
 
   return (
     <div>
