@@ -13,7 +13,7 @@ INSERT INTO masu_hubs (name, description, address, country, city, lat, lng, is_a
 -- Ireland - Tullamore
 ('Charleville Castle', '城', 'Charleville Castle, Tullamore, Co. Offaly, R35 RP77, Ireland', 'Ireland', 'Tullamore', 53.2605, -7.5279, true),
 -- Ireland - Galway
-('WA SUSHI (WA CAFE)', 'カフェ', '13 New Dock Street, Galway, Ireland', 'Ireland', 'Galway', 53.2707, -9.0568, true),
+('WA SUSHI (WA CAFE)', 'カフェ', '13 New Dock Street, Galway, Ireland', 'Ireland', 'Galway', 53.2700, -9.0525, true),
 
 -- USA - New York
 ('Paramount Tower', 'アパート', '240 East 39th Street, New York, NY 10016, USA', 'USA', 'New York', 40.7481, -73.9744, true),
@@ -23,7 +23,7 @@ INSERT INTO masu_hubs (name, description, address, country, city, lat, lng, is_a
 ('FugaCidade', 'バー', 'Rua Conde de Canavial 22, Funchal, Madeira 9000-024, Portugal', 'Portugal', 'Funchal', 32.6478, -16.9148, true),
 
 -- Georgia - Tbilisi
-('SOMA Noodle Cafe', 'ラーメン', '72 Merab Kostava St, Tbilisi 0171, Georgia', 'Georgia', 'Tbilisi', 41.7212, 44.7773, true),
+('SOMA Noodle Cafe', 'ラーメン', '39 Irakli Abashidze Street, Tbilisi 0179, Georgia', 'Georgia', 'Tbilisi', 41.7082, 44.7632, true),
 
 -- UAE - Dubai
 ('KOBEYa', NULL, 'Marina Gate 1 Marsa, Dubai, United Arab Emirates', 'UAE', 'Dubai', 25.0868, 55.1476, true),
@@ -45,16 +45,16 @@ INSERT INTO masu_hubs (name, description, address, country, city, lat, lng, is_a
 -- Philippines - Cebu
 ('Adam The Original Siomai sa Tisa', 'バー / アシュリーは、まっすー行きつけのBAR。Googleマップに載ってませんが、店は賑わってます', '816 Katipunan St, Cebu City, 6000 Cebu, Philippines', 'Philippines', 'Cebu City', 10.3026, 123.8710, true),
 ('Naoki''s Dining Bar', 'バー', '869 A. S. Fortuna St, Mandaue City, Central Visayas, Philippines', 'Philippines', 'Mandaue City', 10.3405, 123.9213, true),
-('リップル', 'バー', '1 Paseo Saturnino, Banilad, Cebu City, 6000 Philippines', 'Philippines', 'Cebu City', 10.3449, 123.9108, true),
+('リップル', 'バー', '1 Paseo Saturnino, Banilad, Cebu City, 6000 Philippines', 'Philippines', 'Cebu City', 10.3431, 123.9112, true),
 
 -- Vietnam - Ho Chi Minh City
 ('割烹多ま Sushi OMAKASE TAMA (Japanese Cuisine)', '日本料理 / FOMUSくま 滞在（閉業）', '8A/7C1 Thái Văn Lung, Bến Nghé, Quận 1, Hồ Chí Minh, Vietnam', 'Vietnam', 'Ho Chi Minh City', 10.7795, 106.7051, true),
-('すなっくS+ Snack & Bar', NULL, NULL, 'Vietnam', 'Ho Chi Minh City', 10.7800, 106.7010, true),
+('すなっくS+ Snack & Bar', NULL, '42 Mê Linh, Phường 19, Bình Thạnh, Hồ Chí Minh, Vietnam', 'Vietnam', 'Ho Chi Minh City', 10.7897, 106.7096, true),
 ('【蔵 KURA】Kaku-Uchi＆SAKE Shop', '酒店 / FOMUSくま 滞在', '40/28 Phạm Viết Chánh, Phường 19, Bình Thạnh, Hồ Chí Minh, Vietnam', 'Vietnam', 'Ho Chi Minh City', 10.7897, 106.7109, true),
 
 -- Japan - 広島
 ('尾道A邸', NULL, '〒722-0054 広島県尾道市尾崎本町10-7', 'Japan', '尾道市', 34.4109, 133.2109, true),
-('佐木島アートギャラリー (Sagishima Art Gallery)', 'アートギャラリー', '広島県三原市佐木島', 'Japan', '三原市', 34.3405, 133.1117, true),
+('佐木島アートギャラリー (Sagishima Art Gallery)', 'アートギャラリー', '広島県三原市鷺浦町向田野浦', 'Japan', '三原市', 34.3468, 133.1237, true),
 
 -- Japan - 青森
 ('株式会社 竹浪酒造店', '日本酒醸造所', '〒038-3662 青森県北津軽郡板柳町板柳土井113-1', 'Japan', '板柳町', 40.6966, 140.4552, true),
@@ -85,7 +85,7 @@ INSERT INTO masu_hubs (name, description, address, country, city, lat, lng, is_a
 ('CAFE TOLAND カフェトゥーランド', 'カフェ', '〒460-0011 愛知県名古屋市中区大須4丁目11-5 Z''s building 6F', 'Japan', '名古屋市', 35.1584, 136.9063, true),
 
 -- Japan - 佐賀
-('Guild（ギルド）', '立食形式の飲食店', '佐賀県武雄市武雄町本町7329', 'Japan', '武雄市', 33.1942, 130.0216, true),
+('Guild（ギルド）', '立食形式の飲食店', '佐賀県武雄市武雄町本町7329', 'Japan', '武雄市', 33.1956, 130.0158, true),
 
 -- Japan - 東京
 ('CryptoBar P2P', 'バー', '〒104-0061 東京都中央区銀座5-6-8 1F', 'Japan', '東京', 35.6710, 139.7630, true),
@@ -98,5 +98,5 @@ INSERT INTO masu_hubs (name, description, address, country, city, lat, lng, is_a
 
 -- Japan - 徳島
 ('吉野川ギルド', 'シェアキッチン', '〒779-3403 徳島県吉野川市山川町前川201', 'Japan', '吉野川市', 34.0574, 134.2387, true),
-('ウダツインキュベーションセンター', 'コミュニティセンター', '美馬市脇町字脇町123', 'Japan', '美馬市', 34.1135, 134.1625, true),
+('ウダツインキュベーションセンター', 'コミュニティセンター', '美馬市脇町字脇町123', 'Japan', '美馬市', 34.0682, 134.1460, true),
 ('ゲストハウスのどけや本館', 'ゲストハウス', '〒779-3610 徳島県美馬市脇町大字脇町117-1', 'Japan', '美馬市', 34.0687, 134.1457, true);

@@ -33,14 +33,14 @@ const hubs = [
   // Ireland - Tullamore
   { name: 'Charleville Castle', description: '城', address: 'Charleville Castle, Tullamore, Co. Offaly, R35 RP77, Ireland', country: 'Ireland', city: 'Tullamore', lat: 53.2605, lng: -7.5279 },
   // Ireland - Galway
-  { name: 'WA SUSHI (WA CAFE)', description: 'カフェ', address: '13 New Dock Street, Galway, Ireland', country: 'Ireland', city: 'Galway', lat: 53.2707, lng: -9.0568 },
+  { name: 'WA SUSHI (WA CAFE)', description: 'カフェ', address: '13 New Dock Street, Galway, Ireland', country: 'Ireland', city: 'Galway', lat: 53.2700, lng: -9.0525 },
   // USA - New York
   { name: 'Paramount Tower', description: 'アパート', address: '240 East 39th Street, New York, NY 10016, USA', country: 'USA', city: 'New York', lat: 40.7481, lng: -73.9744 },
   { name: 'The Met Cloisters', description: '美術館', address: '99 Margaret Corbin Drive, Fort Tryon Park, New York, NY 10040, USA', country: 'USA', city: 'New York', lat: 40.8649, lng: -73.9319 },
   // Portugal - Funchal
   { name: 'FugaCidade', description: 'バー', address: 'Rua Conde de Canavial 22, Funchal, Madeira 9000-024, Portugal', country: 'Portugal', city: 'Funchal', lat: 32.6478, lng: -16.9148 },
   // Georgia - Tbilisi
-  { name: 'SOMA Noodle Cafe', description: 'ラーメン', address: '72 Merab Kostava St, Tbilisi 0171, Georgia', country: 'Georgia', city: 'Tbilisi', lat: 41.7212, lng: 44.7773 },
+  { name: 'SOMA Noodle Cafe', description: 'ラーメン', address: '39 Irakli Abashidze Street, Tbilisi 0179, Georgia', country: 'Georgia', city: 'Tbilisi', lat: 41.7082, lng: 44.7632 },
   // UAE - Dubai
   { name: 'KOBEYa', description: null, address: 'Marina Gate 1 Marsa, Dubai, United Arab Emirates', country: 'UAE', city: 'Dubai', lat: 25.0868, lng: 55.1476 },
   // Japan - 岐阜
@@ -56,14 +56,14 @@ const hubs = [
   // Philippines - Cebu
   { name: 'Adam The Original Siomai sa Tisa', description: 'バー / アシュリーは、まっすー行きつけのBAR。Googleマップに載ってませんが、店は賑わってます', address: '816 Katipunan St, Cebu City, 6000 Cebu, Philippines', country: 'Philippines', city: 'Cebu City', lat: 10.3026, lng: 123.8710 },
   { name: "Naoki's Dining Bar", description: 'バー', address: '869 A. S. Fortuna St, Mandaue City, Central Visayas, Philippines', country: 'Philippines', city: 'Mandaue City', lat: 10.3405, lng: 123.9213 },
-  { name: 'リップル', description: 'バー', address: '1 Paseo Saturnino, Banilad, Cebu City, 6000 Philippines', country: 'Philippines', city: 'Cebu City', lat: 10.3449, lng: 123.9108 },
+  { name: 'リップル', description: 'バー', address: '1 Paseo Saturnino, Banilad, Cebu City, 6000 Philippines', country: 'Philippines', city: 'Cebu City', lat: 10.3431, lng: 123.9112 },
   // Vietnam - Ho Chi Minh City
   { name: '割烹多ま Sushi OMAKASE TAMA (Japanese Cuisine)', description: '日本料理 / FOMUSくま 滞在（閉業）', address: '8A/7C1 Thái Văn Lung, Bến Nghé, Quận 1, Hồ Chí Minh, Vietnam', country: 'Vietnam', city: 'Ho Chi Minh City', lat: 10.7795, lng: 106.7051 },
-  { name: 'すなっくS+ Snack & Bar', description: null, address: null, country: 'Vietnam', city: 'Ho Chi Minh City', lat: 10.7800, lng: 106.7010 },
+  { name: 'すなっくS+ Snack & Bar', description: null, address: '42 Mê Linh, Phường 19, Bình Thạnh, Hồ Chí Minh, Vietnam', country: 'Vietnam', city: 'Ho Chi Minh City', lat: 10.7897, lng: 106.7096 },
   { name: '【蔵 KURA】Kaku-Uchi＆SAKE Shop', description: '酒店 / FOMUSくま 滞在', address: '40/28 Phạm Viết Chánh, Phường 19, Bình Thạnh, Hồ Chí Minh, Vietnam', country: 'Vietnam', city: 'Ho Chi Minh City', lat: 10.7897, lng: 106.7109 },
   // Japan - 広島
   { name: '尾道A邸', description: null, address: '〒722-0054 広島県尾道市尾崎本町10-7', country: 'Japan', city: '尾道市', lat: 34.4109, lng: 133.2109 },
-  { name: '佐木島アートギャラリー (Sagishima Art Gallery)', description: 'アートギャラリー', address: '広島県三原市佐木島', country: 'Japan', city: '三原市', lat: 34.3405, lng: 133.1117 },
+  { name: '佐木島アートギャラリー (Sagishima Art Gallery)', description: 'アートギャラリー', address: '広島県三原市鷺浦町向田野浦', country: 'Japan', city: '三原市', lat: 34.3468, lng: 133.1237 },
   // Japan - 青森
   { name: '株式会社 竹浪酒造店', description: '日本酒醸造所', address: '〒038-3662 青森県北津軽郡板柳町板柳土井113-1', country: 'Japan', city: '板柳町', lat: 40.6966, lng: 140.4552 },
   { name: 'アウル∞珈琲', description: 'コーヒーショップ', address: '〒038-3133 青森県つがる市木造末広36-8', country: 'Japan', city: 'つがる市', lat: 40.8125, lng: 140.3835 },
@@ -87,7 +87,7 @@ const hubs = [
   // Japan - 愛知
   { name: 'CAFE TOLAND カフェトゥーランド', description: 'カフェ', address: "〒460-0011 愛知県名古屋市中区大須4丁目11-5 Z's building 6F", country: 'Japan', city: '名古屋市', lat: 35.1584, lng: 136.9063 },
   // Japan - 佐賀
-  { name: 'Guild（ギルド）', description: '立食形式の飲食店', address: '佐賀県武雄市武雄町本町7329', country: 'Japan', city: '武雄市', lat: 33.1942, lng: 130.0216 },
+  { name: 'Guild（ギルド）', description: '立食形式の飲食店', address: '佐賀県武雄市武雄町本町7329', country: 'Japan', city: '武雄市', lat: 33.1956, lng: 130.0158 },
   // Japan - 東京
   { name: 'CryptoBar P2P', description: 'バー', address: '〒104-0061 東京都中央区銀座5-6-8 1F', country: 'Japan', city: '東京', lat: 35.6710, lng: 139.7630 },
   // Japan - 千葉
@@ -96,7 +96,7 @@ const hubs = [
   { name: 'ルナール', description: 'デザートショップ', address: '岩手県盛岡市上太田上吉本24-3', country: 'Japan', city: '盛岡市', lat: 39.6905, lng: 141.0833 },
   // Japan - 徳島
   { name: '吉野川ギルド', description: 'シェアキッチン', address: '〒779-3403 徳島県吉野川市山川町前川201', country: 'Japan', city: '吉野川市', lat: 34.0574, lng: 134.2387 },
-  { name: 'ウダツインキュベーションセンター', description: 'コミュニティセンター', address: '美馬市脇町字脇町123', country: 'Japan', city: '美馬市', lat: 34.1135, lng: 134.1625 },
+  { name: 'ウダツインキュベーションセンター', description: 'コミュニティセンター', address: '美馬市脇町字脇町123', country: 'Japan', city: '美馬市', lat: 34.0682, lng: 134.1460 },
   { name: 'ゲストハウスのどけや本館', description: 'ゲストハウス', address: '〒779-3610 徳島県美馬市脇町大字脇町117-1', country: 'Japan', city: '美馬市', lat: 34.0687, lng: 134.1457 },
 ]
 
