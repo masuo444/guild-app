@@ -227,6 +227,10 @@ const translations = {
     quests: 'クエスト',
     noQuestsAvailable: '現在利用可能なクエストはありません',
     stayTuned: '新しいチャレンジをお楽しみに！',
+    exclusiveArticles: '限定記事',
+    noArticlesAvailable: '現在公開中の記事はありません',
+    stayTunedArticles: '新しい記事をお楽しみに！',
+    comingSoon: '近日公開',
     // Quest Card & Modal
     questTypePhoto: 'フォトクエスト',
     questTypeCheckin: 'チェックイン',
@@ -530,6 +534,10 @@ const translations = {
     quests: 'Quests',
     noQuestsAvailable: 'No quests currently available',
     stayTuned: 'Stay tuned for new challenges!',
+    exclusiveArticles: 'Articles',
+    noArticlesAvailable: 'No articles currently available',
+    stayTunedArticles: 'Stay tuned for new articles!',
+    comingSoon: 'Coming Soon',
     // Quest Card & Modal
     questTypePhoto: 'Photo Quest',
     questTypeCheckin: 'Check-in',

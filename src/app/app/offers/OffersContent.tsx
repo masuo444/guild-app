@@ -7,7 +7,7 @@ import { QuestCard } from './QuestCard'
 import { QuestSubmitModal } from './QuestSubmitModal'
 import { useLanguage } from '@/lib/i18n'
 
-type Tab = 'services' | 'quests'
+type Tab = 'services' | 'quests' | 'articles'
 
 interface OffersContentProps {
   quests: GuildQuest[]
@@ -80,6 +80,16 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
         >
           {t.fomusServices}
         </button>
+        <button
+          onClick={() => setActiveTab('articles')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'articles'
+              ? 'bg-[#c0c0c0] text-zinc-900'
+              : 'bg-white/10 text-zinc-300 hover:bg-white/20'
+          }`}
+        >
+          {t.exclusiveArticles}
+        </button>
       </div>
 
       {/* クエストタブ */}
@@ -138,6 +148,26 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
             link="https://silva.fomus.jp/"
             external
           />
+        </div>
+      )}
+
+      {/* 限定記事タブ */}
+      {activeTab === 'articles' && (
+        <div>
+          <Card>
+            <CardContent className="py-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                </svg>
+              </div>
+              <p className="text-zinc-300">{t.noArticlesAvailable}</p>
+              <p className="text-zinc-500 text-sm mt-1">{t.stayTunedArticles}</p>
+              <span className="inline-block mt-3 px-3 py-1 text-xs font-medium rounded-full bg-amber-500/20 text-amber-300">
+                {t.comingSoon}
+              </span>
+            </CardContent>
+          </Card>
         </div>
       )}
 

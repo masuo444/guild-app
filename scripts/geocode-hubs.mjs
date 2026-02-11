@@ -37,7 +37,7 @@ const hubs = [
   { name: 'CryptoBar P2P', address: '東京都中央区銀座7-2-12', category: 'バー', description: null, country: 'Japan', city: '東京' },
   { name: '力車イン', address: '岐阜県高山市末広町54', category: 'ホテル', description: null, country: 'Japan', city: '高山市' },
   { name: 'SOTOCHIKU & 89 unLtd.（パクチー銀行）', address: '千葉県安房郡鋸南町保田65-2', category: 'カフェ', description: null, country: 'Japan', city: '鋸南町' },
-  { name: 'パティスリー ルナール 盛岡', address: '岩手県盛岡市中央通2-5-11', category: 'デザートショップ', description: null, country: 'Japan', city: '盛岡市' },
+  { name: 'ルナール', address: '岩手県盛岡市上太田上吉本24-3', category: 'デザートショップ', description: null, country: 'Japan', city: '盛岡市' },
   { name: '吉野川ギルド', address: '徳島県吉野川市山川町前川201', category: 'シェアキッチン', description: null, country: 'Japan', city: '吉野川市' },
   { name: 'ウダツインキュベーションセンター', address: '徳島県美馬市脇町字脇町123', category: 'コミュニティセンター', description: null, country: 'Japan', city: '美馬市' },
   { name: 'ゲストハウスのどけや本館', address: '徳島県美馬市脇町大字脇町117-1', category: 'ゲストハウス', description: null, country: 'Japan', city: '美馬市' },

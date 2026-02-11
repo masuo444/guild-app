@@ -57,7 +57,7 @@ const hubs = [
   { name: 'Guild', description: '立食形式の飲食店', address: '佐賀県武雄市武雄町武雄7411', country: 'Japan', city: '武雄市', lat: 33.1950, lng: 130.0190 },
   { name: 'CryptoBar P2P', description: 'バー', address: '東京都中央区銀座7-2-12', country: 'Japan', city: '東京', lat: 35.6692, lng: 139.7640 },
   { name: 'SOTOCHIKU & 89 unLtd.（パクチー銀行）', description: 'カフェ', address: '千葉県安房郡鋸南町保田65-2', country: 'Japan', city: '鋸南町', lat: 35.1460, lng: 139.8490 },
-  { name: 'パティスリー ルナール 盛岡', description: 'デザートショップ', address: '岩手県盛岡市中央通2-5-11', country: 'Japan', city: '盛岡市', lat: 39.7036, lng: 141.1527 },
+  { name: 'ルナール', description: 'デザートショップ', address: '岩手県盛岡市上太田上吉本24-3', country: 'Japan', city: '盛岡市', lat: 39.6905, lng: 141.0833 },
   { name: '吉野川ギルド', description: 'シェアキッチン', address: '徳島県吉野川市山川町前川201', country: 'Japan', city: '吉野川市', lat: 34.0290, lng: 134.1730 },
   { name: 'ウダツインキュベーションセンター', description: 'コミュニティセンター', address: '徳島県美馬市脇町字脇町123', country: 'Japan', city: '美馬市', lat: 34.0660, lng: 134.1480 },
   { name: 'ゲストハウスのどけや本館', description: 'ゲストハウス', address: '徳島県美馬市脇町大字脇町117-1', country: 'Japan', city: '美馬市', lat: 34.0660, lng: 134.1480 },

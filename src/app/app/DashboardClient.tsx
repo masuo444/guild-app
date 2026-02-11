@@ -1,23 +1,35 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Profile, ActivityLog } from '@/types/database'
 import { MembershipCard } from '@/components/membership/MembershipCard'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { calculateRank, getPointsToNextRank } from '@/config/rank'
 import { formatDate } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n'
+import type { LoginBonusResult } from './page'
 
 interface DashboardClientProps {
   profile: Profile
   totalPoints: number
   recentLogs: ActivityLog[]
   inviteCount: number
+  loginBonusResult?: LoginBonusResult
 }
 
-export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount }: DashboardClientProps) {
+export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount, loginBonusResult }: DashboardClientProps) {
   const rank = calculateRank(totalPoints)
   const pointsToNext = getPointsToNextRank(totalPoints)
   const { language, setLanguage, t } = useLanguage()
+  const [showBonusBanner, setShowBonusBanner] = useState(false)
+
+  useEffect(() => {
+    if (loginBonusResult?.dailyBonus) {
+      setShowBonusBanner(true)
+      const timer = setTimeout(() => setShowBonusBanner(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [loginBonusResult])
 
   const cardTranslations = {
     guildMember: t.guildMember,
@@ -25,6 +37,26 @@ export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount 
     points: t.points,
     rank: t.rank,
     tapToFlip: t.tapToFlip,
+  }
+
+  const getBonusMessage = () => {
+    if (!loginBonusResult?.dailyBonus) return null
+    const parts: string[] = []
+    parts.push(language === 'ja' ? '+10 ログインボーナス!' : '+10 Login Bonus!')
+    if (loginBonusResult.streakBonus === 7) {
+      parts.push(language === 'ja' ? '+50 7日連続ボーナス!' : '+50 7-Day Streak Bonus!')
+    }
+    if (loginBonusResult.streakBonus === 30) {
+      parts.push(language === 'ja' ? '+150 30日連続ボーナス!' : '+150 30-Day Streak Bonus!')
+    }
+    if (loginBonusResult.streakDays > 1) {
+      parts.push(
+        language === 'ja'
+          ? `${loginBonusResult.streakDays}日連続ログイン中`
+          : `${loginBonusResult.streakDays}-day login streak`
+      )
+    }
+    return parts
   }
 
   return (
@@ -38,6 +70,25 @@ export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount 
           {language === 'ja' ? 'EN' : 'JA'}
         </button>
       </div>
+
+      {/* ログインボーナス通知 */}
+      {showBonusBanner && (
+        <div
+          className="mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 animate-in fade-in slide-in-from-top-2 duration-500"
+          onClick={() => setShowBonusBanner(false)}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">&#x1F381;</span>
+            <div>
+              {getBonusMessage()?.map((msg, i) => (
+                <p key={i} className={`text-sm font-semibold ${i === 0 ? 'text-yellow-300' : 'text-amber-300'}`}>
+                  {msg}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 会員証 */}
       <div className="mb-8">
@@ -120,4 +171,3 @@ function StatCard({
     </div>
   )
 }
-
