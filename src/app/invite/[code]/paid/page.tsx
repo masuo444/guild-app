@@ -84,6 +84,9 @@ export default function PaidPage() {
           email: customerEmail,
           options: {
             emailRedirectTo: `${window.location.origin}/api/auth/callback?invite_code=${code}`,
+            data: {
+              invite_code: code,
+            },
           },
         })
 
