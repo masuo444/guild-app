@@ -205,10 +205,10 @@ export async function GET(request: NextRequest) {
   // 管理者メールかどうかチェック
   const isAdmin = ADMIN_EMAILS.includes(user.email as typeof ADMIN_EMAILS[number])
 
-  // プロフィールが存在しないか、トリガーで作成された不完全なプロフィール（inactive）を検出
-  // on_auth_user_created トリガーで subscription_status='inactive' のプロフィールが自動作成される場合がある
-  // プロフィール未作成、またはトリガーで作成された不完全プロフィール（inactive/free_tier）で招待コードがある場合
-  const needsSetup = !profile || ((profile.subscription_status === 'inactive' || profile.subscription_status === 'free_tier') && inviteCode)
+  // プロフィールが存在しないか、招待コード付きの新規登録フローかを判定
+  // DBトリガーが先にプロフィールを作成する場合があるため、招待コードがあれば常に更新する
+  // ただし、既にactive（有料決済済み）のユーザーは除外
+  const needsSetup = !profile || (!!inviteCode && profile.subscription_status !== 'active')
 
   if (needsSetup) {
     const membershipId = profile?.id ? undefined : `FG${Date.now().toString(36).toUpperCase()}`
