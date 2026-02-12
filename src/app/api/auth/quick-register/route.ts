@@ -75,8 +75,8 @@ export async function POST(request: NextRequest) {
 
   if (existingProfile) {
     // トリガーで作成された不完全なプロフィールを正しい値に更新
-    // 既に 'free' or 'active' なら招待による上書きは不要（再ログイン時）
-    if (existingProfile.subscription_status !== 'active' && existingProfile.subscription_status !== 'free') {
+    // 既に 'active'（有料決済済み）なら上書きしない
+    if (existingProfile.subscription_status !== 'active') {
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
         .update(profileData)

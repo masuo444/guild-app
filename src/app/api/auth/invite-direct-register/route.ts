@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       email_confirm: true,
+      user_metadata: { invite_code: inviteCode },
     })
 
     if (createError || !newUser.user) {
@@ -114,9 +115,9 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (existingProfile) {
-    // トリガーで作成された不完全なプロフィール、または既存プロフィールを更新
-    // 既に 'free' or 'active' なら招待による上書きは不要
-    if (existingProfile.subscription_status !== 'active' && existingProfile.subscription_status !== 'free') {
+    // トリガーで作成された不完全なプロフィールを正しい値に更新
+    // 既に 'active'（有料決済済み）なら上書きしない
+    if (existingProfile.subscription_status !== 'active') {
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
         .update(profileData)
