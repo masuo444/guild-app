@@ -287,9 +287,7 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
   // メンバータイプに応じた背景色を取得
   const getTypeBgColor = (type: MembershipType) => {
     switch (type) {
-      case 'model': return 'bg-pink-500/20 text-pink-300 border-pink-500/30'
       case 'ambassador': return 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-      case 'staff': return 'bg-blue-500/20 text-blue-300 border-blue-500/30'
       case 'partner': return 'bg-amber-500/20 text-amber-300 border-amber-500/30'
       default: return 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
     }
@@ -776,7 +774,29 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
     }
   }
 
-  const handleSubscriptionStatusChange = async (memberId: string, newStatus: 'active' | 'free' | 'free_tier') => {
+  const handleDeleteMember = async (memberId: string, memberName: string) => {
+    if (!confirm(`「${memberName}」を完全に削除しますか？この操作は元に戻せません。`)) return
+    setUpdatingMember(memberId)
+    try {
+      const res = await fetch('/api/admin/delete-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        alert(`削除エラー: ${data.error}`)
+      } else {
+        router.refresh()
+      }
+    } catch {
+      alert('削除に失敗しました')
+    } finally {
+      setUpdatingMember(null)
+    }
+  }
+
+  const handleSubscriptionStatusChange = async (memberId: string, newStatus: 'active' | 'free') => {
     setUpdatingMember(memberId)
     try {
       const supabase = createClient()
@@ -882,9 +902,7 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
 
   const typeColors: Record<MembershipType, string> = {
     standard: 'bg-zinc-500/20 text-zinc-400',
-    model: 'bg-pink-500/20 text-pink-300',
     ambassador: 'bg-purple-500/20 text-purple-300',
-    staff: 'bg-blue-500/20 text-blue-300',
     partner: 'bg-amber-500/20 text-amber-300',
   }
 
@@ -901,7 +919,6 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
   const statusColors: Record<string, string> = {
     active: 'bg-green-500/20 text-green-300',
     free: 'bg-blue-500/20 text-blue-300',
-    free_tier: 'bg-red-500/20 text-red-300',
   }
 
   const membershipStatusColors: Record<string, string> = {
@@ -1045,14 +1062,13 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">ステータス</label>
                       <select
-                        value={member.subscription_status || 'free_tier'}
-                        onChange={(e) => handleSubscriptionStatusChange(member.id, e.target.value as 'active' | 'free' | 'free_tier')}
+                        value={member.subscription_status === 'active' ? 'active' : 'free'}
+                        onChange={(e) => handleSubscriptionStatusChange(member.id, e.target.value as 'active' | 'free')}
                         disabled={isUpdating}
-                        className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${statusColors[member.subscription_status || 'free_tier']} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${statusColors[member.subscription_status === 'active' ? 'active' : 'free']} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <option value="active" className="bg-zinc-900">有効</option>
+                        <option value="active" className="bg-zinc-900">有料</option>
                         <option value="free" className="bg-zinc-900">無料</option>
-                        <option value="free_tier" className="bg-zinc-900">無効</option>
                       </select>
                     </div>
 
@@ -1128,9 +1144,7 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
                         className={`w-full px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${typeColors[memberType]} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <option value="standard" className="bg-zinc-900">Standard (有料)</option>
-                        <option value="model" className="bg-zinc-900">Model (無料)</option>
                         <option value="ambassador" className="bg-zinc-900">Ambassador (無料)</option>
-                        <option value="staff" className="bg-zinc-900">Staff (無料)</option>
                         <option value="partner" className="bg-zinc-900">Partner (無料)</option>
                       </select>
                     </div>
@@ -1175,6 +1189,17 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
                       </div>
                     </div>
                   )}
+
+                  {/* 削除ボタン */}
+                  <div className="mt-3 pt-3 border-t border-zinc-700/50 flex justify-end">
+                    <button
+                      onClick={() => handleDeleteMember(member.id, member.display_name || '名前未設定')}
+                      disabled={isUpdating}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      メンバー削除
+                    </button>
+                  </div>
                 </div>
               )
             })}

@@ -22,9 +22,7 @@ interface MembershipCardProps {
 // メンバータイプバッジのスタイル設定
 const MEMBERSHIP_TYPE_STYLES: Record<MembershipType, { bgColor: string; textColor: string }> = {
   standard: { bgColor: '#4a4540', textColor: '#a89984' },
-  model: { bgColor: '#be185d', textColor: '#fce7f3' },      // Pink
   ambassador: { bgColor: '#7e22ce', textColor: '#f3e8ff' }, // Purple
-  staff: { bgColor: '#1d4ed8', textColor: '#dbeafe' },      // Blue
   partner: { bgColor: '#b45309', textColor: '#fef3c7' },    // Amber
 }
 

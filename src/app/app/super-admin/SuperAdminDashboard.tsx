@@ -283,9 +283,7 @@ function MembersTab({ members, customRoles, memberRoles }: { members: Profile[];
                     onChange={(e) => setEditingMember({ ...editingMember, membership_type: e.target.value as MembershipType })}
                   >
                     <option value="standard" className="bg-zinc-900">Standard</option>
-                    <option value="model" className="bg-zinc-900">Model</option>
                     <option value="ambassador" className="bg-zinc-900">Ambassador</option>
-                    <option value="staff" className="bg-zinc-900">Staff</option>
                     <option value="partner" className="bg-zinc-900">Partner</option>
                   </select>
                 </div>
@@ -297,11 +295,8 @@ function MembersTab({ members, customRoles, memberRoles }: { members: Profile[];
                     value={editingMember.subscription_status}
                     onChange={(e) => setEditingMember({ ...editingMember, subscription_status: e.target.value as SubscriptionStatus })}
                   >
-                    <option value="free_tier" className="bg-zinc-900">Free Tier</option>
-                    <option value="free" className="bg-zinc-900">Free (Invited)</option>
-                    <option value="active" className="bg-zinc-900">Active (Paid)</option>
-                    <option value="inactive" className="bg-zinc-900">Inactive</option>
-                    <option value="canceled" className="bg-zinc-900">Canceled</option>
+                    <option value="active" className="bg-zinc-900">有料 (Active)</option>
+                    <option value="free" className="bg-zinc-900">無料 (Free)</option>
                   </select>
                 </div>
               </div>
@@ -1118,9 +1113,7 @@ function InvitesTab({ invites }: { invites: SuperAdminDashboardProps['invites'] 
                 onChange={(e) => setSelectedType(e.target.value as MembershipType)}
               >
                 <option value="standard" className="bg-zinc-900">Standard (Paid)</option>
-                <option value="model" className="bg-zinc-900">Model (Free)</option>
                 <option value="ambassador" className="bg-zinc-900">Ambassador (Free)</option>
-                <option value="staff" className="bg-zinc-900">Staff (Free)</option>
                 <option value="partner" className="bg-zinc-900">Partner (Free)</option>
               </select>
             </div>

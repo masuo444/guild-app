@@ -1,13 +1,13 @@
 export type MembershipStatus = 'inactive' | 'active' | 'suspended'
 export type SubscriptionStatus = 'inactive' | 'active' | 'past_due' | 'canceled' | 'free' | 'free_tier'
-export type MembershipType = 'standard' | 'model' | 'ambassador' | 'staff' | 'partner'
+export type MembershipType = 'standard' | 'ambassador' | 'partner'
 export type UserRole = 'admin' | 'member'
 export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'SS'
 export type QuestType = 'photo' | 'checkin' | 'action'
 export type QuestSubmissionStatus = 'pending' | 'approved' | 'rejected'
 
 // 無料メンバータイプかどうかを判定
-export const FREE_MEMBERSHIP_TYPES: MembershipType[] = ['model', 'ambassador', 'staff', 'partner']
+export const FREE_MEMBERSHIP_TYPES: MembershipType[] = ['ambassador', 'partner']
 
 export function isFreeMembershipType(type: MembershipType): boolean {
   return FREE_MEMBERSHIP_TYPES.includes(type)
@@ -16,9 +16,7 @@ export function isFreeMembershipType(type: MembershipType): boolean {
 // メンバータイプのラベル
 export const MEMBERSHIP_TYPE_LABELS: Record<MembershipType, string> = {
   standard: 'Standard',
-  model: 'Model',
   ambassador: 'Ambassador',
-  staff: 'Staff',
   partner: 'Partner',
 }
 
