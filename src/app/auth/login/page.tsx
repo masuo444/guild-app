@@ -362,10 +362,10 @@ export default function LoginPage() {
                     type="text"
                     required
                     value={loginCode}
-                    onChange={(e) => setLoginCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="000000"
+                    onChange={(e) => setLoginCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="00000000"
                     className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent font-mono text-center text-2xl tracking-[0.5em]"
-                    maxLength={6}
+                    maxLength={8}
                     autoFocus
                   />
                 </div>
@@ -384,7 +384,7 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  disabled={loginLoading || loginCode.length !== 6}
+                  disabled={loginLoading || loginCode.length !== 8}
                   className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {loginLoading ? (
