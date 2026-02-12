@@ -165,7 +165,7 @@ export default async function DashboardPage() {
     lng: null,
     instagram_id: null,
     avatar_url: null,
-    show_location_on_map: false,
+    show_location_on_map: true,
     created_at: new Date().toISOString(),
   }
 
