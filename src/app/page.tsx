@@ -107,6 +107,16 @@ export default function HomePage() {
                   {language === 'ja' ? 'ギルドに入る' : 'Enter the Guild'}
                 </Link>
               </div>
+
+              {/* Guide Link */}
+              <div className="mt-4 text-center md:text-left">
+                <Link
+                  href="/guide"
+                  className="text-xs text-stone-400 hover:text-stone-600 transition-colors underline underline-offset-2"
+                >
+                  {language === 'ja' ? '使い方ガイドを見る' : 'View Guide'}
+                </Link>
+              </div>
             </div>
           </div>
         </div>
