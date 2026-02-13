@@ -61,32 +61,33 @@ export async function POST(request: NextRequest) {
   let userId: string
   let isNewUser = false
 
-  // 既存ユーザーを検索
-  const { data: users } = await supabaseAdmin.auth.admin.listUsers()
-  const existingUser = users?.users.find(u => u.email === email)
+  // まずcreateUserを試みる（既存ユーザーなら重複エラーが返る）
+  const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { invite_code: inviteCode },
+  })
 
-  if (existingUser) {
-    userId = existingUser.id
-  } else {
-    // 新規ユーザーを Admin API で作成（メール送信なし）
-    // 注意: createUser() により on_auth_user_created トリガーが発火し、
-    // handle_new_user() でデフォルトプロフィールが自動作成される場合がある
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { invite_code: inviteCode },
-    })
-
-    if (createError || !newUser.user) {
+  if (createError) {
+    if (createError.message.includes('already been registered') || createError.message.includes('already exists')) {
+      // 既存ユーザー → メールで検索
+      const { data: userList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+      const existingUser = userList?.users?.find(u => u.email === email)
+      if (!existingUser) {
+        return NextResponse.json({ error: 'User lookup failed' }, { status: 500 })
+      }
+      userId = existingUser.id
+    } else {
       console.error('Failed to create user:', createError)
       return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
     }
-
+  } else if (newUser?.user) {
     userId = newUser.user.id
     isNewUser = true
-
     // トリガーによるプロフィール作成の完了を待つ
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise(resolve => setTimeout(resolve, 300))
+  } else {
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
   }
 
   const isAdmin = ADMIN_EMAILS.includes(email as typeof ADMIN_EMAILS[number])

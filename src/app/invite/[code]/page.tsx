@@ -27,7 +27,6 @@ export default function InvitePage() {
   const [isFree, setIsFree] = useState(false)
   const [language, setLanguageState] = useState<Language>('en')
   const [isJapan, setIsJapan] = useState(false)
-  const [isInApp, setIsInApp] = useState(false)
 
   useEffect(() => {
     const lang = getInitialLanguage()
@@ -36,20 +35,6 @@ export default function InvitePage() {
     const isJapanese = lang === 'ja' || Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Tokyo'
     setIsJapan(isJapanese)
 
-    // Instagram等のアプリ内ブラウザを検知して外部ブラウザにリダイレクト
-    const ua = navigator.userAgent || ''
-    const isInAppBrowser = /Instagram|FBAN|FBAV|Line\/|Twitter|Snapchat/i.test(ua)
-    if (isInAppBrowser) {
-      setIsInApp(true)
-      const url = window.location.href
-      const isAndroid = /android/i.test(ua)
-      if (isAndroid) {
-        window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`
-      } else {
-        // iOSではSafariで自動的に開けないため、ユーザーに案内を表示
-        navigator.clipboard?.writeText(url)
-      }
-    }
   }, [])
 
   const setLanguage = (lang: Language) => {
@@ -118,14 +103,20 @@ export default function InvitePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    if (isFree) {
+      // 無料招待: OTP不要。サーバー側で直接登録→即ログイン
+      await handleDirectRegister()
+      return
+    }
+
+    // 有料招待: OTP認証フロー
     setStatus('submitting')
 
     const supabase = createClient()
 
-    // 招待コードをcookieに保存（メールリンクからの戻り時に使用）
     document.cookie = `pending_invite_code=${code}; path=/; max-age=3600; SameSite=Lax`
 
-    // Magic Link を送信
     const { error: authError } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -138,19 +129,6 @@ export default function InvitePage() {
 
     if (authError) {
       console.error('Auth error:', authError)
-
-      // レート制限またはDatabase errorの場合は直接登録にフォールバック
-      if (
-        authError.message.includes('rate limit') ||
-        authError.message.includes('Rate limit') ||
-        authError.message.includes('email rate limit') ||
-        authError.message.includes('Database error') ||
-        authError.message.includes('database')
-      ) {
-        await handleDirectRegister()
-        return
-      }
-
       setError(authError.message)
       setStatus('valid')
       return
@@ -235,44 +213,6 @@ export default function InvitePage() {
       // ネットワークエラー時は従来のフローにフォールバック
       window.location.href = `/api/auth/callback?invite_code=${code}&next=/app`
     }
-  }
-
-  // アプリ内ブラウザ検知時のフォールバック画面
-  if (isInApp) {
-    const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h1 className="text-xl font-bold text-zinc-900 mb-2">
-            {language === 'ja' ? 'ブラウザで開いてください' : 'Please open in browser'}
-          </h1>
-          <p className="text-zinc-600 text-sm mb-6">
-            {language === 'ja'
-              ? 'アプリ内ブラウザでは正常に動作しません。下のボタンでURLをコピーして、SafariまたはChromeで開いてください。'
-              : 'This page does not work in the in-app browser. Copy the URL below and open it in Safari or Chrome.'}
-          </p>
-          <button
-            onClick={() => {
-              navigator.clipboard?.writeText(currentUrl)
-              alert(language === 'ja' ? 'URLをコピーしました！SafariまたはChromeに貼り付けてください。' : 'URL copied! Paste it in Safari or Chrome.')
-            }}
-            className="w-full px-6 py-3 bg-zinc-900 text-white rounded-lg font-medium hover:bg-zinc-800 transition-colors"
-          >
-            {language === 'ja' ? 'URLをコピーする' : 'Copy URL'}
-          </button>
-          <p className="text-xs text-zinc-400 mt-4">
-            {language === 'ja'
-              ? '右上の「…」メニューから「Safariで開く」も使えます'
-              : 'You can also use "Open in Safari" from the "..." menu'}
-          </p>
-        </div>
-      </div>
-    )
   }
 
   if (status === 'loading' || status === 'redirecting') {
