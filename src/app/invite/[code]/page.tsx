@@ -139,18 +139,19 @@ export default function InvitePage() {
     if (authError) {
       console.error('Auth error:', authError)
 
-      // レート制限エラーの場合は直接登録にフォールバック
-      if (authError.message.includes('rate limit') || authError.message.includes('Rate limit') || authError.message.includes('email rate limit')) {
+      // レート制限またはDatabase errorの場合は直接登録にフォールバック
+      if (
+        authError.message.includes('rate limit') ||
+        authError.message.includes('Rate limit') ||
+        authError.message.includes('email rate limit') ||
+        authError.message.includes('Database error') ||
+        authError.message.includes('database')
+      ) {
         await handleDirectRegister()
         return
       }
 
-      // より分かりやすいエラーメッセージに変換
-      let errorMessage = authError.message
-      if (authError.message.includes('Database error')) {
-        errorMessage = t.serverError
-      }
-      setError(errorMessage)
+      setError(authError.message)
       setStatus('valid')
       return
     }
