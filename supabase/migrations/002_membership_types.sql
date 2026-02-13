@@ -82,8 +82,8 @@ BEGIN
     v_membership_type := 'standard';
   END IF;
 
-  -- 無料タイプ（model, ambassador, staff, partner）の場合
-  IF v_membership_type IN ('model', 'ambassador', 'staff', 'partner') THEN
+  -- 無料タイプ（ambassador, partner）の場合
+  IF v_membership_type IN ('ambassador', 'partner') THEN
     INSERT INTO public.profiles (
       id,
       display_name,
