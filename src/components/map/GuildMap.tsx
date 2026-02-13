@@ -110,8 +110,8 @@ function getMarkerSize(zoom: number): { base: number; avatar: number } {
   }
 }
 
-// Generate circle SVG for members with avatar
-function getMemberAvatarMarkerSvg(avatarUrl: string, size: number): string {
+// Generate circle SVG for members with avatar (base64 embedded)
+function getMemberAvatarMarkerSvg(base64DataUrl: string, size: number): string {
   const r = size / 2
   const border = Math.max(2, r * 0.12)
   const imgR = r - border
@@ -127,9 +127,33 @@ function getMemberAvatarMarkerSvg(avatarUrl: string, size: number): string {
       </defs>
       <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e" filter="url(#shadow)"/>
       <circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/>
-      <image href="${avatarUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice"/>
+      <image href="${base64DataUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice"/>
     </svg>
   `
+}
+
+// Preload avatar image and convert to base64 data URL
+function loadAvatarAsBase64(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const size = 80 // small enough for marker
+      canvas.width = size
+      canvas.height = size
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject('No canvas context'); return }
+      // Draw as square crop
+      const min = Math.min(img.width, img.height)
+      const sx = (img.width - min) / 2
+      const sy = (img.height - min) / 2
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
+      resolve(canvas.toDataURL('image/jpeg', 0.7))
+    }
+    img.onerror = () => reject('Failed to load')
+    img.src = url
+  })
 }
 
 // Generate circle SVG for members without avatar
@@ -224,6 +248,7 @@ function MapMarkers({
   filteredHubs,
   filteredPending,
   markerSizes,
+  avatarCache,
   onMarkerClick,
 }: {
   showMembers: boolean
@@ -233,13 +258,15 @@ function MapMarkers({
   filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
   filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
   markerSizes: { base: number; avatar: number }
+  avatarCache: Record<string, string>
   onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
 }) {
   return (
     <>
       {showMembers &&
         filteredMembers.map((member) => {
-          const size = member.avatar_url ? markerSizes.avatar : markerSizes.base
+          const cachedBase64 = member.avatar_url ? avatarCache[member.avatar_url] : undefined
+          const size = cachedBase64 ? markerSizes.avatar : markerSizes.base
           return (
             <Marker
               key={member.id}
@@ -248,8 +275,8 @@ function MapMarkers({
               title={member.display_name || 'Member'}
               icon={{
                 url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-                  member.avatar_url
-                    ? getMemberAvatarMarkerSvg(member.avatar_url, size)
+                  cachedBase64
+                    ? getMemberAvatarMarkerSvg(cachedBase64, size)
                     : getMemberDotMarkerSvg(size)
                 ),
                 scaledSize: { width: size, height: size, equals: () => false },
@@ -307,6 +334,29 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const [zoomLevel, setZoomLevel] = useState(3)
   const mapRef = useRef<google.maps.Map | null>(null)
   const fullscreenMapRef = useRef<google.maps.Map | null>(null)
+
+  // Avatar base64 cache: avatar_url -> base64 data URL
+  const [avatarCache, setAvatarCache] = useState<Record<string, string>>({})
+
+  // Preload avatar images as base64
+  useEffect(() => {
+    const membersWithAvatars = members.filter(m => m.avatar_url)
+    if (membersWithAvatars.length === 0) return
+
+    let mounted = true
+    membersWithAvatars.forEach(member => {
+      const url = member.avatar_url!
+      if (avatarCache[url]) return // already cached
+      loadAvatarAsBase64(url).then(base64 => {
+        if (mounted) {
+          setAvatarCache(prev => ({ ...prev, [url]: base64 }))
+        }
+      }).catch(() => {/* ignore failed loads */})
+    })
+
+    return () => { mounted = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members])
 
   // Get current marker sizes based on zoom
   const markerSizes = useMemo(() => getMarkerSize(zoomLevel), [zoomLevel])
@@ -427,6 +477,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
                 markerSizes={markerSizes}
+                avatarCache={avatarCache}
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
@@ -693,6 +744,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
                 markerSizes={markerSizes}
+                avatarCache={avatarCache}
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
