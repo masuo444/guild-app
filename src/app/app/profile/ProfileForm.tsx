@@ -197,7 +197,13 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     if (error) {
       setMessage({ type: 'error', text: error.message })
     } else {
-      setMessage({ type: 'success', text: t.profileUpdated })
+      const locationMissing = !formData.home_country && !formData.home_city
+      setMessage({
+        type: 'success',
+        text: locationMissing
+          ? `${t.profileUpdated}\n${t.locationMissing}`
+          : t.profileUpdated,
+      })
     }
   }
 
@@ -315,7 +321,8 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             {/* Avatar Upload */}
             <div>
               <label className="block text-sm text-zinc-300 mb-1">{t.profileImage}</label>
-              <p className="text-xs text-zinc-400 mb-3">{t.profileImageDesc}</p>
+              <p className="text-xs text-zinc-400 mb-2">{t.profileImageDesc}</p>
+              <p className="text-xs text-amber-400 mb-3">🍶 {t.masuPhotoRecommend}</p>
 
               <div className="flex items-start gap-4">
                 {/* プレビュー */}
@@ -494,7 +501,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
 
             {message && (
               <div
-                className={`p-3 rounded-lg text-sm ${
+                className={`p-3 rounded-lg text-sm whitespace-pre-line ${
                   message.type === 'success'
                     ? 'bg-green-500/20 text-green-300 border border-green-500/30'
                     : 'bg-red-500/20 text-red-300 border border-red-500/30'
