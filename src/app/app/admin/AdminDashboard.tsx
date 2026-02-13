@@ -158,19 +158,13 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
   // 無料招待を発行できるか
   const canCreateFreeInvite = canIssueFreeInvite(adminEmail)
 
-  // 利用可能なメンバータイプ（再利用可能な場合は standard のみ）
-  const availableMembershipTypes: MembershipType[] = isReusable
-    ? ['standard']
-    : canCreateFreeInvite
-      ? ['standard', ...FREE_MEMBERSHIP_TYPES]
-      : ['standard']
+  // 利用可能なメンバータイプ
+  const availableMembershipTypes: MembershipType[] = canCreateFreeInvite
+    ? ['standard', ...FREE_MEMBERSHIP_TYPES]
+    : ['standard']
 
-  // 再利用可能に変更したときに membership_type を standard に強制
   const handleReusableChange = (checked: boolean) => {
     setIsReusable(checked)
-    if (checked) {
-      setSelectedType('standard')
-    }
   }
 
   // ジオコーディング（国・都市から座標取得）
@@ -308,7 +302,6 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
                 className="w-full px-4 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value as MembershipType)}
-                disabled={isReusable}
               >
                 {availableMembershipTypes.map((type) => (
                   <option key={type} value={type} className="bg-zinc-900">
@@ -390,7 +383,7 @@ function InvitesTab({ invites: initialInvites, adminId, adminEmail }: { invites:
                   永久リンク（再利用可能）
                 </span>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  外部サイト掲載用。何度でも使える招待リンクを作成します（有料メンバーのみ）
+                  外部サイト掲載用。何度でも使える招待リンクを作成します
                 </p>
               </div>
             </label>
