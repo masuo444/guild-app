@@ -87,13 +87,6 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // 500MB制限チェック
-    const maxSize = 500 * 1024 * 1024 // 500MB
-    if (file.size > maxSize) {
-      setMessage({ type: 'error', text: `${t.fileTooLarge} (max 500MB). ${formatFileSize(file.size)}` })
-      return
-    }
-
     // 画像ファイルかチェック
     if (!file.type.startsWith('image/')) {
       setMessage({ type: 'error', text: t.selectImageFile })
