@@ -405,7 +405,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
       <div className="fixed inset-0 z-[9999] bg-zinc-900">
         {/* Map takes full screen */}
         <div className="absolute inset-0">
-          <APIProvider apiKey={apiKey} language={language}>
+          <APIProvider apiKey={apiKey} language={language} key={`map-fs-${language}`}>
             <Map
               defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
               defaultZoom={3}
@@ -661,7 +661,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
       {/* Map container with expand hint on mobile */}
       <div className="relative">
         <div className="w-full h-[400px] sm:h-[500px] rounded-xl overflow-hidden shadow-lg border border-zinc-500/30">
-          <APIProvider apiKey={apiKey} language={language}>
+          <APIProvider apiKey={apiKey} language={language} key={`map-${language}`}>
             <Map
               defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
               defaultZoom={3}
