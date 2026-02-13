@@ -784,7 +784,7 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
     }
 
     const supabase = createClient()
-    await supabase.from('masu_hubs').insert({
+    const { data: insertedHub } = await supabase.from('masu_hubs').insert({
       name: newHub.name,
       description: newHub.description || null,
       country: newHub.country,
@@ -796,7 +796,12 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
       website_url: newHub.website_url || null,
       phone: newHub.phone || null,
       is_active: true,
-    })
+    }).select('id').single()
+
+    // Google Maps URLがあれば自動で写真取得
+    if (insertedHub && newHub.google_maps_url) {
+      fetchHubPhoto(insertedHub.id, newHub.google_maps_url).catch(() => {})
+    }
 
     setNewHub({ name: '', description: '', country: '', city: '', address: '', lat: 0, lng: 0, google_maps_url: '', website_url: '', phone: '' })
     setShowAddForm(false)
@@ -809,6 +814,47 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
 
     const supabase = createClient()
     await supabase.from('masu_hubs').delete().eq('id', hubId)
+    router.refresh()
+  }
+
+  // Google Maps写真取得
+  const [fetchingPhoto, setFetchingPhoto] = useState<string | null>(null)
+  const [fetchingAllPhotos, setFetchingAllPhotos] = useState(false)
+
+  const fetchHubPhoto = async (hubId: string, googleMapsUrl: string) => {
+    setFetchingPhoto(hubId)
+    try {
+      const res = await fetch('/api/hub/fetch-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hubId, googleMapsUrl }),
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        console.error('Photo fetch failed:', result.error)
+      }
+    } catch {
+      console.error('Photo fetch error')
+    } finally {
+      setFetchingPhoto(null)
+    }
+  }
+
+  const handleFetchAllPhotos = async () => {
+    const hubsWithoutPhoto = hubs.filter(h => !h.image_url && h.google_maps_url)
+    if (hubsWithoutPhoto.length === 0) {
+      alert('写真未取得のHub（Google Maps URLあり）はありません')
+      return
+    }
+    if (!confirm(`${hubsWithoutPhoto.length}件のHubの写真をGoogleから取得します。よろしいですか？`)) return
+
+    setFetchingAllPhotos(true)
+    for (const hub of hubsWithoutPhoto) {
+      await fetchHubPhoto(hub.id, hub.google_maps_url!)
+      // API制限回避のため少し待つ
+      await new Promise(r => setTimeout(r, 500))
+    }
+    setFetchingAllPhotos(false)
     router.refresh()
   }
 
@@ -1002,10 +1048,22 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
       {/* Hub一覧 */}
       <Card>
         <CardContent className="p-0">
+          <div className="px-4 py-3 border-b border-zinc-500/30 flex justify-end">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleFetchAllPhotos}
+              loading={fetchingAllPhotos}
+              disabled={fetchingAllPhotos}
+            >
+              {fetchingAllPhotos ? '取得中...' : 'Google写真を一括取得'}
+            </Button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-500/30">
+                  <th className="text-left py-3 px-4 font-medium text-zinc-300">Photo</th>
                   <th className="text-left py-3 px-4 font-medium text-zinc-300">Name</th>
                   <th className="text-left py-3 px-4 font-medium text-zinc-300">Location</th>
                   <th className="text-left py-3 px-4 font-medium text-zinc-300">Address</th>
@@ -1017,6 +1075,22 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
               <tbody>
                 {hubs.map((hub) => (
                   <tr key={hub.id} className="border-b border-zinc-500/20 hover:bg-white/5">
+                    <td className="py-3 px-4">
+                      {hub.image_url ? (
+                        <img src={hub.image_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : hub.google_maps_url ? (
+                        <button
+                          onClick={() => fetchHubPhoto(hub.id, hub.google_maps_url!)}
+                          disabled={fetchingPhoto === hub.id}
+                          className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-xs text-zinc-400 hover:bg-zinc-600 disabled:opacity-50"
+                          title="Google写真を取得"
+                        >
+                          {fetchingPhoto === hub.id ? '...' : '📷'}
+                        </button>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-500 text-xs">-</div>
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       <p className="font-medium text-white">{hub.name}</p>
                       {hub.description && <p className="text-zinc-400 text-xs">{hub.description}</p>}
