@@ -297,7 +297,7 @@ function MapMarkers({
 }
 
 export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMembers = true }: GuildMapProps) {
-  const { language, t } = useLanguage()
+  const { language, setLanguage, t } = useLanguage()
   const [showMembers, setShowMembers] = useState(canViewMembers)
   const [showHubs, setShowHubs] = useState(true)
   const [showPending, setShowPending] = useState(true)
@@ -474,6 +474,14 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 </button>
               )}
             </div>
+
+            {/* Language toggle */}
+            <button
+              onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
+              className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center flex-shrink-0 text-sm font-bold text-zinc-700"
+            >
+              {language === 'ja' ? 'EN' : 'JA'}
+            </button>
           </div>
 
           {/* Filter chips */}
@@ -630,6 +638,13 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
               {t.pendingInvites}
             </button>
           )}
+          {/* Language toggle */}
+          <button
+            onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
+            className="px-3 py-2 rounded-lg text-sm font-medium bg-white/10 text-zinc-300 hover:bg-white/20 transition-colors"
+          >
+            {language === 'ja' ? 'EN' : 'JA'}
+          </button>
           {/* Fullscreen button */}
           <button
             onClick={() => setIsFullscreen(true)}
