@@ -13,7 +13,9 @@ async function checkAutoQuests(
     lat?: number
     lng?: number
   }
-) {
+): Promise<{ type: 'profile' | 'map'; points: number }[]> {
+  const completed: { type: 'profile' | 'map'; points: number }[] = []
+
   // Check "プロフィールを完成させよう" quest
   const profileComplete =
     profileData.display_name &&
@@ -53,6 +55,8 @@ async function checkAutoQuests(
           note: `Quest: ${profileQuest.id}`,
           points: profileQuest.points_reward,
         })
+
+        completed.push({ type: 'profile', points: profileQuest.points_reward })
       }
     }
   }
@@ -95,9 +99,13 @@ async function checkAutoQuests(
           note: `Quest: ${mapQuest.id}`,
           points: mapQuest.points_reward,
         })
+
+        completed.push({ type: 'map', points: mapQuest.points_reward })
       }
     }
   }
+
+  return completed
 }
 
 export async function POST(request: NextRequest) {
@@ -127,7 +135,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check auto-quest completion after successful profile update
-    await checkAutoQuests(supabase, data.userId, {
+    const completedQuests = await checkAutoQuests(supabase, data.userId, {
       display_name: data.display_name,
       home_country: data.home_country,
       home_city: data.home_city,
@@ -137,7 +145,7 @@ export async function POST(request: NextRequest) {
       lng: data.lng,
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, completedQuests })
   } catch (e) {
     console.error('Profile update error:', e)
     return NextResponse.json(

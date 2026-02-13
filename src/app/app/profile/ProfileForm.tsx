@@ -23,6 +23,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [questNotifications, setQuestNotifications] = useState<{ type: 'profile' | 'map'; points: number }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 招待コード関連
@@ -175,28 +176,40 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       }
     }
 
-    // 直接Supabaseで更新（シンプル）
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        display_name: formData.display_name,
-        instagram_id: formData.instagram_id || null,
-        avatar_url: formData.avatar_url || null,
-        home_country: formData.home_country,
-        home_state: formData.home_state,
-        home_city: formData.home_city,
-        lat,
-        lng,
-        show_location_on_map: formData.show_location_on_map,
+    try {
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile.id,
+          display_name: formData.display_name,
+          instagram_id: formData.instagram_id || null,
+          avatar_url: formData.avatar_url || null,
+          home_country: formData.home_country,
+          home_state: formData.home_state,
+          home_city: formData.home_city,
+          lat,
+          lng,
+          show_location_on_map: formData.show_location_on_map,
+        }),
       })
-      .eq('id', profile.id)
 
-    setSaving(false)
+      const result = await res.json()
 
-    if (error) {
-      setMessage({ type: 'error', text: error.message })
-    } else {
+      setSaving(false)
+
+      if (!res.ok || !result.success) {
+        setMessage({ type: 'error', text: result.error || 'Update failed' })
+        return
+      }
+
+      // クエスト達成通知
+      if (result.completedQuests && result.completedQuests.length > 0) {
+        setQuestNotifications(result.completedQuests)
+        // 8秒後に自動で消す
+        setTimeout(() => setQuestNotifications([]), 8000)
+      }
+
       const locationMissing = !formData.home_country && !formData.home_city
       setMessage({
         type: 'success',
@@ -204,6 +217,9 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
           ? `${t.profileUpdated}\n${t.locationMissing}`
           : t.profileUpdated,
       })
+    } catch {
+      setSaving(false)
+      setMessage({ type: 'error', text: 'Network error' })
     }
   }
 
@@ -498,6 +514,26 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                 />
               </button>
             </div>
+
+            {/* クエスト達成通知 */}
+            {questNotifications.length > 0 && (
+              <div className="space-y-2">
+                {questNotifications.map((quest) => (
+                  <div
+                    key={quest.type}
+                    className="p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-center animate-pulse"
+                  >
+                    <div className="text-2xl mb-1">🎉</div>
+                    <p className="text-amber-300 font-bold text-sm whitespace-pre-line">
+                      {quest.type === 'profile' ? t.questProfileComplete : t.questMapVisible}
+                    </p>
+                    <p className="text-amber-400 text-xs mt-1">
+                      +{quest.points} {t.questPointsEarned}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {message && (
               <div
