@@ -173,7 +173,7 @@ function getMemberDotMarkerSvg(size: number): string {
   `
 }
 
-// Generate circle SVG for hubs
+// Generate circle SVG for hubs without image
 function getHubMarkerSvg(size: number): string {
   const r = size / 2
   const innerR = r * 0.45
@@ -186,6 +186,28 @@ function getHubMarkerSvg(size: number): string {
       </defs>
       <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316" filter="url(#shadow)"/>
       <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
+    </svg>
+  `
+}
+
+// Generate circle SVG for hubs with image (base64 embedded)
+function getHubImageMarkerSvg(base64DataUrl: string, size: number): string {
+  const r = size / 2
+  const border = Math.max(2, r * 0.12)
+  const imgR = r - border
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <defs>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
+        </filter>
+        <clipPath id="hubClip">
+          <circle cx="${r}" cy="${r}" r="${imgR}"/>
+        </clipPath>
+      </defs>
+      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316" filter="url(#shadow)"/>
+      <circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/>
+      <image href="${base64DataUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#hubClip)" preserveAspectRatio="xMidYMid slice"/>
     </svg>
   `
 }
@@ -287,7 +309,8 @@ function MapMarkers({
         })}
       {showHubs &&
         filteredHubs.map((hub) => {
-          const size = markerSizes.base
+          const cachedHubBase64 = hub.image_url ? avatarCache[hub.image_url] : undefined
+          const size = cachedHubBase64 ? markerSizes.avatar : markerSizes.base
           return (
             <Marker
               key={hub.id}
@@ -295,7 +318,11 @@ function MapMarkers({
               onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
               title={hub.name}
               icon={{
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(getHubMarkerSvg(size)),
+                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+                  cachedHubBase64
+                    ? getHubImageMarkerSvg(cachedHubBase64, size)
+                    : getHubMarkerSvg(size)
+                ),
                 scaledSize: { width: size, height: size, equals: () => false },
                 anchor: { x: size / 2, y: size / 2, equals: () => false },
               }}
@@ -338,14 +365,15 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   // Avatar base64 cache: avatar_url -> base64 data URL
   const [avatarCache, setAvatarCache] = useState<Record<string, string>>({})
 
-  // Preload avatar images as base64
+  // Preload avatar/hub images as base64
   useEffect(() => {
-    const membersWithAvatars = members.filter(m => m.avatar_url)
-    if (membersWithAvatars.length === 0) return
+    const urls: string[] = []
+    members.forEach(m => { if (m.avatar_url) urls.push(m.avatar_url) })
+    hubs.forEach(h => { if (h.image_url) urls.push(h.image_url) })
+    if (urls.length === 0) return
 
     let mounted = true
-    membersWithAvatars.forEach(member => {
-      const url = member.avatar_url!
+    urls.forEach(url => {
       if (avatarCache[url]) return // already cached
       loadAvatarAsBase64(url).then(base64 => {
         if (mounted) {
@@ -356,7 +384,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
 
     return () => { mounted = false }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members])
+  }, [members, hubs])
 
   // Get current marker sizes based on zoom
   const markerSizes = useMemo(() => getMarkerSize(zoomLevel), [zoomLevel])
