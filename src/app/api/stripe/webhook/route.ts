@@ -43,12 +43,15 @@ export async function POST(request: Request) {
           break
         }
 
-        // 現在のプロフィールを取得（invited_by を確認するため）
+        // 現在のプロフィールを取得（invited_by + 冪等性チェック）
         const { data: profile } = await supabase
           .from('profiles')
-          .select('invited_by')
+          .select('invited_by, subscription_status')
           .eq('id', userId)
           .single()
+
+        // 既にactiveならスキップ（リトライ対策）
+        if (profile?.subscription_status === 'active') break
 
         // プロファイルを更新（会員証ID発行）
         const membershipId = generateMembershipId()
@@ -211,10 +214,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true })
   } catch (error) {
+    // エラーはログに残すが、Stripeには200を返す
+    // （200以外を返すとStripeが72時間リトライし続けるため）
     console.error('Webhook processing error:', error)
-    return NextResponse.json(
-      { error: 'Webhook processing failed' },
-      { status: 500 }
-    )
+    return NextResponse.json({ received: true, error: 'processing_failed' })
   }
 }

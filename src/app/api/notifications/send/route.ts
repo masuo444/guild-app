@@ -124,7 +124,19 @@ export async function POST(request: NextRequest) {
     let emailFailed = 0
 
     if (sendEmail) {
-      const { data: { users: allUsers }, error: listError } = await serviceClient.auth.admin.listUsers({ perPage: 1000 })
+      // ページネーションで全ユーザー取得
+      type AuthUser = { email?: string }
+      let allUsers: AuthUser[] = []
+      let listError: Error | null = null
+      let page = 1
+      while (true) {
+        const { data: { users }, error } = await serviceClient.auth.admin.listUsers({ page, perPage: 1000 })
+        if (error) { listError = error; break }
+        if (!users.length) break
+        allUsers.push(...users)
+        if (users.length < 1000) break
+        page++
+      }
 
       if (listError) {
         console.error('Failed to list users:', listError)

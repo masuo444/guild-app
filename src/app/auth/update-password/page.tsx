@@ -4,9 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useLanguage, LanguageProvider } from '@/lib/i18n'
 
-export default function UpdatePasswordPage() {
+function UpdatePasswordContent() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -20,13 +22,13 @@ export default function UpdatePasswordPage() {
     setMessage(null)
 
     if (password.length < 6) {
-      setMessage({ type: 'error', text: 'パスワードは6文字以上で入力してください' })
+      setMessage({ type: 'error', text: t.passwordMinLength })
       setLoading(false)
       return
     }
 
     if (password !== confirmPassword) {
-      setMessage({ type: 'error', text: 'パスワードが一致しません' })
+      setMessage({ type: 'error', text: t.passwordMismatch })
       setLoading(false)
       return
     }
@@ -41,11 +43,11 @@ export default function UpdatePasswordPage() {
       return
     }
 
-    setMessage({ type: 'success', text: 'パスワードを更新しました。ダッシュボードに移動します...' })
+    setMessage({ type: 'success', text: t.passwordUpdated })
 
     // 2秒後にダッシュボードにリダイレクト
     setTimeout(() => {
-      router.push('/dashboard')
+      router.push('/app')
       router.refresh()
     }, 2000)
   }
@@ -56,7 +58,7 @@ export default function UpdatePasswordPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">FOMUS GUILD</h1>
-          <p className="text-zinc-300">パスワードを更新</p>
+          <p className="text-zinc-300">{t.updatePassword}</p>
         </div>
 
         {/* Update Password Card */}
@@ -64,7 +66,7 @@ export default function UpdatePasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-1">
-                新しいパスワード
+                {t.newPassword}
               </label>
               <input
                 id="password"
@@ -73,14 +75,14 @@ export default function UpdatePasswordPage() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="6文字以上"
+                placeholder={t.sixOrMoreChars}
                 className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent"
               />
             </div>
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-300 mb-1">
-                パスワード（確認）
+                {t.confirmPassword}
               </label>
               <input
                 id="confirmPassword"
@@ -89,7 +91,7 @@ export default function UpdatePasswordPage() {
                 minLength={6}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="もう一度入力"
+                placeholder={t.enterAgain}
                 className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent"
               />
             </div>
@@ -136,7 +138,7 @@ export default function UpdatePasswordPage() {
                   Processing...
                 </>
               ) : (
-                'パスワードを更新'
+                t.updatePassword
               )}
             </button>
           </form>
@@ -145,10 +147,18 @@ export default function UpdatePasswordPage() {
         {/* Back to login */}
         <div className="mt-6 text-center">
           <Link href="/auth/login" className="text-zinc-400 hover:text-white text-sm transition-colors">
-            ← ログインページに戻る
+            ← {t.backToLogin}
           </Link>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <LanguageProvider>
+      <UpdatePasswordContent />
+    </LanguageProvider>
   )
 }

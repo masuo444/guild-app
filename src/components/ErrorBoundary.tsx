@@ -12,6 +12,25 @@ interface State {
   error: Error | null
 }
 
+function getLanguage(): 'ja' | 'en' {
+  if (typeof window === 'undefined') return 'en'
+  const saved = localStorage.getItem('fomus-guild-language')
+  return saved === 'ja' ? 'ja' : 'en'
+}
+
+const errorTexts = {
+  ja: {
+    title: 'エラーが発生しました',
+    description: '予期しないエラーが発生しました。もう一度お試しください。',
+    retry: '再試行',
+  },
+  en: {
+    title: 'Something went wrong',
+    description: 'An unexpected error occurred. Please try again.',
+    retry: 'Try Again',
+  },
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
@@ -39,6 +58,9 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback
       }
 
+      const lang = getLanguage()
+      const texts = errorTexts[lang]
+
       return (
         <div className="min-h-[400px] flex items-center justify-center p-8">
           <div className="text-center max-w-md">
@@ -58,16 +80,16 @@ export class ErrorBoundary extends Component<Props, State> {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-white mb-2">
-              Something went wrong
+              {texts.title}
             </h2>
             <p className="text-zinc-400 mb-6">
-              An unexpected error occurred. Please try again.
+              {texts.description}
             </p>
             <button
               onClick={this.handleRetry}
               className="px-6 py-2 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors"
             >
-              Try Again
+              {texts.retry}
             </button>
           </div>
         </div>

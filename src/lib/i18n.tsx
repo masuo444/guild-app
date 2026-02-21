@@ -373,6 +373,17 @@ const translations = {
     guideFooterCta: 'FOMUS GUILDに参加しよう',
     guideFooterCtaDesc: '招待コードを持っている方は、今すぐギルドに参加できます。',
     guidePrintNote: 'このページはブラウザの「印刷」機能でPDF保存できます',
+
+    // Update Password Page
+    updatePassword: 'パスワードを更新',
+    newPassword: '新しいパスワード',
+    confirmPassword: 'パスワード（確認）',
+    passwordMinLength: 'パスワードは6文字以上で入力してください',
+    passwordMismatch: 'パスワードが一致しません',
+    passwordUpdated: 'パスワードを更新しました。ダッシュボードに移動します...',
+    backToLogin: 'ログインページに戻る',
+    sixOrMoreChars: '6文字以上',
+    enterAgain: 'もう一度入力',
   },
   en: {
     // Landing Page
@@ -740,6 +751,17 @@ const translations = {
     guideFooterCta: 'Join FOMUS GUILD',
     guideFooterCtaDesc: 'If you have an invite code, you can join the guild right now.',
     guidePrintNote: 'You can save this page as PDF using your browser\'s Print function',
+
+    // Update Password Page
+    updatePassword: 'Update Password',
+    newPassword: 'New Password',
+    confirmPassword: 'Confirm Password',
+    passwordMinLength: 'Password must be at least 6 characters',
+    passwordMismatch: 'Passwords do not match',
+    passwordUpdated: 'Password updated. Redirecting to dashboard...',
+    backToLogin: 'Back to Login',
+    sixOrMoreChars: '6 or more characters',
+    enterAgain: 'Enter again',
   },
 }
 
