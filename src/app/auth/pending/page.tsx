@@ -4,9 +4,9 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
-import { useLanguage } from '@/lib/i18n'
+import { useLanguage, LanguageProvider } from '@/lib/i18n'
 
-export default function PendingPage() {
+function PendingContent() {
   const router = useRouter()
   const { t } = useLanguage()
   const [status, setStatus] = useState<'checking' | 'pending' | 'active'>('checking')
@@ -119,5 +119,13 @@ export default function PendingPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+export default function PendingPage() {
+  return (
+    <LanguageProvider>
+      <PendingContent />
+    </LanguageProvider>
   )
 }
