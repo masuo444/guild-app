@@ -4,15 +4,25 @@ import { Resend } from 'resend'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ADMIN_EMAILS } from '@/lib/access'
 
-webpush.setVapidDetails(
-  'mailto:keisukendo414@gmail.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
+let vapidInitialized = false
+function initVapid() {
+  if (!vapidInitialized && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+      'mailto:keisukendo414@gmail.com',
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    )
+    vapidInitialized = true
+  }
+}
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
 export async function POST(request: NextRequest) {
+  initVapid()
+
   try {
     // 認証チェック
     const supabase = await createClient()
@@ -131,7 +141,7 @@ export async function POST(request: NextRequest) {
 
         const emailResults = await Promise.allSettled(
           emails.map(async (email) => {
-            const { error: sendError } = await resend.emails.send({
+            const { error: sendError } = await getResend().emails.send({
               from: fromEmail,
               to: email,
               subject: `[FOMUS GUILD] ${title}`,
