@@ -185,6 +185,9 @@ const translations = {
     unused: '未使用',
     used: '使用済み',
     copyUrl: 'URLをコピー',
+    copyCode: 'コード',
+    copyLink: 'リンク',
+    tapToCopy: 'タップでコピー',
     copied: 'コピー済み!',
     noCodesYet: 'まだ招待コードを発行していません',
 
@@ -549,6 +552,9 @@ const translations = {
     unused: 'Unused',
     used: 'Used',
     copyUrl: 'Copy URL',
+    copyCode: 'Code',
+    copyLink: 'Link',
+    tapToCopy: 'Tap to copy',
     copied: 'Copied!',
     noCodesYet: "You haven't generated any invite codes yet",
 

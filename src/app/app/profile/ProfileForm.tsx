@@ -35,6 +35,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
   const [invitesLoaded, setInvitesLoaded] = useState(false)
   const [copiedInviteCode, setCopiedInviteCode] = useState<string | null>(null)
   const [lastCreatedInvite, setLastCreatedInvite] = useState<string | null>(null)
+  const [copiedField, setCopiedField] = useState<'code' | 'link' | null>(null)
 
   const [formData, setFormData] = useState({
     display_name: profile.display_name || '',
@@ -616,13 +617,36 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
           </Button>
 
           {lastCreatedInvite && (
-            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl">
-              <p className="text-green-300 text-sm font-medium">
-                {t.inviteCodeCreated} <span className="font-mono">{lastCreatedInvite}</span>
-              </p>
-              <p className="text-green-400/70 text-xs mt-1">
-                {t.inviteUrlCopied}
-              </p>
+            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl space-y-2">
+              <p className="text-green-300 text-sm font-medium">{t.inviteCodeCreated}</p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(lastCreatedInvite)
+                  setCopiedField('code')
+                  setTimeout(() => setCopiedField(null), 2000)
+                }}
+                className="w-full flex items-center justify-between p-2 bg-white/10 rounded-lg hover:bg-white/15 transition-colors"
+              >
+                <span className="text-xs text-zinc-400">{t.copyCode}</span>
+                <span className="font-mono text-sm text-white">{lastCreatedInvite}</span>
+                <span className="text-xs text-green-400 min-w-[60px] text-right">
+                  {copiedField === 'code' ? t.copied : t.tapToCopy}
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/invite/${lastCreatedInvite}`)
+                  setCopiedField('link')
+                  setTimeout(() => setCopiedField(null), 2000)
+                }}
+                className="w-full flex items-center justify-between p-2 bg-white/10 rounded-lg hover:bg-white/15 transition-colors"
+              >
+                <span className="text-xs text-zinc-400">{t.copyLink}</span>
+                <span className="text-xs text-white truncate mx-2">{window.location.origin}/invite/{lastCreatedInvite}</span>
+                <span className="text-xs text-green-400 min-w-[60px] text-right">
+                  {copiedField === 'link' ? t.copied : t.tapToCopy}
+                </span>
+              </button>
             </div>
           )}
 
