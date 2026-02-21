@@ -1,6 +1,7 @@
 'use client'
 
 import { Navigation } from '@/components/ui/Navigation'
+import { PushNotificationSubscriber } from '@/components/PushNotificationSubscriber'
 import { LanguageProvider } from '@/lib/i18n'
 
 interface AppLayoutClientProps {
@@ -14,6 +15,7 @@ export function AppLayoutClient({ children, isAdmin, isSuperAdmin }: AppLayoutCl
     <LanguageProvider>
       <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
         <Navigation isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+        <PushNotificationSubscriber />
         <main className="flex-1 pb-20 md:pb-0">
           {children}
         </main>

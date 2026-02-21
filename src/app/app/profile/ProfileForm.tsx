@@ -26,6 +26,9 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
   const [questNotifications, setQuestNotifications] = useState<{ type: 'profile' | 'map'; points: number }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // サブスク管理
+  const [managingSubscription, setManagingSubscription] = useState(false)
+
   // 招待コード関連
   const [creatingInvite, setCreatingInvite] = useState(false)
   const [myInvites, setMyInvites] = useState<Array<{ code: string; used: boolean; created_at: string }>>([])
@@ -263,6 +266,20 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       // クリップボードにコピー
       const url = `${window.location.origin}/invite/${code}`
       navigator.clipboard.writeText(url)
+    }
+  }
+
+  // Stripe Customer Portalへリダイレクト
+  const handleManageSubscription = async () => {
+    setManagingSubscription(true)
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch {
+      setManagingSubscription(false)
     }
   }
 
@@ -573,6 +590,16 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
               </span>
             </div>
           </div>
+          {profile.stripe_customer_id && (
+            <Button
+              variant="outline"
+              onClick={handleManageSubscription}
+              loading={managingSubscription}
+              className="w-full mt-4"
+            >
+              {managingSubscription ? t.managingSubscription : t.manageSubscription}
+            </Button>
+          )}
         </CardContent>
       </Card>
 

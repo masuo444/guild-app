@@ -131,22 +131,32 @@ export default async function DashboardPage() {
     }
   }
 
-  // アクティビティログ取得（ログインボーナス挿入後に取得）
-  const { data: logs } = await supabase
-    .from('activity_logs')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
+  // アクティビティログ・招待数を並列取得（ログインボーナス挿入後に取得）
+  const [
+    { data: logs },
+    { data: allLogs },
+    { count: inviteCount },
+  ] = await Promise.all([
+    // 表示用: 直近10件
+    supabase
+      .from('activity_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    // ポイント集計: 全ログから合計
+    supabase
+      .from('activity_logs')
+      .select('points')
+      .eq('user_id', user.id),
+    // 招待した人数
+    supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('invited_by', user.id),
+  ])
 
-  // ポイント集計
-  const totalPoints = logs?.reduce((sum, log) => sum + (log.points || 0), 0) ?? 0
-
-  // 招待した人数を取得
-  const { count: inviteCount } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .eq('invited_by', user.id)
+  const totalPoints = allLogs?.reduce((sum, log) => sum + (log.points || 0), 0) ?? 0
 
   // プロフィールがない場合のフォールバック
   const userProfile: Profile = profile || {

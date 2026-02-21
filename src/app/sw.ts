@@ -21,4 +21,43 @@ const serwist = new Serwist({
   runtimeCaching: defaultCache,
 });
 
+// Push通知受信
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  try {
+    const data = event.data.json() as { title?: string; body?: string; url?: string };
+    const title = data.title || "FOMUS GUILD";
+    const options: NotificationOptions = {
+      body: data.body || "",
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-192x192.png",
+      data: { url: data.url || "/" },
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch {
+    // JSON parse failed — ignore
+  }
+});
+
+// 通知クリック時
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const url = (event.notification.data?.url as string) || "/";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});
+
 serwist.addEventListeners();
