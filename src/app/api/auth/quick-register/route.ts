@@ -103,22 +103,32 @@ export async function POST(request: NextRequest) {
   }
 
   if (isNewRegistration) {
-    // Welcome Bonus (100pt)
-    await supabaseAdmin.from('activity_logs').insert({
-      user_id: userId,
-      type: 'Welcome Bonus',
-      note: 'ギルドへようこそ！',
-      points: 100,
-    })
+    // Welcome Bonus 重複チェック（リトライ対策）
+    const { data: existingWelcome } = await supabaseAdmin
+      .from('activity_logs')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('type', 'Welcome Bonus')
+      .single()
 
-    // 招待者に Invite Bonus (100pt)
-    if (invite.invited_by) {
+    if (!existingWelcome) {
+      // Welcome Bonus (100pt)
       await supabaseAdmin.from('activity_logs').insert({
-        user_id: invite.invited_by,
-        type: 'Invite Bonus',
-        note: '新メンバーを招待しました',
+        user_id: userId,
+        type: 'Welcome Bonus',
+        note: 'ギルドへようこそ！',
         points: 100,
       })
+
+      // 招待者に Invite Bonus (100pt)
+      if (invite.invited_by) {
+        await supabaseAdmin.from('activity_logs').insert({
+          user_id: invite.invited_by,
+          type: 'Invite Bonus',
+          note: '新メンバーを招待しました',
+          points: 100,
+        })
+      }
     }
 
     // 招待コード使用記録

@@ -20,20 +20,14 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // ユーザーが存在するか確認
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    // ユーザーが存在するか確認（profilesテーブルで検索）
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single()
 
-    if (listError) {
-      console.error('List users error:', listError)
-      return NextResponse.json(
-        { error: 'ユーザー情報の取得に失敗しました' },
-        { status: 500 }
-      )
-    }
-
-    const user = users.users.find(u => u.email === email)
-
-    if (!user) {
+    if (profileError || !profile) {
       return NextResponse.json(
         { error: 'このメールアドレスは登録されていません' },
         { status: 404 }

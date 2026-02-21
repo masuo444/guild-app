@@ -96,6 +96,15 @@ const translations = {
     cancelAnytime: 'いつでもキャンセル可能です。決済はStripeで安全に処理されます。',
     logout: 'ログアウト',
 
+    // Pending Page
+    pendingWelcome: 'FOMUS GUILD へようこそ！',
+    pendingActiveRedirecting: 'メンバーシップが有効になりました。ダッシュボードへ移動中...',
+    pendingActivating: 'メンバーシップを有効化中',
+    pendingProcessing: 'お支払いを処理しています。通常は数秒で完了します...',
+    pendingTakingLong: '通常より時間がかかっています',
+    pendingTryRefresh: 'しばらく経っても変わらない場合は、ページを更新するかサポートにお問い合わせください。',
+    pendingRefresh: 'ステータスを更新',
+
     // Header
     membershipCard: 'メンバーシップカード',
 
@@ -450,6 +459,15 @@ const translations = {
     subscribeIntl: 'Subscribe for $10/month',
     cancelAnytime: 'Cancel anytime. Payments are securely processed by Stripe.',
     logout: 'Logout',
+
+    // Pending Page
+    pendingWelcome: 'Welcome to FOMUS GUILD!',
+    pendingActiveRedirecting: 'Your membership is now active. Redirecting to your dashboard...',
+    pendingActivating: 'Activating Your Membership',
+    pendingProcessing: 'We\'re processing your payment. This usually takes just a few seconds...',
+    pendingTakingLong: 'Taking longer than expected?',
+    pendingTryRefresh: 'If this persists, please refresh the page or contact support.',
+    pendingRefresh: 'Refresh Status',
 
     // Header
     membershipCard: 'Membership Card',

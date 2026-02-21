@@ -1,18 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
+import { useLanguage } from '@/lib/i18n'
 
 export default function PendingPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [status, setStatus] = useState<'checking' | 'pending' | 'active'>('checking')
   const [attempts, setAttempts] = useState(0)
+  const attemptsRef = useRef(0)
 
   useEffect(() => {
     const supabase = createClient()
-    let interval: NodeJS.Timeout
 
     async function checkStatus() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -30,21 +32,21 @@ export default function PendingPage() {
 
       if (profile?.subscription_status === 'active' && profile?.membership_status === 'active') {
         setStatus('active')
-        clearInterval(interval)
         // 少し待ってからリダイレクト
         setTimeout(() => router.push('/app'), 1500)
         return
       }
 
       setStatus('pending')
-      setAttempts((prev) => prev + 1)
+      attemptsRef.current += 1
+      setAttempts(attemptsRef.current)
     }
 
     checkStatus()
 
     // 2秒ごとにステータスをチェック（最大30回 = 1分）
-    interval = setInterval(() => {
-      if (attempts < 30) {
+    const interval = setInterval(() => {
+      if (attemptsRef.current < 30) {
         checkStatus()
       } else {
         clearInterval(interval)
@@ -52,7 +54,7 @@ export default function PendingPage() {
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [router, attempts])
+  }, [router])
 
   if (status === 'checking') {
     return (
@@ -82,10 +84,10 @@ export default function PendingPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-zinc-900 mb-4">
-            Welcome to FOMUS GUILD!
+            {t('pendingWelcome')}
           </h1>
           <p className="text-zinc-600">
-            Your membership is now active. Redirecting to your dashboard...
+            {t('pendingActiveRedirecting')}
           </p>
         </div>
       </div>
@@ -99,23 +101,21 @@ export default function PendingPage() {
           <div className="animate-spin w-10 h-10 border-3 border-zinc-300 border-t-zinc-900 rounded-full" />
         </div>
         <h1 className="text-2xl font-bold text-zinc-900 mb-4">
-          Activating Your Membership
+          {t('pendingActivating')}
         </h1>
         <p className="text-zinc-600 mb-6">
-          We&apos;re processing your payment. This usually takes just a few seconds...
+          {t('pendingProcessing')}
         </p>
 
         {attempts > 10 && (
           <div className="bg-amber-50 text-amber-800 p-4 rounded-lg mb-4 text-sm">
-            <p className="mb-2">Taking longer than expected?</p>
-            <p>
-              If this persists, please refresh the page or contact support.
-            </p>
+            <p className="mb-2">{t('pendingTakingLong')}</p>
+            <p>{t('pendingTryRefresh')}</p>
           </div>
         )}
 
         <Button variant="secondary" onClick={() => window.location.reload()}>
-          Refresh Status
+          {t('pendingRefresh')}
         </Button>
       </div>
     </div>

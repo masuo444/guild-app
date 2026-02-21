@@ -477,9 +477,15 @@ export async function GET(request: NextRequest) {
   // 最終的なリダイレクト先でレスポンスを再作成（Cookieを保持）
   const finalResponse = NextResponse.redirect(redirectTo, { status: 302 })
 
-  // 元のレスポンスからCookieをコピー
+  // 元のレスポンスからCookieをコピー（オプションも保持）
   response.cookies.getAll().forEach(cookie => {
-    finalResponse.cookies.set(cookie.name, cookie.value)
+    finalResponse.cookies.set(cookie.name, cookie.value, {
+      path: cookie.path || '/',
+      httpOnly: cookie.httpOnly,
+      secure: cookie.secure,
+      sameSite: cookie.sameSite as 'lax' | 'strict' | 'none' | undefined,
+      maxAge: cookie.maxAge,
+    })
   })
 
   return finalResponse

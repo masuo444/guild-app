@@ -186,12 +186,24 @@ export async function POST(request: Request) {
 
         // 継続ボーナスを付与（月ごとに1回）
         const periodStart = new Date((invoice.period_start ?? 0) * 1000).toISOString().slice(0, 7) // YYYY-MM形式
-        await supabase.from('activity_logs').insert({
-          user_id: userId,
-          type: 'Renewal Bonus',
-          note: periodStart, // 重複チェック用に対象月を記録
-          points: 100,
-        })
+
+        // 重複チェック（同月の Renewal Bonus が既に存在するか）
+        const { data: existingRenewal } = await supabase
+          .from('activity_logs')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('type', 'Renewal Bonus')
+          .eq('note', periodStart)
+          .single()
+
+        if (!existingRenewal) {
+          await supabase.from('activity_logs').insert({
+            user_id: userId,
+            type: 'Renewal Bonus',
+            note: periodStart,
+            points: 100,
+          })
+        }
 
         break
       }
