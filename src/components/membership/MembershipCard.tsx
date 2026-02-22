@@ -9,6 +9,7 @@ interface MembershipCardProps {
   profile: Profile
   points: number
   inviteCount?: number
+  masuPoints?: number
   translations?: {
     guildMember: string
     memberSince: string
@@ -132,7 +133,7 @@ function GuildEmblem({ primary, bgFrom, bgTo }: { primary: string; bgFrom: strin
   )
 }
 
-export function MembershipCard({ profile, points, inviteCount = 0, translations }: MembershipCardProps) {
+export function MembershipCard({ profile, points, inviteCount = 0, masuPoints = 0, translations }: MembershipCardProps) {
   const [isFlipped, setIsFlipped] = useState(false)
   const rank = calculateRank(points)
   const membershipType = profile.membership_type || 'standard'
@@ -341,11 +342,27 @@ export function MembershipCard({ profile, points, inviteCount = 0, translations 
             }}
           />
 
-          {/* 招待数のみ表示（ランク別カラー） */}
-          <div className="relative z-10 h-full flex items-center justify-center">
-            <p className="text-7xl font-light" style={{ fontFamily: 'serif', color: theme.primary }}>
-              {inviteCount}
-            </p>
+          {/* 裏面コンテンツ */}
+          <div className="relative z-10 h-full flex flex-col items-center justify-center gap-4">
+            {/* 招待人数 */}
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-[0.15em] mb-1" style={{ color: `${theme.primary}99` }}>
+                {t.invites || 'Invites'}
+              </p>
+              <p className="text-5xl font-light" style={{ fontFamily: 'serif', color: theme.primary }}>
+                {inviteCount}
+              </p>
+            </div>
+            {/* MASU Points */}
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-[0.15em] mb-1" style={{ color: `${theme.primary}99` }}>
+                MASU Points
+              </p>
+              <p className="text-3xl font-light" style={{ fontFamily: 'serif', color: theme.primary }}>
+                {masuPoints.toLocaleString()}
+                <span className="text-sm ml-1" style={{ color: `${theme.primary}80` }}>pt</span>
+              </p>
+            </div>
           </div>
         </div>
       </div>

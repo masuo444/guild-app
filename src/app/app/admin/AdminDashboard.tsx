@@ -3,7 +3,7 @@
 import { useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, GuildQuest, QuestSubmission, CustomRole, MemberRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
+import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, GuildQuest, QuestSubmission, CustomRole, MemberRole, RoleColor, ROLE_COLOR_OPTIONS, ExchangeItem, ExchangeOrder } from '@/types/database'
 import { calculateRank, RANK_THRESHOLDS } from '@/config/rank'
 import { canIssueFreeInvite } from '@/config/admin'
 import { Button } from '@/components/ui/Button'
@@ -23,6 +23,11 @@ interface InviteWithRelations extends Invite {
   invitee: { display_name: string | null; membership_id: string | null } | null
 }
 
+interface ExchangeOrderWithRelations extends ExchangeOrder {
+  exchange_items: { name: string; points_cost: number; coupon_code: string | null } | null
+  profiles: { display_name: string | null; membership_id: string | null } | null
+}
+
 interface AdminDashboardProps {
   invites: InviteWithRelations[]
   members: Profile[]
@@ -32,11 +37,13 @@ interface AdminDashboardProps {
   memberPoints: Record<string, number>
   customRoles: CustomRole[]
   memberRoles: MemberRole[]
+  exchangeItems: ExchangeItem[]
+  exchangeOrders: ExchangeOrderWithRelations[]
   adminId: string
   adminEmail: string
 }
 
-type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'quests' | 'notifications'
+type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'quests' | 'exchange' | 'notifications'
 
 const TAB_LABELS: Record<Tab, string> = {
   invites: '招待コード',
@@ -44,6 +51,7 @@ const TAB_LABELS: Record<Tab, string> = {
   roles: 'ロール',
   hubs: '拠点',
   quests: 'クエスト',
+  exchange: '交換所',
   notifications: '通知',
 }
 
@@ -73,6 +81,11 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
     </svg>
   ),
+  exchange: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
   notifications: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -80,7 +93,7 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
   ),
 }
 
-export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, memberPoints, customRoles, memberRoles, adminId, adminEmail }: AdminDashboardProps) {
+export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, memberPoints, customRoles, memberRoles, exchangeItems, exchangeOrders, adminId, adminEmail }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('invites')
 
   // 承認待ちの投稿数
@@ -114,7 +127,7 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
 
       {/* タブナビゲーション */}
       <div className="flex gap-1 mb-6 p-1 bg-white/5 rounded-xl overflow-x-auto">
-        {(['invites', 'members', 'roles', 'hubs', 'quests', 'notifications'] as Tab[]).map((tab) => (
+        {(['invites', 'members', 'roles', 'hubs', 'quests', 'exchange', 'notifications'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -143,6 +156,7 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
       {activeTab === 'roles' && <RolesTab customRoles={customRoles} memberRoles={memberRoles} members={members} />}
       {activeTab === 'hubs' && <HubsTab hubs={hubs} />}
       {activeTab === 'quests' && <QuestsTab submissions={questSubmissions} quests={quests} adminId={adminId} />}
+      {activeTab === 'exchange' && <ExchangeAdminTab items={exchangeItems} orders={exchangeOrders} adminId={adminId} />}
       {activeTab === 'notifications' && <NotificationsTab />}
     </div>
   )
@@ -2495,6 +2509,263 @@ function QuestsTab({ submissions, quests, adminId }: { submissions: QuestSubmiss
                   </div>
                   <span className="text-xs text-zinc-600 flex-shrink-0">
                     {formatDate(submission.created_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+function ExchangeAdminTab({ items: initialItems, orders: initialOrders, adminId }: { items: ExchangeItem[]; orders: ExchangeOrderWithRelations[]; adminId: string }) {
+  const router = useRouter()
+  const [items, setItems] = useState(initialItems)
+  const [orders, setOrders] = useState(initialOrders)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingItem, setEditingItem] = useState<ExchangeItem | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [processing, setProcessing] = useState<string | null>(null)
+
+  // Form state
+  const [formName, setFormName] = useState('')
+  const [formNameEn, setFormNameEn] = useState('')
+  const [formDesc, setFormDesc] = useState('')
+  const [formDescEn, setFormDescEn] = useState('')
+  const [formCost, setFormCost] = useState('')
+  const [formStock, setFormStock] = useState('-1')
+  const [formCoupon, setFormCoupon] = useState('')
+
+  const resetForm = () => {
+    setFormName('')
+    setFormNameEn('')
+    setFormDesc('')
+    setFormDescEn('')
+    setFormCost('')
+    setFormStock('-1')
+    setFormCoupon('')
+    setEditingItem(null)
+    setShowCreateForm(false)
+  }
+
+  const startEdit = (item: ExchangeItem) => {
+    setFormName(item.name)
+    setFormNameEn(item.name_en || '')
+    setFormDesc(item.description || '')
+    setFormDescEn(item.description_en || '')
+    setFormCost(String(item.points_cost))
+    setFormStock(String(item.stock))
+    setFormCoupon(item.coupon_code || '')
+    setEditingItem(item)
+    setShowCreateForm(true)
+  }
+
+  const handleSaveItem = async () => {
+    if (!formName || !formCost) return
+    setSaving(true)
+    try {
+      if (editingItem) {
+        const res = await fetch('/api/admin/exchange-items', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingItem.id,
+            name: formName,
+            name_en: formNameEn || null,
+            description: formDesc || null,
+            description_en: formDescEn || null,
+            points_cost: parseInt(formCost),
+            stock: parseInt(formStock),
+            coupon_code: formCoupon || null,
+          }),
+        })
+        if (res.ok) {
+          const { item } = await res.json()
+          setItems(prev => prev.map(i => i.id === item.id ? item : i))
+          resetForm()
+        }
+      } else {
+        const res = await fetch('/api/admin/exchange-items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formName,
+            name_en: formNameEn || null,
+            description: formDesc || null,
+            description_en: formDescEn || null,
+            points_cost: parseInt(formCost),
+            stock: parseInt(formStock),
+            coupon_code: formCoupon || null,
+          }),
+        })
+        if (res.ok) {
+          const { item } = await res.json()
+          setItems(prev => [item, ...prev])
+          resetForm()
+        }
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleActive = async (item: ExchangeItem) => {
+    const res = await fetch('/api/admin/exchange-items', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: item.id, is_active: !item.is_active }),
+    })
+    if (res.ok) {
+      const { item: updated } = await res.json()
+      setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
+    }
+  }
+
+  const handleOrderAction = async (orderId: string, status: 'approved' | 'rejected') => {
+    setProcessing(orderId)
+    try {
+      const res = await fetch('/api/admin/exchange-orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orderId, status }),
+      })
+      if (res.ok) {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, reviewed_by: adminId, reviewed_at: new Date().toISOString() } : o))
+      }
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const pendingOrders = orders.filter(o => o.status === 'pending')
+  const processedOrders = orders.filter(o => o.status !== 'pending')
+
+  return (
+    <div className="space-y-6">
+      {/* アイテム管理 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-white">交換アイテム</h2>
+            <Button
+              onClick={() => { resetForm(); setShowCreateForm(!showCreateForm) }}
+              className="text-xs"
+            >
+              {showCreateForm ? 'キャンセル' : '+ 新規作成'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {showCreateForm && (
+            <div className="mb-4 p-4 bg-white/5 rounded-lg border border-zinc-700 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Input placeholder="アイテム名 *" value={formName} onChange={e => setFormName(e.target.value)} />
+                <Input placeholder="Item Name (EN)" value={formNameEn} onChange={e => setFormNameEn(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input placeholder="説明" value={formDesc} onChange={e => setFormDesc(e.target.value)} />
+                <Input placeholder="Description (EN)" value={formDescEn} onChange={e => setFormDescEn(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <Input placeholder="必要ポイント *" type="number" value={formCost} onChange={e => setFormCost(e.target.value)} />
+                <Input placeholder="在庫 (-1=無制限)" type="number" value={formStock} onChange={e => setFormStock(e.target.value)} />
+                <Input placeholder="クーポンコード" value={formCoupon} onChange={e => setFormCoupon(e.target.value)} />
+              </div>
+              <Button onClick={handleSaveItem} disabled={saving || !formName || !formCost}>
+                {saving ? '保存中...' : editingItem ? '更新' : '作成'}
+              </Button>
+            </div>
+          )}
+
+          {items.length === 0 ? (
+            <p className="text-zinc-500 text-sm">アイテムがありません</p>
+          ) : (
+            <div className="space-y-2">
+              {items.map(item => (
+                <div key={item.id} className={`flex items-center justify-between p-3 rounded-lg border ${item.is_active ? 'bg-white/5 border-zinc-700' : 'bg-zinc-900/50 border-zinc-800 opacity-60'}`}>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-white text-sm font-medium">{item.name}</p>
+                      {!item.is_active && <span className="text-xs text-red-400">無効</span>}
+                    </div>
+                    <p className="text-zinc-500 text-xs">{item.points_cost}pt / 在庫: {item.stock < 0 ? '無制限' : item.stock}{item.coupon_code ? ` / コード: ${item.coupon_code}` : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => startEdit(item)} className="text-xs text-blue-400 hover:text-blue-300">編集</button>
+                    <button onClick={() => toggleActive(item)} className={`text-xs ${item.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'}`}>
+                      {item.is_active ? '無効化' : '有効化'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 承認待ち注文 */}
+      {pendingOrders.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold text-white">承認待ち注文 ({pendingOrders.length})</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {pendingOrders.map(order => (
+                <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <div>
+                    <p className="text-white text-sm font-medium">{order.exchange_items?.name || '—'}</p>
+                    <p className="text-zinc-400 text-xs">
+                      {order.profiles?.display_name || order.profiles?.membership_id || '—'} / -{order.points_spent}pt / {formatDate(order.created_at)}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleOrderAction(order.id, 'approved')}
+                      disabled={processing === order.id}
+                      className="px-3 py-1 rounded text-xs font-medium bg-green-500/20 text-green-300 hover:bg-green-500/30"
+                    >
+                      承認
+                    </button>
+                    <button
+                      onClick={() => handleOrderAction(order.id, 'rejected')}
+                      disabled={processing === order.id}
+                      className="px-3 py-1 rounded text-xs font-medium bg-red-500/20 text-red-300 hover:bg-red-500/30"
+                    >
+                      却下
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 処理済み注文 */}
+      {processedOrders.length > 0 && (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold text-white">処理済み注文</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {processedOrders.map(order => (
+                <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-zinc-700/50">
+                  <div>
+                    <p className="text-white text-sm">{order.exchange_items?.name || '—'}</p>
+                    <p className="text-zinc-500 text-xs">
+                      {order.profiles?.display_name || '—'} / -{order.points_spent}pt / {formatDate(order.created_at)}
+                    </p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    order.status === 'approved' ? 'bg-green-500/20 text-green-300' :
+                    order.status === 'rejected' ? 'bg-red-500/20 text-red-300' :
+                    'bg-zinc-500/20 text-zinc-300'
+                  }`}>
+                    {order.status === 'approved' ? '承認' : order.status === 'rejected' ? '却下' : 'キャンセル'}
                   </span>
                 </div>
               ))}

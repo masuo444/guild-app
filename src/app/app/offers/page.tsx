@@ -32,6 +32,9 @@ export default async function OffersPage() {
   const [
     { data: quests },
     { data: submissions },
+    { data: exchangeItems },
+    { data: exchangeOrders },
+    { data: allLogs },
   ] = await Promise.all([
     supabase
       .from('guild_quests')
@@ -43,7 +46,23 @@ export default async function OffersPage() {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('exchange_items')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('exchange_orders')
+      .select('*, exchange_items(name, name_en)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('activity_logs')
+      .select('points')
+      .eq('user_id', user.id),
   ])
+
+  const masuPoints = allLogs?.reduce((sum, log) => sum + (log.points || 0), 0) ?? 0
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
@@ -53,6 +72,9 @@ export default async function OffersPage() {
         quests={quests || []}
         submissions={submissions || []}
         userId={user.id}
+        exchangeItems={exchangeItems || []}
+        exchangeOrders={exchangeOrders || []}
+        masuPoints={masuPoints}
       />
     </div>
   )

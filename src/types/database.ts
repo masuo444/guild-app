@@ -5,6 +5,7 @@ export type UserRole = 'admin' | 'member'
 export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'SS'
 export type QuestType = 'photo' | 'checkin' | 'action'
 export type QuestSubmissionStatus = 'pending' | 'approved' | 'rejected'
+export type ExchangeOrderStatus = 'pending' | 'approved' | 'rejected' | 'canceled'
 
 // 無料メンバータイプかどうかを判定
 export const FREE_MEMBERSHIP_TYPES: MembershipType[] = ['ambassador', 'partner']
@@ -155,6 +156,32 @@ export interface QuestSubmission {
   created_at: string
 }
 
+export interface ExchangeItem {
+  id: string
+  name: string
+  name_en: string | null
+  description: string | null
+  description_en: string | null
+  image_url: string | null
+  points_cost: number
+  stock: number
+  coupon_code: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export interface ExchangeOrder {
+  id: string
+  user_id: string
+  item_id: string
+  points_spent: number
+  status: ExchangeOrderStatus
+  coupon_code: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -202,6 +229,16 @@ export interface Database {
         Row: QuestSubmission
         Insert: Omit<QuestSubmission, 'id' | 'created_at'>
         Update: Partial<Omit<QuestSubmission, 'id'>>
+      }
+      exchange_items: {
+        Row: ExchangeItem
+        Insert: Omit<ExchangeItem, 'id' | 'created_at'>
+        Update: Partial<Omit<ExchangeItem, 'id'>>
+      }
+      exchange_orders: {
+        Row: ExchangeOrder
+        Insert: Omit<ExchangeOrder, 'id' | 'created_at'>
+        Update: Partial<Omit<ExchangeOrder, 'id'>>
       }
     }
   }

@@ -144,10 +144,10 @@ export default async function DashboardPage() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10),
-    // ポイント集計: 全ログから合計
+    // ポイント集計: 全ログから合計（type含む）
     supabase
       .from('activity_logs')
-      .select('points')
+      .select('points, type')
       .eq('user_id', user.id),
     // 招待した人数
     supabase
@@ -156,7 +156,15 @@ export default async function DashboardPage() {
       .eq('invited_by', user.id),
   ])
 
-  const totalPoints = allLogs?.reduce((sum, log) => sum + (log.points || 0), 0) ?? 0
+  // デュアルポイント計算
+  let statusPoints = 0
+  let masuPoints = 0
+  for (const log of allLogs || []) {
+    masuPoints += log.points || 0
+    if (log.type !== 'Point Exchange' && log.type !== 'Point Exchange Reversal') {
+      statusPoints += log.points || 0
+    }
+  }
 
   // プロフィールがない場合のフォールバック
   const userProfile: Profile = profile || {
@@ -182,7 +190,8 @@ export default async function DashboardPage() {
   return (
     <DashboardClient
       profile={userProfile}
-      totalPoints={totalPoints}
+      statusPoints={statusPoints}
+      masuPoints={masuPoints}
       recentLogs={logs || []}
       inviteCount={inviteCount || 0}
       loginBonusResult={loginBonusResult}

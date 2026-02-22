@@ -11,15 +11,16 @@ import type { LoginBonusResult } from './page'
 
 interface DashboardClientProps {
   profile: Profile
-  totalPoints: number
+  statusPoints: number
+  masuPoints: number
   recentLogs: ActivityLog[]
   inviteCount: number
   loginBonusResult?: LoginBonusResult
 }
 
-export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount, loginBonusResult }: DashboardClientProps) {
-  const rank = calculateRank(totalPoints)
-  const pointsToNext = getPointsToNextRank(totalPoints)
+export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs, inviteCount, loginBonusResult }: DashboardClientProps) {
+  const rank = calculateRank(statusPoints)
+  const pointsToNext = getPointsToNextRank(statusPoints)
   const { language, setLanguage, t } = useLanguage()
   const [showBonusBanner, setShowBonusBanner] = useState(false)
 
@@ -92,7 +93,7 @@ export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount,
 
       {/* 会員証 */}
       <div className="mb-8">
-        <MembershipCard profile={profile} points={totalPoints} inviteCount={inviteCount} translations={cardTranslations} />
+        <MembershipCard profile={profile} points={statusPoints} inviteCount={inviteCount} masuPoints={masuPoints} translations={cardTranslations} />
       </div>
 
       {/* ステータスカード */}
@@ -104,7 +105,7 @@ export function DashboardClient({ profile, totalPoints, recentLogs, inviteCount,
         />
         <StatCard
           label={t.masuPoints}
-          value={totalPoints.toLocaleString()}
+          value={masuPoints.toLocaleString()}
         />
         <StatCard
           label={t.memberSince}

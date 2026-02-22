@@ -32,6 +32,8 @@ export default async function AdminPage() {
     { data: activityLogs },
     { data: customRoles },
     { data: memberRoles },
+    { data: exchangeItems },
+    { data: exchangeOrders },
   ] = await Promise.all([
     supabase
       .from('invites')
@@ -66,6 +68,14 @@ export default async function AdminPage() {
     supabase
       .from('member_roles')
       .select('*'),
+    supabase
+      .from('exchange_items')
+      .select('*')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('exchange_orders')
+      .select('*, exchange_items(name, points_cost, coupon_code), profiles:user_id(display_name, membership_id)')
+      .order('created_at', { ascending: false }),
   ])
 
   // メンバーごとのポイントを集計
@@ -87,6 +97,8 @@ export default async function AdminPage() {
         memberPoints={memberPoints}
         customRoles={customRoles ?? []}
         memberRoles={memberRoles ?? []}
+        exchangeItems={exchangeItems ?? []}
+        exchangeOrders={exchangeOrders ?? []}
         adminId={user.id}
         adminEmail={user.email || ''}
       />

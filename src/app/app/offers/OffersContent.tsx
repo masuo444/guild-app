@@ -1,18 +1,27 @@
 'use client'
 
 import { useState } from 'react'
-import { GuildQuest, QuestSubmission } from '@/types/database'
+import { GuildQuest, QuestSubmission, ExchangeItem, ExchangeOrder } from '@/types/database'
 import { Card, CardContent } from '@/components/ui/Card'
 import { QuestCard } from './QuestCard'
 import { QuestSubmitModal } from './QuestSubmitModal'
 import { useLanguage } from '@/lib/i18n'
+import { formatDate } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
-type Tab = 'services' | 'quests' | 'articles'
+type Tab = 'services' | 'quests' | 'articles' | 'exchange'
+
+interface ExchangeOrderWithItem extends ExchangeOrder {
+  exchange_items: { name: string; name_en: string | null } | null
+}
 
 interface OffersContentProps {
   quests: GuildQuest[]
   submissions: QuestSubmission[]
   userId: string
+  exchangeItems?: ExchangeItem[]
+  exchangeOrders?: ExchangeOrderWithItem[]
+  masuPoints?: number
 }
 
 // 優先度順（友達招待が最上位）
@@ -30,10 +39,10 @@ const QUEST_PRIORITY: Record<string, number> = {
   'FOMUS PARUREを身につけよう': 11,
 }
 
-export function OffersContent({ quests, submissions, userId }: OffersContentProps) {
+export function OffersContent({ quests, submissions, userId, exchangeItems = [], exchangeOrders = [], masuPoints = 0 }: OffersContentProps) {
   const [activeTab, setActiveTab] = useState<Tab>('quests')
   const [selectedQuest, setSelectedQuest] = useState<GuildQuest | null>(null)
-  const { t } = useLanguage()
+  const { language, t } = useLanguage()
 
   // アクティブなクエストのみ → クリア済み非リピータブルを除外 → 優先度順
   const activeQuests = quests
@@ -52,10 +61,10 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
   return (
     <div>
       {/* タブ */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto">
         <button
           onClick={() => setActiveTab('quests')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'quests'
               ? 'bg-[#c0c0c0] text-zinc-900'
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
@@ -71,8 +80,18 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
           )}
         </button>
         <button
+          onClick={() => setActiveTab('exchange')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+            activeTab === 'exchange'
+              ? 'bg-[#c0c0c0] text-zinc-900'
+              : 'bg-white/10 text-zinc-300 hover:bg-white/20'
+          }`}
+        >
+          {t.pointExchange}
+        </button>
+        <button
           onClick={() => setActiveTab('services')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
             activeTab === 'services'
               ? 'bg-[#c0c0c0] text-zinc-900'
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
@@ -82,7 +101,7 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
         </button>
         <button
           onClick={() => setActiveTab('articles')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
             activeTab === 'articles'
               ? 'bg-[#c0c0c0] text-zinc-900'
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
@@ -115,6 +134,16 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
             </Card>
           )}
         </div>
+      )}
+
+      {/* ポイント交換所タブ */}
+      {activeTab === 'exchange' && (
+        <ExchangeTab
+          items={exchangeItems}
+          orders={exchangeOrders}
+          masuPoints={masuPoints}
+          language={language}
+        />
       )}
 
       {/* FOMUSのサービスタブ */}
@@ -179,6 +208,200 @@ export function OffersContent({ quests, submissions, userId }: OffersContentProp
           userId={userId}
           onClose={() => setSelectedQuest(null)}
         />
+      )}
+    </div>
+  )
+}
+
+function ExchangeTab({
+  items,
+  orders,
+  masuPoints,
+  language,
+}: {
+  items: ExchangeItem[]
+  orders: ExchangeOrderWithItem[]
+  masuPoints: number
+  language: string
+}) {
+  const { t } = useLanguage()
+  const router = useRouter()
+  const [exchanging, setExchanging] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  const handleExchange = async (item: ExchangeItem) => {
+    if (masuPoints < item.points_cost) {
+      setError(t.exchangeInsufficientPoints)
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+    if (item.stock === 0) {
+      setError(t.exchangeOutOfStock)
+      setTimeout(() => setError(null), 3000)
+      return
+    }
+
+    if (!confirm(t.exchangeConfirm)) return
+
+    setExchanging(item.id)
+    setError(null)
+    try {
+      const res = await fetch('/api/exchange/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Error')
+      } else {
+        setSuccess(true)
+        setTimeout(() => {
+          setSuccess(false)
+          router.refresh()
+        }, 2000)
+      }
+    } catch {
+      setError('Network error')
+    } finally {
+      setExchanging(null)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-500/20 text-yellow-300'
+      case 'approved': return 'bg-green-500/20 text-green-300'
+      case 'rejected': return 'bg-red-500/20 text-red-300'
+      case 'canceled': return 'bg-zinc-500/20 text-zinc-300'
+      default: return 'bg-zinc-500/20 text-zinc-300'
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return t.exchangeStatusPending
+      case 'approved': return t.exchangeStatusApproved
+      case 'rejected': return t.exchangeStatusRejected
+      case 'canceled': return t.exchangeStatusCanceled
+      default: return status
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 残高表示 */}
+      <div className="bg-gradient-to-r from-amber-500/20 to-yellow-500/10 rounded-xl p-4 border border-amber-500/20">
+        <p className="text-amber-300 text-xs font-medium mb-1">{t.exchangeBalance}</p>
+        <p className="text-3xl font-bold text-white">{masuPoints.toLocaleString()} <span className="text-sm font-normal text-amber-300">pt</span></p>
+      </div>
+
+      {/* 通知 */}
+      {error && (
+        <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="p-3 rounded-lg bg-green-500/20 border border-green-500/30 text-green-300 text-sm">
+          {t.exchangeSuccess}
+        </div>
+      )}
+
+      {/* アイテム一覧 */}
+      {items.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {items.map((item) => {
+            const itemName = language === 'en' && item.name_en ? item.name_en : item.name
+            const itemDesc = language === 'en' && item.description_en ? item.description_en : item.description
+            const canAfford = masuPoints >= item.points_cost
+            const inStock = item.stock !== 0
+
+            return (
+              <Card key={item.id}>
+                <CardContent className="py-4">
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <h3 className="font-semibold text-white mb-1">{itemName}</h3>
+                      {itemDesc && <p className="text-sm text-zinc-400">{itemDesc}</p>}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-amber-300 font-bold">{item.points_cost} pt</span>
+                        {item.stock >= 0 && (
+                          <span className="text-xs text-zinc-500">
+                            {t.exchangeStock}: {item.stock === 0 ? t.exchangeOutOfStock : item.stock}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleExchange(item)}
+                        disabled={!canAfford || !inStock || exchanging === item.id}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          canAfford && inStock
+                            ? 'bg-amber-500 text-black hover:bg-amber-400'
+                            : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
+                        }`}
+                      >
+                        {exchanging === item.id ? '...' : t.exchangeButton}
+                      </button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-zinc-300">{t.pointExchangeComingSoon}</p>
+            <p className="text-zinc-500 text-sm mt-1">{t.pointExchangeStayTuned}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 交換履歴 */}
+      {orders.length > 0 && (
+        <div>
+          <h3 className="text-white font-semibold mb-3">{t.exchangeHistory}</h3>
+          <div className="space-y-2">
+            {orders.map((order) => {
+              const orderItemName = language === 'en' && order.exchange_items?.name_en
+                ? order.exchange_items.name_en
+                : order.exchange_items?.name || '—'
+
+              return (
+                <div key={order.id} className="bg-white/5 rounded-lg p-3 border border-zinc-700/50">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-white text-sm font-medium">{orderItemName}</p>
+                      <p className="text-zinc-500 text-xs mt-0.5">{formatDate(order.created_at)}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
+                        {getStatusLabel(order.status)}
+                      </span>
+                      <p className="text-amber-300 text-sm mt-1">-{order.points_spent} pt</p>
+                    </div>
+                  </div>
+                  {order.status === 'approved' && order.coupon_code && (
+                    <div className="mt-2 p-2 bg-green-500/10 rounded border border-green-500/20">
+                      <p className="text-green-300 text-xs font-medium">{t.exchangeCouponCode}</p>
+                      <p className="text-green-200 text-sm font-mono mt-0.5">{order.coupon_code}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
     </div>
   )

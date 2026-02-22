@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export function usePoints(userId: string | undefined) {
-  const [points, setPoints] = useState(0)
+  const [statusPoints, setStatusPoints] = useState(0)
+  const [masuPoints, setMasuPoints] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -18,17 +19,24 @@ export function usePoints(userId: string | undefined) {
     async function fetchPoints() {
       const { data, error } = await supabase
         .from('activity_logs')
-        .select('points')
+        .select('points, type')
         .eq('user_id', userId)
 
       if (error) {
-        // Failed to fetch points - silently fail
         setLoading(false)
         return
       }
 
-      const total = data.reduce((sum, log) => sum + log.points, 0)
-      setPoints(total)
+      let status = 0
+      let masu = 0
+      for (const log of data) {
+        masu += log.points
+        if (log.type !== 'Point Exchange' && log.type !== 'Point Exchange Reversal') {
+          status += log.points
+        }
+      }
+      setStatusPoints(status)
+      setMasuPoints(masu)
       setLoading(false)
     }
 
@@ -56,5 +64,5 @@ export function usePoints(userId: string | undefined) {
     }
   }, [userId])
 
-  return { points, loading }
+  return { statusPoints, masuPoints, loading }
 }
