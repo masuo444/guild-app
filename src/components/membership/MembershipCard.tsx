@@ -89,6 +89,61 @@ function CornerFrame({ position, primary, secondary }: { position: 'tl' | 'tr' |
   )
 }
 
+// 桜テーマのカラーオーバーライド
+const SAKURA_THEME = {
+  primary: '#e8a0b4',
+  secondary: '#c97d94',
+  bgFrom: '#3a1a28',
+  bgTo: '#1a0d14',
+  glow: 'rgba(232,160,180,0.4)',
+  shimmer: 'rgba(255,183,197,0.5)',
+}
+
+// 桜の花びらSVGオーバーレイ
+function SakuraPetals() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <svg className="absolute w-full h-full" viewBox="0 0 400 252" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id="petalGrad" cx="50%" cy="30%" r="60%">
+            <stop offset="0%" stopColor="#ffb7c5" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#e8a0b4" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {/* 花びら群 - 右上 */}
+        <g transform="translate(320, 30) rotate(15)" opacity="0.25">
+          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(0)" />
+          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(72)" />
+          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(144)" />
+          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(216)" />
+          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(288)" />
+          <circle cx="0" cy="0" r="5" fill="#d4829a" opacity="0.6" />
+        </g>
+        {/* 花びら群 - 左下 */}
+        <g transform="translate(60, 200) rotate(-10)" opacity="0.2">
+          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(0)" />
+          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(72)" />
+          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(144)" />
+          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(216)" />
+          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(288)" />
+          <circle cx="0" cy="0" r="4" fill="#d4829a" opacity="0.5" />
+        </g>
+        {/* 散り花びら */}
+        <ellipse cx="150" cy="60" rx="6" ry="3" fill="#ffb7c5" opacity="0.3" transform="rotate(30 150 60)" />
+        <ellipse cx="280" cy="140" rx="5" ry="2.5" fill="#ffb7c5" opacity="0.25" transform="rotate(-20 280 140)" />
+        <ellipse cx="80" cy="100" rx="4" ry="2" fill="#ffb7c5" opacity="0.2" transform="rotate(60 80 100)" />
+        <ellipse cx="350" cy="190" rx="5" ry="2" fill="#ffb7c5" opacity="0.2" transform="rotate(45 350 190)" />
+        <ellipse cx="200" cy="220" rx="4" ry="2" fill="#ffb7c5" opacity="0.15" transform="rotate(-35 200 220)" />
+        <ellipse cx="40" cy="40" rx="3" ry="1.5" fill="#ffb7c5" opacity="0.2" transform="rotate(10 40 40)" />
+        <ellipse cx="250" cy="30" rx="4" ry="2" fill="#ffb7c5" opacity="0.15" transform="rotate(-50 250 30)" />
+        {/* 枝のライン */}
+        <path d="M360 0 Q340 40 310 50 Q290 55 270 45" fill="none" stroke="#8b5e6b" strokeWidth="1" opacity="0.15" />
+        <path d="M0 230 Q30 210 55 205 Q75 200 90 210" fill="none" stroke="#8b5e6b" strokeWidth="0.8" opacity="0.12" />
+      </svg>
+    </div>
+  )
+}
+
 // ギルドエンブレム（盾型シンボル）
 function GuildEmblem({ primary, bgFrom, bgTo }: { primary: string; bgFrom: string; bgTo: string }) {
   return (
@@ -139,7 +194,8 @@ export function MembershipCard({ profile, points, inviteCount = 0, masuPoints = 
   const membershipType = profile.membership_type || 'standard'
   const isFree = isFreeMembershipType(membershipType)
   const typeStyle = MEMBERSHIP_TYPE_STYLES[membershipType]
-  const theme = RANK_THEMES[rank]
+  const isSakura = profile.card_theme === 'sakura'
+  const theme = isSakura ? SAKURA_THEME : RANK_THEMES[rank]
 
   const t = translations || {
     guildMember: 'Guild Member',
@@ -212,6 +268,9 @@ export function MembershipCard({ profile, points, inviteCount = 0, masuPoints = 
               background: `linear-gradient(to right, transparent, ${theme.shimmer}, transparent)`,
             }}
           />
+
+          {/* 桜テーマオーバーレイ */}
+          {isSakura && <SakuraPetals />}
 
           {/* コーナーフレーム（ランク別） */}
           <CornerFrame position="tl" primary={theme.primary} secondary={theme.secondary} />
@@ -341,6 +400,9 @@ export function MembershipCard({ profile, points, inviteCount = 0, masuPoints = 
               boxShadow: `inset 0 0 60px ${theme.glow}`,
             }}
           />
+
+          {/* 桜テーマオーバーレイ（裏面） */}
+          {isSakura && <SakuraPetals />}
 
           {/* 裏面コンテンツ */}
           <div className="relative z-10 h-full flex flex-col items-center justify-center gap-4">

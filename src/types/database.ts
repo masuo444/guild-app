@@ -57,6 +57,7 @@ export interface Profile {
   avatar_url: string | null
   show_location_on_map: boolean
   invited_by: string | null
+  card_theme: string | null
   created_at: string
 }
 

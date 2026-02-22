@@ -3,6 +3,9 @@
 -- Supabase SQL Editor で実行してください
 -- =============================================
 
+-- profiles に card_theme カラム追加
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS card_theme TEXT DEFAULT NULL;
+
 -- exchange_items テーブル
 CREATE TABLE IF NOT EXISTS exchange_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

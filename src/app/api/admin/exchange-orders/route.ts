@@ -69,18 +69,29 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (status === 'approved') {
+      const itemCoupon = order.exchange_items?.coupon_code || null
+
       // coupon_codeをorder行にコピー、reviewed_by/at設定
       const { error } = await supabaseAdmin
         .from('exchange_orders')
         .update({
           status: 'approved',
-          coupon_code: order.exchange_items?.coupon_code || null,
+          coupon_code: itemCoupon,
           reviewed_by: user.id,
           reviewed_at: new Date().toISOString(),
         })
         .eq('id', id)
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+      // カードテーマの自動適用: coupon_code が "theme:xxx" の場合
+      if (itemCoupon && itemCoupon.startsWith('theme:')) {
+        const themeName = itemCoupon.replace('theme:', '')
+        await supabaseAdmin
+          .from('profiles')
+          .update({ card_theme: themeName })
+          .eq('id', order.user_id)
+      }
     } else if (status === 'rejected' || status === 'canceled') {
       // ステータス更新
       const { error } = await supabaseAdmin
