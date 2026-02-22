@@ -352,6 +352,12 @@ function MapMarkers({
 
 export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMembers = true }: GuildMapProps) {
   const { language, setLanguage, t } = useLanguage()
+
+  // マップの言語切替はGoogle Maps JS APIの再読み込みが必要なためリロード
+  const toggleMapLanguage = () => {
+    setLanguage(language === 'ja' ? 'en' : 'ja')
+    window.location.reload()
+  }
   const [showMembers, setShowMembers] = useState(canViewMembers)
   const [showHubs, setShowHubs] = useState(true)
   const [showPending, setShowPending] = useState(true)
@@ -556,7 +562,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
 
             {/* Language toggle */}
             <button
-              onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
+              onClick={toggleMapLanguage}
               className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center flex-shrink-0 text-sm font-bold text-zinc-700"
             >
               {language === 'ja' ? 'EN' : 'JA'}
@@ -719,7 +725,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
           )}
           {/* Language toggle */}
           <button
-            onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
+            onClick={toggleMapLanguage}
             className="px-3 py-2 rounded-lg text-sm font-medium bg-white/10 text-zinc-300 hover:bg-white/20 transition-colors"
           >
             {language === 'ja' ? 'EN' : 'JA'}
