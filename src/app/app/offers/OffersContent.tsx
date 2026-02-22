@@ -364,6 +364,7 @@ function ExchangeTab({
             const themeKey = item.coupon_code?.startsWith('theme:') ? item.coupon_code.replace('theme:', '') : null
             const themeColors = themeKey ? CARD_THEMES[themeKey] : null
             const ThemeOverlay = themeKey ? THEME_OVERLAYS[themeKey] : null
+            const isOwned = themeKey && orders.some(o => o.exchange_items?.name === item.name && (o.status === 'approved' || o.status === 'pending'))
 
             return (
               <Card key={item.id}>
@@ -462,17 +463,23 @@ function ExchangeTab({
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-amber-300 font-bold">{item.points_cost} pt</span>
-                      <button
-                        onClick={() => handleExchange(item)}
-                        disabled={!canAfford || !inStock || exchanging === item.id}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          canAfford && inStock
-                            ? 'bg-amber-500 text-black hover:bg-amber-400'
-                            : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
-                        }`}
-                      >
-                        {exchanging === item.id ? '...' : t.exchangeButton}
-                      </button>
+                      {isOwned ? (
+                        <span className="px-4 py-2 rounded-lg text-sm font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+                          {t.exchangeOwned}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleExchange(item)}
+                          disabled={!canAfford || !inStock || exchanging === item.id}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            canAfford && inStock
+                              ? 'bg-amber-500 text-black hover:bg-amber-400'
+                              : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
+                          }`}
+                        >
+                          {exchanging === item.id ? '...' : t.exchangeButton}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
