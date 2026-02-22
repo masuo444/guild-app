@@ -61,67 +61,34 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
 
   return (
     <div>
-      {/* タブ */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('quests')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'quests'
-              ? 'bg-[#c0c0c0] text-zinc-900'
-              : 'bg-white/10 text-zinc-300 hover:bg-white/20'
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          {t.quests}
-          {activeQuests.length > 0 && (
-            <span className={`px-1.5 py-0.5 rounded text-xs ${
-              activeTab === 'quests' ? 'bg-zinc-900/20' : 'bg-amber-500/30 text-amber-300'
-            }`}>
-              {activeQuests.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('exchange')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'exchange'
-              ? 'bg-[#c0c0c0] text-zinc-900'
-              : 'bg-white/10 text-zinc-300 hover:bg-white/20'
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {t.pointExchange}
-        </button>
-        <button
-          onClick={() => setActiveTab('services')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'services'
-              ? 'bg-[#c0c0c0] text-zinc-900'
-              : 'bg-white/10 text-zinc-300 hover:bg-white/20'
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          {t.fomusServices}
-        </button>
-        <button
-          onClick={() => setActiveTab('articles')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'articles'
-              ? 'bg-[#c0c0c0] text-zinc-900'
-              : 'bg-white/10 text-zinc-300 hover:bg-white/20'
-          }`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-          </svg>
-          {t.exclusiveArticles}
-        </button>
+      {/* カテゴリカード（2x2グリッド） */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {([
+          { key: 'quests' as Tab, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', label: t.quests, badge: activeQuests.length > 0 ? activeQuests.length : null },
+          { key: 'exchange' as Tab, icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', label: t.pointExchange, badge: null },
+          { key: 'services' as Tab, icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t.fomusServices, badge: null },
+          { key: 'articles' as Tab, icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z', label: t.exclusiveArticles, badge: null },
+        ]).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(activeTab === tab.key ? tab.key : tab.key)}
+            className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl text-sm font-medium transition-colors border ${
+              activeTab === tab.key
+                ? 'bg-[#c0c0c0]/15 text-white border-[#c0c0c0]/40'
+                : 'bg-white/5 text-zinc-400 hover:bg-white/10 border-zinc-700/50'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
+            </svg>
+            <span className="text-xs">{tab.label}</span>
+            {tab.badge && (
+              <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/30 text-amber-300">
+                {tab.badge}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* クエストタブ */}
