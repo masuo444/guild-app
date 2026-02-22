@@ -1092,6 +1092,12 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
                       </div>
                       <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5 flex-wrap">
                         <span className="font-mono">{member.membership_id || '-'}</span>
+                        {member.serial_number != null && (
+                          <>
+                            <span>•</span>
+                            <span className="font-mono">No.{String(member.serial_number).padStart(4, '0')}</span>
+                          </>
+                        )}
                         <span>•</span>
                         <span>{currentPoints}pt</span>
                         {member.home_city && member.home_country && (
@@ -1217,7 +1223,7 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
                       <div className="flex gap-1">
                         <input
                           type="number"
-                          placeholder="-"
+                          placeholder="0001"
                           value={editingSerial[member.id] !== undefined ? editingSerial[member.id] : (member.serial_number ?? '')}
                           onChange={(e) => setEditingSerial(prev => ({ ...prev, [member.id]: e.target.value }))}
                           onKeyDown={(e) => {
