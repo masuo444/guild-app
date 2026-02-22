@@ -8,6 +8,7 @@ import { QuestSubmitModal } from './QuestSubmitModal'
 import { useLanguage } from '@/lib/i18n'
 import { formatDate } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { CARD_THEMES, THEME_OVERLAYS } from '@/components/membership/MembershipCard'
 
 type Tab = 'services' | 'quests' | 'articles' | 'exchange'
 
@@ -360,11 +361,91 @@ function ExchangeTab({
             const itemDesc = language === 'en' && item.description_en ? item.description_en : item.description
             const canAfford = masuPoints >= item.points_cost
             const inStock = item.stock !== 0
+            const themeKey = item.coupon_code?.startsWith('theme:') ? item.coupon_code.replace('theme:', '') : null
+            const themeColors = themeKey ? CARD_THEMES[themeKey] : null
+            const ThemeOverlay = themeKey ? THEME_OVERLAYS[themeKey] : null
 
             return (
               <Card key={item.id}>
                 <CardContent className="py-4">
                   <div className="flex flex-col gap-3">
+                    {/* テーマプレビュー */}
+                    {themeColors && (
+                      <div
+                        className="relative aspect-[1.586/1] rounded-lg overflow-hidden border border-white/10"
+                      >
+                        {/* 背景グラデーション */}
+                        <div
+                          className="absolute inset-0"
+                          style={{
+                            background: `linear-gradient(135deg, ${themeColors.bgFrom} 0%, ${themeColors.bgTo} 50%, ${themeColors.bgFrom} 100%)`,
+                          }}
+                        />
+                        {/* グロー */}
+                        <div
+                          className="absolute inset-0 opacity-20"
+                          style={{
+                            background: `radial-gradient(ellipse at top right, ${themeColors.primary}, transparent, transparent)`,
+                          }}
+                        />
+                        {/* オーバーレイ */}
+                        {ThemeOverlay && <ThemeOverlay />}
+                        {/* コーナー装飾 */}
+                        <div className="absolute top-1.5 left-1.5 w-5 h-5 pointer-events-none">
+                          <svg viewBox="0 0 32 32" className="w-full h-full">
+                            <path d="M2 12 L2 2 L12 2" fill="none" stroke={themeColors.primary} strokeWidth="2" strokeLinecap="round" />
+                            <circle cx="2" cy="2" r="1.5" fill={themeColors.primary} />
+                          </svg>
+                        </div>
+                        <div className="absolute top-1.5 right-1.5 w-5 h-5 pointer-events-none">
+                          <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: 'scale(-1, 1)' }}>
+                            <path d="M2 12 L2 2 L12 2" fill="none" stroke={themeColors.primary} strokeWidth="2" strokeLinecap="round" />
+                            <circle cx="2" cy="2" r="1.5" fill={themeColors.primary} />
+                          </svg>
+                        </div>
+                        <div className="absolute bottom-1.5 left-1.5 w-5 h-5 pointer-events-none">
+                          <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: 'scale(1, -1)' }}>
+                            <path d="M2 12 L2 2 L12 2" fill="none" stroke={themeColors.primary} strokeWidth="2" strokeLinecap="round" />
+                            <circle cx="2" cy="2" r="1.5" fill={themeColors.primary} />
+                          </svg>
+                        </div>
+                        <div className="absolute bottom-1.5 right-1.5 w-5 h-5 pointer-events-none">
+                          <svg viewBox="0 0 32 32" className="w-full h-full" style={{ transform: 'scale(-1, -1)' }}>
+                            <path d="M2 12 L2 2 L12 2" fill="none" stroke={themeColors.primary} strokeWidth="2" strokeLinecap="round" />
+                            <circle cx="2" cy="2" r="1.5" fill={themeColors.primary} />
+                          </svg>
+                        </div>
+                        {/* カードテキスト（サンプル） */}
+                        <div className="relative z-10 h-full p-3 flex flex-col justify-between">
+                          <div>
+                            <p className="text-[#f5e6d3] font-bold text-xs tracking-wider" style={{ fontFamily: 'serif' }}>
+                              FOMUS GUILD
+                            </p>
+                            <p className="text-[#a89984] text-[8px] uppercase tracking-[0.15em]">
+                              Guild Member
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[#f5e6d3] text-sm font-light tracking-wide" style={{ fontFamily: 'serif' }}>
+                              Your Name
+                            </p>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <div className="w-6 h-px" style={{ background: `linear-gradient(to right, ${themeColors.primary}99, transparent)` }} />
+                              <p className="text-[#6b5b4f] font-mono text-[8px]">FG-XXXX-XXXX</p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-lg font-light" style={{ fontFamily: 'serif', color: themeColors.primary }}>
+                              1,234
+                              <span className="text-[#6b5b4f] text-[10px] ml-0.5">EXP</span>
+                            </p>
+                          </div>
+                        </div>
+                        {/* カードエッジ */}
+                        <div className="absolute inset-0 rounded-lg" style={{ border: `1px solid ${themeColors.primary}33` }} />
+                        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(to right, transparent, ${themeColors.primary}66, transparent)` }} />
+                      </div>
+                    )}
                     <div>
                       <h3 className="font-semibold text-white mb-1">{itemName}</h3>
                       {itemDesc && <p className="text-sm text-zinc-400">{itemDesc}</p>}
