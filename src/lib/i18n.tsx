@@ -303,11 +303,15 @@ const translations = {
     questErrorUploadFailed: '画像のアップロードに失敗しました',
     questErrorSubmitFailed: '投稿の送信に失敗しました',
     questErrorGeneral: 'エラーが発生しました',
+    fomusDesc: '日本の伝統工芸「枡」を起点に、アート・物語・テクノロジーを掛け合わせ、新たな文化の表現と価値創造に挑むブランド。',
+    masuDesc: 'FOMUSの原点。国産ヒノキを使った最高品質の枡。',
     masuPhotoDesc: '世界中で『枡を持って撮る』アートプロジェクト。【※15ヶ国・2025年12月現在】枡が人と文化をつなぐ表現を可能に。',
     fomusParureDesc: '世界最小サイズの枡を活用したジュエリーブランド。',
     masukameDesc: '枡（益＝繁栄）と亀（長寿）を一体化した世界で唯一のアート作品。',
     kukuDesc: '精霊と木の神をめぐる物語。絵本・小説・アニメ・グッズへと展開する長編物語。鋭意制作中。',
     silvaDesc: '世界初、枡を使って遊べるカードゲーム。子どもからご年配の方まで遊べます。',
+    architectureDesc: '文化・伝統・ブランドの伴走支援。ストーリー設計から実装まで。',
+    sagishimaDesc: '広島県の佐木島にあるアートギャラリー。枡の壁「枡ウォール」と「枡の額縁」をプロデュース。',
 
     // Profile Page
     profileSettings: 'プロフィール設定',
@@ -708,11 +712,15 @@ const translations = {
     questErrorUploadFailed: 'Failed to upload image',
     questErrorSubmitFailed: 'Failed to create submission',
     questErrorGeneral: 'An error occurred',
+    fomusDesc: 'A creative brand that combines art, storytelling, and technology, starting from the traditional Japanese craft "MASU."',
+    masuDesc: 'The origin of FOMUS. The highest quality MASU made from domestic Japanese cypress.',
     masuPhotoDesc: 'A global art project of photographing with MASU. Currently in 15 countries as of Dec 2025. MASU enables expression connecting people and cultures.',
     fomusParureDesc: "A jewelry brand utilizing the world's smallest MASU.",
     masukameDesc: "The world's only art piece combining MASU (prosperity) and turtle (longevity).",
     kukuDesc: 'A story about spirits and tree gods. An epic tale expanding into picture books, novels, anime, and merchandise. Currently in production.',
     silvaDesc: "The world's first card game you can play with MASU. Enjoyable for children to seniors.",
+    architectureDesc: 'Supporting culture, tradition, and brands. From story design to implementation.',
+    sagishimaDesc: 'An art gallery on Sagishima Island, Hiroshima. Producing the "MASU Wall" and "MASU Frames."',
 
     // Profile Page
     profileSettings: 'Profile Settings',

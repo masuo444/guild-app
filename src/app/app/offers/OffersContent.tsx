@@ -70,6 +70,9 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
           }`}
         >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
           {t.quests}
           {activeQuests.length > 0 && (
             <span className={`px-1.5 py-0.5 rounded text-xs ${
@@ -81,32 +84,41 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
         </button>
         <button
           onClick={() => setActiveTab('exchange')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'exchange'
               ? 'bg-[#c0c0c0] text-zinc-900'
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
           }`}
         >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {t.pointExchange}
         </button>
         <button
           onClick={() => setActiveTab('services')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'services'
               ? 'bg-[#c0c0c0] text-zinc-900'
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
           }`}
         >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
           {t.fomusServices}
         </button>
         <button
           onClick={() => setActiveTab('articles')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'articles'
               ? 'bg-[#c0c0c0] text-zinc-900'
               : 'bg-white/10 text-zinc-300 hover:bg-white/20'
           }`}
         >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+          </svg>
           {t.exclusiveArticles}
         </button>
       </div>
@@ -148,33 +160,64 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
 
       {/* FOMUSのサービスタブ */}
       {activeTab === 'services' && (
-        <div className="grid gap-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <ServiceCard
+            title="FOMUS"
+            description={t.fomusDesc}
+            image="/services/fomus.png"
+            link="https://www.fomus.jp/"
+            external
+          />
+          <ServiceCard
+            title="MASU"
+            description={t.masuDesc}
+            image="/services/masu.png"
+            link="https://www.fomus.jp/"
+            external
+          />
           <ServiceCard
             title="Masu Photo"
             description={t.masuPhotoDesc}
+            image="/services/masu-photo.png"
             link="https://masuphoto.fomusglobal.com/"
             external
           />
           <ServiceCard
             title="FOMUS PARURE"
             description={t.fomusParureDesc}
+            image="/services/fomus-parure.png"
             link="https://parure.fomus.jp/"
             external
           />
           <ServiceCard
             title="MASUKAME"
             description={t.masukameDesc}
+            image="/services/masukame.jpg"
           />
           <ServiceCard
             title="KUKU"
             description={t.kukuDesc}
+            image="/services/kuku.jpg"
             link="https://kuku.fomusglobal.com/"
             external
           />
           <ServiceCard
             title="SILVA"
             description={t.silvaDesc}
+            image="/services/silva.png"
             link="https://silva.fomus.jp/"
+            external
+          />
+          <ServiceCard
+            title="Architecture"
+            description={t.architectureDesc}
+            image="/services/architecture.png"
+          />
+          <ServiceCard
+            title="Sagishima Art Gallery"
+            description={t.sagishimaDesc}
+            image="/services/sagishima.png"
+            link="https://sagishimagallery.fomus.jp/"
             external
           />
         </div>
@@ -410,34 +453,36 @@ function ExchangeTab({
 function ServiceCard({
   title,
   description,
+  image,
   link,
   external = false,
 }: {
   title: string
   description: string
+  image?: string
   link?: string
   external?: boolean
 }) {
   const content = (
-    <Card className={link ? "hover:bg-white/5 transition-colors cursor-pointer" : ""}>
+    <Card className={`overflow-hidden ${link ? "hover:bg-white/5 transition-colors cursor-pointer" : ""}`}>
+      {image && (
+        <div className="aspect-square overflow-hidden">
+          <img src={image} alt={title} className="w-full h-full object-cover" />
+        </div>
+      )}
       <CardContent className="py-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-[#c0c0c0]/20 flex items-center justify-center flex-shrink-0">
-            <svg className="w-6 h-6 text-[#c0c0c0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div className="flex-1">
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-white mb-1">{title}</h3>
-            <p className="text-sm text-zinc-400">{description}</p>
+            <p className="text-sm text-zinc-400 line-clamp-3">{description}</p>
           </div>
           {link && (
             external ? (
-              <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-zinc-500 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             ) : (
-              <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-zinc-500 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             )
