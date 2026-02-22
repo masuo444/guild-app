@@ -17,6 +17,7 @@ interface MembershipCardProps {
     rank: string
     invites?: string
     tapToFlip?: string
+    serialNumber?: string
   }
 }
 
@@ -295,9 +296,16 @@ export function MembershipCard({ profile, points, inviteCount = 0, masuPoints = 
                     <h2 className="text-[#f5e6d3] font-bold text-lg tracking-wider" style={{ fontFamily: 'serif' }}>
                       FOMUS GUILD
                     </h2>
-                    <p className="text-[#a89984] text-[10px] uppercase tracking-[0.2em]">
-                      {t.guildMember}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[#a89984] text-[10px] uppercase tracking-[0.2em]">
+                        {t.guildMember}
+                      </p>
+                      {profile.serial_number != null && (
+                        <p className="text-[#a89984] text-[10px] font-mono tracking-wider">
+                          No.{String(profile.serial_number).padStart(4, '0')}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -345,7 +353,7 @@ export function MembershipCard({ profile, points, inviteCount = 0, masuPoints = 
                 </p>
                 <p className="text-3xl font-light" style={{ fontFamily: 'serif', color: theme.primary }}>
                   {points.toLocaleString()}
-                  <span className="text-[#6b5b4f] text-sm ml-1">pt</span>
+                  <span className="text-[#6b5b4f] text-sm ml-1">EXP</span>
                 </p>
               </div>
 

@@ -608,6 +608,7 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
   const [searchQuery, setSearchQuery] = useState('')
   const [editingPoints, setEditingPoints] = useState<Record<string, string>>({})
   const [localMemberPoints, setLocalMemberPoints] = useState<Record<string, number>>(initialMemberPoints)
+  const [editingSerial, setEditingSerial] = useState<Record<string, string>>({})
 
   // メンバーに割り当てられたロールを取得
   const getMemberRoles = (memberId: string) => {
@@ -903,6 +904,39 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
     }
   }
 
+  const handleSerialNumberChange = async (memberId: string) => {
+    const newSerial = editingSerial[memberId]
+    if (newSerial === undefined) return
+
+    setUpdatingMember(memberId)
+    try {
+      const res = await fetch('/api/admin/serial-number', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: memberId,
+          serialNumber: newSerial === '' ? null : parseInt(newSerial),
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        alert(`更新エラー: ${data.error}`)
+      } else {
+        setEditingSerial(prev => {
+          const updated = { ...prev }
+          delete updated[memberId]
+          return updated
+        })
+        router.refresh()
+      }
+    } catch {
+      alert('更新に失敗しました')
+    } finally {
+      setUpdatingMember(null)
+    }
+  }
+
   // 検索フィルタ
   const filteredMembers = members.filter((member) => {
     const query = searchQuery.toLowerCase()
@@ -1071,7 +1105,7 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
                   </div>
 
                   {/* 中段: 設定項目 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-7 gap-2 mb-3">
                     {/* ステータス */}
                     <div>
                       <label className="block text-xs text-zinc-500 mb-1">ステータス</label>
@@ -1175,6 +1209,37 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
                         <option value="active" className="bg-zinc-900">表示する</option>
                         <option value="inactive" className="bg-zinc-900">非表示</option>
                       </select>
+                    </div>
+
+                    {/* シリアルNo */}
+                    <div>
+                      <label className="block text-xs text-zinc-500 mb-1">シリアルNo</label>
+                      <div className="flex gap-1">
+                        <input
+                          type="number"
+                          placeholder="-"
+                          value={editingSerial[member.id] !== undefined ? editingSerial[member.id] : (member.serial_number ?? '')}
+                          onChange={(e) => setEditingSerial(prev => ({ ...prev, [member.id]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur()
+                              handleSerialNumberChange(member.id)
+                            }
+                          }}
+                          disabled={isUpdating}
+                          className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium border border-zinc-600 bg-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        />
+                        {editingSerial[member.id] !== undefined && editingSerial[member.id] !== String(member.serial_number ?? '') && (
+                          <button
+                            type="button"
+                            onClick={() => handleSerialNumberChange(member.id)}
+                            disabled={isUpdating}
+                            className="px-2 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded-lg disabled:opacity-50"
+                          >
+                            保存
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 

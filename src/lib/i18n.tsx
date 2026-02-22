@@ -111,7 +111,7 @@ const translations = {
     // Card
     guildMember: 'ギルドメンバー',
     memberSince: '加入日',
-    points: 'ポイント',
+    points: 'Guild EXP',
     rank: 'ランク',
 
     // Navigation
@@ -248,7 +248,7 @@ const translations = {
     pointExchangeDesc: '溜まったポイントは、将来的に、さまざまな商品やサービスと交換できるようになります。',
     pointExchangeComingSoon: '交換アイテムは順次追加されます',
     pointExchangeStayTuned: 'お楽しみに！',
-    statusPoints: 'ステータスポイント',
+    statusPoints: 'Guild EXP',
     exchangeHistory: '交換履歴',
     exchangeConfirm: 'このアイテムと交換しますか？',
     exchangeSuccess: '交換申請が完了しました！',
@@ -516,7 +516,7 @@ const translations = {
     // Card
     guildMember: 'Guild Member',
     memberSince: 'Member Since',
-    points: 'Points',
+    points: 'Guild EXP',
     rank: 'Rank',
 
     // Navigation
@@ -653,7 +653,7 @@ const translations = {
     pointExchangeDesc: 'Accumulated points will be exchangeable for various products and services in the future.',
     pointExchangeComingSoon: 'Exchange items will be added gradually',
     pointExchangeStayTuned: 'Stay tuned!',
-    statusPoints: 'Status Points',
+    statusPoints: 'Guild EXP',
     exchangeHistory: 'Exchange History',
     exchangeConfirm: 'Exchange this item?',
     exchangeSuccess: 'Exchange request submitted!',
