@@ -58,14 +58,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient points' }, { status: 400 })
     }
 
-    // exchange_orders にpending行挿入
+    // テーマ商品かどうか判定（coupon_codeが "theme:" で始まる）
+    const isThemeItem = item.coupon_code && (item.coupon_code as string).startsWith('theme:')
+    const orderStatus = isThemeItem ? 'approved' : 'pending'
+
+    // exchange_orders に行挿入（テーマ商品は即時approved）
     const { error: orderError } = await supabaseAdmin
       .from('exchange_orders')
       .insert({
         user_id: user.id,
         item_id: item.id,
         points_spent: item.points_cost,
-        status: 'pending',
+        status: orderStatus,
       })
 
     if (orderError) {
@@ -92,6 +96,15 @@ export async function POST(request: NextRequest) {
         .from('exchange_items')
         .update({ stock: item.stock - 1 })
         .eq('id', item.id)
+    }
+
+    // テーマ商品の場合、card_themeを即時更新
+    if (isThemeItem) {
+      const themeName = (item.coupon_code as string).replace('theme:', '')
+      await supabaseAdmin
+        .from('profiles')
+        .update({ card_theme: themeName })
+        .eq('id', user.id)
     }
 
     return NextResponse.json({ success: true })

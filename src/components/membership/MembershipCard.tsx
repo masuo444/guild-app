@@ -90,56 +90,107 @@ function CornerFrame({ position, primary, secondary }: { position: 'tl' | 'tr' |
   )
 }
 
-// 桜テーマのカラーオーバーライド
+// 桜テーマのカラーオーバーライド（深みのあるピンク〜紫グラデ + 金の差し色）
 const SAKURA_THEME = {
-  primary: '#e8a0b4',
-  secondary: '#c97d94',
-  bgFrom: '#3a1a28',
-  bgTo: '#1a0d14',
-  glow: 'rgba(232,160,180,0.4)',
-  shimmer: 'rgba(255,183,197,0.5)',
+  primary: '#f0b4c8',
+  secondary: '#d4829a',
+  bgFrom: '#3d1a30',
+  bgTo: '#1c0e1e',
+  glow: 'rgba(240,180,200,0.45)',
+  shimmer: 'rgba(255,200,220,0.55)',
 }
 
-// 桜の花びらSVGオーバーレイ
+// 桜の花びらSVGオーバーレイ（大幅強化版）
 function SakuraPetals() {
+  // 五弁花を生成するヘルパー
+  const fiveFlower = (cx: number, cy: number, r: number, rot: number, opacity: number, fill: string) => (
+    <g transform={`translate(${cx}, ${cy}) rotate(${rot})`} opacity={opacity}>
+      {[0, 72, 144, 216, 288].map((angle) => (
+        <ellipse key={angle} cx="0" cy={-r * 0.6} rx={r} ry={r * 0.45} fill={fill} transform={`rotate(${angle})`} />
+      ))}
+      <circle cx="0" cy="0" r={r * 0.3} fill="#d4829a" opacity="0.7" />
+      {/* 雄しべドット */}
+      {[0, 60, 120, 180, 240, 300].map((angle) => (
+        <circle key={`s-${angle}`} cx={Math.cos(angle * Math.PI / 180) * r * 0.2} cy={Math.sin(angle * Math.PI / 180) * r * 0.2} r="0.8" fill="#d4a574" opacity="0.8" />
+      ))}
+    </g>
+  )
+
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       <svg className="absolute w-full h-full" viewBox="0 0 400 252" preserveAspectRatio="xMidYMid slice">
         <defs>
           <radialGradient id="petalGrad" cx="50%" cy="30%" r="60%">
-            <stop offset="0%" stopColor="#ffb7c5" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#e8a0b4" stopOpacity="0" />
+            <stop offset="0%" stopColor="#ffb7c5" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#f0b4c8" stopOpacity="0" />
           </radialGradient>
+          <radialGradient id="goldGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#d4a574" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#c9956a" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="branchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6b4a50" />
+            <stop offset="100%" stopColor="#8b5e6b" />
+          </linearGradient>
         </defs>
-        {/* 花びら群 - 右上 */}
-        <g transform="translate(320, 30) rotate(15)" opacity="0.25">
-          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(0)" />
-          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(72)" />
-          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(144)" />
-          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(216)" />
-          <ellipse cx="0" cy="0" rx="18" ry="8" fill="#ffb7c5" transform="rotate(288)" />
-          <circle cx="0" cy="0" r="5" fill="#d4829a" opacity="0.6" />
-        </g>
-        {/* 花びら群 - 左下 */}
-        <g transform="translate(60, 200) rotate(-10)" opacity="0.2">
-          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(0)" />
-          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(72)" />
-          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(144)" />
-          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(216)" />
-          <ellipse cx="0" cy="0" rx="14" ry="6" fill="#ffb7c5" transform="rotate(288)" />
-          <circle cx="0" cy="0" r="4" fill="#d4829a" opacity="0.5" />
-        </g>
-        {/* 散り花びら */}
-        <ellipse cx="150" cy="60" rx="6" ry="3" fill="#ffb7c5" opacity="0.3" transform="rotate(30 150 60)" />
-        <ellipse cx="280" cy="140" rx="5" ry="2.5" fill="#ffb7c5" opacity="0.25" transform="rotate(-20 280 140)" />
-        <ellipse cx="80" cy="100" rx="4" ry="2" fill="#ffb7c5" opacity="0.2" transform="rotate(60 80 100)" />
-        <ellipse cx="350" cy="190" rx="5" ry="2" fill="#ffb7c5" opacity="0.2" transform="rotate(45 350 190)" />
-        <ellipse cx="200" cy="220" rx="4" ry="2" fill="#ffb7c5" opacity="0.15" transform="rotate(-35 200 220)" />
-        <ellipse cx="40" cy="40" rx="3" ry="1.5" fill="#ffb7c5" opacity="0.2" transform="rotate(10 40 40)" />
-        <ellipse cx="250" cy="30" rx="4" ry="2" fill="#ffb7c5" opacity="0.15" transform="rotate(-50 250 30)" />
-        {/* 枝のライン */}
-        <path d="M360 0 Q340 40 310 50 Q290 55 270 45" fill="none" stroke="#8b5e6b" strokeWidth="1" opacity="0.15" />
-        <path d="M0 230 Q30 210 55 205 Q75 200 90 210" fill="none" stroke="#8b5e6b" strokeWidth="0.8" opacity="0.12" />
+
+        {/* 繊細な枝のライン群 */}
+        <path d="M380 0 Q350 30 320 42 Q295 50 270 44 Q250 38 235 45" fill="none" stroke="url(#branchGrad)" strokeWidth="1.2" opacity="0.2" />
+        <path d="M345 0 Q330 20 310 30 Q295 35 285 30" fill="none" stroke="url(#branchGrad)" strokeWidth="0.8" opacity="0.15" />
+        <path d="M310 42 Q300 55 285 58" fill="none" stroke="url(#branchGrad)" strokeWidth="0.6" opacity="0.12" />
+        <path d="M0 240 Q25 220 50 212 Q70 206 90 210 Q110 215 125 208" fill="none" stroke="url(#branchGrad)" strokeWidth="1" opacity="0.18" />
+        <path d="M50 252 Q60 235 75 228 Q85 224 95 228" fill="none" stroke="url(#branchGrad)" strokeWidth="0.6" opacity="0.12" />
+        <path d="M0 180 Q15 175 28 178" fill="none" stroke="url(#branchGrad)" strokeWidth="0.5" opacity="0.1" />
+
+        {/* メイン桜花 - 右上（大・フォーカルポイント） */}
+        {fiveFlower(325, 35, 16, 15, 0.3, '#ffb7c5')}
+        {/* メイン桜花 - 右上サブ */}
+        {fiveFlower(290, 52, 10, -5, 0.2, '#ffc8d6')}
+        {/* メイン桜花 - 左下 */}
+        {fiveFlower(65, 210, 13, -10, 0.25, '#ffb7c5')}
+        {/* サブ桜花 - 左下小 */}
+        {fiveFlower(95, 225, 8, 20, 0.18, '#ffc8d6')}
+        {/* 中央アクセント花 */}
+        {fiveFlower(200, 126, 20, 0, 0.12, '#ffd0de')}
+
+        {/* 追加の桜花 */}
+        {fiveFlower(240, 40, 7, 30, 0.15, '#ffb7c5')}
+        {fiveFlower(370, 180, 9, -15, 0.15, '#ffc8d6')}
+        {fiveFlower(30, 150, 6, 40, 0.12, '#ffb7c5')}
+        {fiveFlower(140, 45, 5, 25, 0.1, '#ffd0de')}
+
+        {/* 散り花びら（多数・サイズバリエーション） */}
+        <ellipse cx="160" cy="55" rx="7" ry="3.5" fill="#ffb7c5" opacity="0.3" transform="rotate(35 160 55)" />
+        <ellipse cx="280" cy="135" rx="5" ry="2.5" fill="#ffc8d6" opacity="0.25" transform="rotate(-25 280 135)" />
+        <ellipse cx="85" cy="95" rx="4" ry="2" fill="#ffb7c5" opacity="0.22" transform="rotate(55 85 95)" />
+        <ellipse cx="345" cy="185" rx="6" ry="2.5" fill="#ffc8d6" opacity="0.2" transform="rotate(40 345 185)" />
+        <ellipse cx="210" cy="210" rx="5" ry="2" fill="#ffb7c5" opacity="0.18" transform="rotate(-30 210 210)" />
+        <ellipse cx="45" cy="35" rx="3.5" ry="1.5" fill="#ffb7c5" opacity="0.2" transform="rotate(15 45 35)" />
+        <ellipse cx="255" cy="25" rx="4.5" ry="2" fill="#ffc8d6" opacity="0.17" transform="rotate(-45 255 25)" />
+        <ellipse cx="120" cy="170" rx="4" ry="2" fill="#ffb7c5" opacity="0.15" transform="rotate(70 120 170)" />
+        <ellipse cx="310" cy="110" rx="3" ry="1.5" fill="#ffc8d6" opacity="0.18" transform="rotate(-10 310 110)" />
+        <ellipse cx="180" cy="150" rx="5" ry="2" fill="#ffb7c5" opacity="0.13" transform="rotate(50 180 150)" />
+        <ellipse cx="370" cy="80" rx="3.5" ry="1.5" fill="#ffc8d6" opacity="0.15" transform="rotate(25 370 80)" />
+        <ellipse cx="60" cy="130" rx="3" ry="1.5" fill="#ffb7c5" opacity="0.12" transform="rotate(-60 60 130)" />
+
+        {/* 金色アクセント花びら */}
+        <ellipse cx="300" cy="70" rx="4" ry="1.8" fill="#d4a574" opacity="0.15" transform="rotate(20 300 70)" />
+        <ellipse cx="110" cy="195" rx="3.5" ry="1.5" fill="#d4a574" opacity="0.12" transform="rotate(-35 110 195)" />
+        <ellipse cx="230" cy="100" rx="3" ry="1.3" fill="#c9956a" opacity="0.1" transform="rotate(45 230 100)" />
+        <ellipse cx="350" cy="140" rx="2.5" ry="1.2" fill="#d4a574" opacity="0.1" transform="rotate(-15 350 140)" />
+
+        {/* 微細なキラキラドット（金） */}
+        <circle cx="335" cy="20" r="1.2" fill="#d4a574" opacity="0.3" />
+        <circle cx="275" cy="60" r="0.8" fill="#d4a574" opacity="0.25" />
+        <circle cx="50" cy="195" r="1" fill="#d4a574" opacity="0.2" />
+        <circle cx="190" cy="30" r="0.7" fill="#d4a574" opacity="0.2" />
+        <circle cx="380" cy="160" r="0.9" fill="#d4a574" opacity="0.15" />
+        <circle cx="100" cy="80" r="0.6" fill="#d4a574" opacity="0.15" />
+
+        {/* 淡いピンクのグラデ雲 */}
+        <ellipse cx="320" cy="40" rx="50" ry="30" fill="url(#petalGrad)" opacity="0.15" />
+        <ellipse cx="70" cy="210" rx="40" ry="25" fill="url(#petalGrad)" opacity="0.12" />
+        <ellipse cx="200" cy="126" rx="60" ry="35" fill="url(#petalGrad)" opacity="0.06" />
       </svg>
     </div>
   )

@@ -604,6 +604,9 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         </CardContent>
       </Card>
 
+      {/* カードテーマ切替 */}
+      <CardThemeSection profile={profile} t={t} />
+
       {/* 招待コード発行 */}
       <Card>
         <CardHeader>
@@ -735,5 +738,134 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// カードテーマ切替セクション
+function CardThemeSection({ profile, t }: { profile: Profile; t: ReturnType<typeof useLanguage>['t'] }) {
+  const [currentTheme, setCurrentTheme] = useState<string | null>(profile.card_theme || null)
+  const [ownedThemes, setOwnedThemes] = useState<string[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [changing, setChanging] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const loadOwnedThemes = async () => {
+      const supabase = createClient()
+      const { data: orders } = await supabase
+        .from('exchange_orders')
+        .select('id, exchange_items!inner(coupon_code)')
+        .eq('user_id', profile.id)
+        .eq('status', 'approved')
+
+      if (orders) {
+        const themes = orders
+          .filter((order) => {
+            const item = order.exchange_items as unknown as { coupon_code: string | null }
+            return item?.coupon_code?.startsWith('theme:')
+          })
+          .map((order) => {
+            const item = order.exchange_items as unknown as { coupon_code: string }
+            return item.coupon_code.replace('theme:', '')
+          })
+        setOwnedThemes([...new Set(themes)])
+      }
+      setLoaded(true)
+    }
+    loadOwnedThemes()
+  }, [profile.id])
+
+  const handleThemeChange = async (theme: string | null) => {
+    if (theme === currentTheme) return
+    setChanging(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch('/api/profile/card-theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme }),
+      })
+
+      if (res.ok) {
+        setCurrentTheme(theme)
+        setMessage({ type: 'success', text: t.themeChanged })
+        router.refresh()
+      } else {
+        const data = await res.json()
+        setMessage({ type: 'error', text: data.error === 'Theme not owned' ? t.themeNotOwned : t.themeChangeFailed })
+      }
+    } catch {
+      setMessage({ type: 'error', text: t.themeChangeFailed })
+    } finally {
+      setChanging(false)
+    }
+  }
+
+  const THEME_OPTIONS: { key: string | null; label: string; colors: string[] }[] = [
+    { key: null, label: t.defaultTheme, colors: ['#4a3828', '#2a2018', '#cd7f32'] },
+    { key: 'sakura', label: t.sakuraTheme, colors: ['#3d1a30', '#1c0e1e', '#f0b4c8'] },
+  ]
+
+  if (!loaded) return null
+
+  const availableThemes = THEME_OPTIONS.filter(
+    (opt) => opt.key === null || ownedThemes.includes(opt.key)
+  )
+
+  if (availableThemes.length <= 1) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="font-semibold text-white">{t.cardTheme}</h2>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-zinc-400 mb-4">{t.cardThemeDesc}</p>
+
+        <div className="space-y-2">
+          {availableThemes.map((opt) => (
+            <button
+              key={opt.key ?? 'default'}
+              onClick={() => handleThemeChange(opt.key)}
+              disabled={changing}
+              className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                currentTheme === opt.key
+                  ? 'border-white/30 bg-white/10'
+                  : 'border-zinc-500/30 bg-white/5 hover:bg-white/10'
+              }`}
+            >
+              {/* テーマプレビューカラー */}
+              <div
+                className="w-10 h-6 rounded-md flex-shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${opt.colors[0]}, ${opt.colors[1]})`,
+                  border: `1px solid ${opt.colors[2]}40`,
+                }}
+              />
+              <span className="text-sm text-white flex-1 text-left">{opt.label}</span>
+              {currentTheme === opt.key && (
+                <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {message && (
+          <div
+            className={`mt-3 p-2 rounded-lg text-sm ${
+              message.type === 'success'
+                ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                : 'bg-red-500/20 text-red-300 border border-red-500/30'
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

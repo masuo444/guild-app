@@ -352,6 +352,15 @@ const translations = {
     imageUploadFailed: '画像のアップロードに失敗しました',
     profileUpdated: 'プロフィールを更新しました',
 
+    // Card Theme
+    cardTheme: 'カードテーマ',
+    cardThemeDesc: 'メンバーシップカードのデザインテーマを切り替えます',
+    defaultTheme: 'デフォルト（ランク別）',
+    sakuraTheme: '桜',
+    themeChanged: 'テーマを変更しました',
+    themeChangeFailed: 'テーマの変更に失敗しました',
+    themeNotOwned: '所有していないテーマです',
+
     // Language
     languageSetting: '言語設定',
     languageSettingDesc: 'ページの表示言語を切り替えます',
@@ -760,6 +769,15 @@ const translations = {
     imageUploaded: 'Image uploaded',
     imageUploadFailed: 'Failed to upload image',
     profileUpdated: 'Profile updated successfully',
+
+    // Card Theme
+    cardTheme: 'Card Theme',
+    cardThemeDesc: 'Switch the design theme of your membership card',
+    defaultTheme: 'Default (Rank-based)',
+    sakuraTheme: 'Sakura',
+    themeChanged: 'Theme changed successfully',
+    themeChangeFailed: 'Failed to change theme',
+    themeNotOwned: 'You do not own this theme',
 
     // Language
     languageSetting: 'Language',
