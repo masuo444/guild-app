@@ -369,6 +369,16 @@ function ExchangeTab({
               <Card key={item.id}>
                 <CardContent className="py-4">
                   <div className="flex flex-col gap-3">
+                    {/* 商品画像（非テーマアイテム） */}
+                    {!themeColors && item.image_url && (
+                      <div className="aspect-[1.586/1] rounded-lg overflow-hidden">
+                        <img
+                          src={item.image_url}
+                          alt={itemName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
                     {/* テーマプレビュー */}
                     {themeColors && (
                       <div
@@ -451,14 +461,7 @@ function ExchangeTab({
                       {itemDesc && <p className="text-sm text-zinc-400">{itemDesc}</p>}
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-amber-300 font-bold">{item.points_cost} pt</span>
-                        {item.stock >= 0 && (
-                          <span className="text-xs text-zinc-500">
-                            {t.exchangeStock}: {item.stock === 0 ? t.exchangeOutOfStock : item.stock}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-amber-300 font-bold">{item.points_cost} pt</span>
                       <button
                         onClick={() => handleExchange(item)}
                         disabled={!canAfford || !inStock || exchanging === item.id}

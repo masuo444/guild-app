@@ -100,16 +100,6 @@ const SAKURA_THEME = {
   shimmer: 'rgba(255,200,220,0.55)',
 }
 
-// 和風テーマ（墨黒 + 金箔）
-const WAFUU_THEME = {
-  primary: '#c8a84e',
-  secondary: '#8b7a3a',
-  bgFrom: '#1a1a18',
-  bgTo: '#0d0d0b',
-  glow: 'rgba(200,168,78,0.35)',
-  shimmer: 'rgba(200,168,78,0.45)',
-}
-
 // 欧州テーマ（ロイヤルブルー + 金）
 const ROYAL_THEME = {
   primary: '#c9a84c',
@@ -143,7 +133,6 @@ export type CardThemeColors = {
 // テーママッピング
 export const CARD_THEMES: Record<string, CardThemeColors> = {
   sakura: SAKURA_THEME,
-  wafuu: WAFUU_THEME,
   royal: ROYAL_THEME,
   arabian: ARABIAN_THEME,
 }
@@ -239,69 +228,6 @@ function SakuraPetals() {
         <ellipse cx="320" cy="40" rx="50" ry="30" fill="url(#petalGrad)" opacity="0.15" />
         <ellipse cx="70" cy="210" rx="40" ry="25" fill="url(#petalGrad)" opacity="0.12" />
         <ellipse cx="200" cy="126" rx="60" ry="35" fill="url(#petalGrad)" opacity="0.06" />
-      </svg>
-    </div>
-  )
-}
-
-// 和風オーバーレイ（墨流し曲線、竹の葉、金箔ドット、波紋）
-function WafuuOverlay() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      <svg className="absolute w-full h-full" viewBox="0 0 400 252" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <radialGradient id="goldFoilGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#c8a84e" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#8b7a3a" stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id="inkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#3a3a35" />
-            <stop offset="100%" stopColor="#2a2a25" />
-          </linearGradient>
-        </defs>
-
-        {/* 墨流し曲線（suminagashi） */}
-        <path d="M0 180 Q60 160 120 185 Q180 210 240 175 Q300 140 360 165 Q400 180 400 180" fill="none" stroke="#3a3a35" strokeWidth="1.5" opacity="0.2" />
-        <path d="M0 190 Q70 170 130 195 Q190 220 250 180 Q310 145 370 170 Q400 185 400 190" fill="none" stroke="#3a3a35" strokeWidth="0.8" opacity="0.15" />
-        <path d="M0 60 Q50 40 100 55 Q160 75 220 50 Q280 30 340 55 Q380 68 400 60" fill="none" stroke="#3a3a35" strokeWidth="1.2" opacity="0.15" />
-        <path d="M0 70 Q55 50 110 65 Q170 82 230 58 Q290 38 350 60 Q385 72 400 68" fill="none" stroke="#3a3a35" strokeWidth="0.6" opacity="0.1" />
-
-        {/* 竹の葉 - 右上 */}
-        <g transform="translate(340, 30) rotate(-20)" opacity="0.2">
-          <path d="M0 0 Q8 -15 3 -30" fill="none" stroke="#5a6a4a" strokeWidth="0.8" />
-          <ellipse cx="6" cy="-12" rx="2.5" ry="8" fill="#5a6a4a" transform="rotate(25 6 -12)" />
-          <ellipse cx="1" cy="-22" rx="2" ry="7" fill="#5a6a4a" transform="rotate(-15 1 -22)" />
-          <ellipse cx="-3" cy="-8" rx="2" ry="6" fill="#5a6a4a" transform="rotate(-30 -3 -8)" />
-        </g>
-        {/* 竹の葉 - 左下 */}
-        <g transform="translate(50, 220) rotate(15)" opacity="0.18">
-          <path d="M0 0 Q-6 -12 -2 -25" fill="none" stroke="#5a6a4a" strokeWidth="0.7" />
-          <ellipse cx="-5" cy="-10" rx="2" ry="7" fill="#5a6a4a" transform="rotate(-20 -5 -10)" />
-          <ellipse cx="0" cy="-18" rx="2" ry="6" fill="#5a6a4a" transform="rotate(15 0 -18)" />
-        </g>
-
-        {/* 波紋 */}
-        <circle cx="320" cy="200" r="20" fill="none" stroke="#c8a84e" strokeWidth="0.5" opacity="0.12" />
-        <circle cx="320" cy="200" r="14" fill="none" stroke="#c8a84e" strokeWidth="0.4" opacity="0.1" />
-        <circle cx="320" cy="200" r="8" fill="none" stroke="#c8a84e" strokeWidth="0.3" opacity="0.08" />
-        <circle cx="80" cy="50" r="15" fill="none" stroke="#c8a84e" strokeWidth="0.4" opacity="0.1" />
-        <circle cx="80" cy="50" r="10" fill="none" stroke="#c8a84e" strokeWidth="0.3" opacity="0.08" />
-
-        {/* 金箔ドット */}
-        <circle cx="360" cy="18" r="1.5" fill="#c8a84e" opacity="0.35" />
-        <circle cx="310" cy="55" r="1" fill="#c8a84e" opacity="0.25" />
-        <circle cx="280" cy="30" r="0.8" fill="#c8a84e" opacity="0.2" />
-        <circle cx="370" cy="100" r="1.2" fill="#c8a84e" opacity="0.2" />
-        <circle cx="30" cy="180" r="1.3" fill="#c8a84e" opacity="0.3" />
-        <circle cx="70" cy="230" r="0.9" fill="#c8a84e" opacity="0.25" />
-        <circle cx="150" cy="40" r="0.7" fill="#c8a84e" opacity="0.18" />
-        <circle cx="200" cy="126" r="1" fill="#c8a84e" opacity="0.15" />
-        <circle cx="100" cy="110" r="0.8" fill="#c8a84e" opacity="0.15" />
-        <circle cx="250" cy="200" r="1.1" fill="#c8a84e" opacity="0.2" />
-
-        {/* 淡い金のグラデ雲 */}
-        <ellipse cx="340" cy="35" rx="40" ry="25" fill="url(#goldFoilGrad)" opacity="0.12" />
-        <ellipse cx="60" cy="215" rx="35" ry="20" fill="url(#goldFoilGrad)" opacity="0.1" />
       </svg>
     </div>
   )
@@ -441,7 +367,6 @@ function ArabianOverlay() {
 // テーマオーバーレイマッピング
 export const THEME_OVERLAYS: Record<string, () => JSX.Element> = {
   sakura: SakuraPetals,
-  wafuu: WafuuOverlay,
   royal: RoyalOverlay,
   arabian: ArabianOverlay,
 }

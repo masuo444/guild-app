@@ -806,7 +806,6 @@ function CardThemeSection({ profile, t }: { profile: Profile; t: ReturnType<type
   const THEME_OPTIONS: { key: string | null; label: string; colors: string[] }[] = [
     { key: null, label: t.defaultTheme, colors: ['#4a3828', '#2a2018', '#cd7f32'] },
     { key: 'sakura', label: t.sakuraTheme, colors: ['#3d1a30', '#1c0e1e', '#f0b4c8'] },
-    { key: 'wafuu', label: t.wafuuTheme, colors: ['#1a1a18', '#0d0d0b', '#c8a84e'] },
     { key: 'royal', label: t.royalTheme, colors: ['#0e1a3d', '#060d20', '#c9a84c'] },
     { key: 'arabian', label: t.arabianTheme, colors: ['#0c2a2a', '#061616', '#d4a843'] },
   ]
