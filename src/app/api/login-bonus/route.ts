@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { loginBonusLimiter } from '@/lib/rateLimit'
 
 export async function POST() {
   const supabase = await createClient()
@@ -9,19 +10,32 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Rate limit by user
+  if (!loginBonusLimiter.check(user.id)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const serviceClient = createServiceClient()
   const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
-  // 今日のLogin Bonusが既にあるかチェック
-  const { data: todayBonus } = await serviceClient
+  // 日次ログインボーナス挿入 (ON CONFLICT DO NOTHING で重複防止)
+  // unique index idx_activity_logs_login_bonus_unique が (user_id, type, note) WHERE type='Login Bonus' を保証
+  const { data: inserted, error: insertError } = await serviceClient
     .from('activity_logs')
+    .upsert(
+      {
+        user_id: user.id,
+        type: 'Login Bonus',
+        points: 10,
+        note: today,
+      },
+      { onConflict: 'user_id,type,note', ignoreDuplicates: true }
+    )
     .select('id')
-    .eq('user_id', user.id)
-    .eq('type', 'Login Bonus')
-    .eq('note', today)
-    .limit(1)
 
-  if (todayBonus && todayBonus.length > 0) {
+  // upsert with ignoreDuplicates returns empty array if already existed
+  if (insertError) {
+    // Unique constraint violation means already claimed
     return NextResponse.json({
       dailyBonus: false,
       streakBonus: null,
@@ -30,13 +44,14 @@ export async function POST() {
     })
   }
 
-  // 日次ログインボーナス 10pt を挿入
-  await serviceClient.from('activity_logs').insert({
-    user_id: user.id,
-    type: 'Login Bonus',
-    points: 10,
-    note: today,
-  })
+  if (!inserted || inserted.length === 0) {
+    return NextResponse.json({
+      dailyBonus: false,
+      streakBonus: null,
+      streakDays: 0,
+      message: 'Already claimed today',
+    })
+  }
 
   // 連続日数を計算
   const { data: loginLogs } = await serviceClient

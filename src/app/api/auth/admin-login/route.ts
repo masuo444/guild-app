@@ -32,11 +32,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileError || !profile) {
-      // 既存ユーザーのみ許可（新規登録は招待コード経由で）
-      return NextResponse.json(
-        { error: 'このメールアドレスは登録されていません' },
-        { status: 404 }
-      )
+      // Return same response shape to prevent email enumeration
+      return NextResponse.json({
+        success: true,
+        redirectUrl: null,
+      })
     }
 
     // マジックリンクを生成（管理者APIを使用、メール送信なし）
@@ -50,10 +50,11 @@ export async function POST(request: NextRequest) {
 
     if (linkError || !linkData) {
       console.error('Generate link error:', linkError)
-      return NextResponse.json(
-        { error: 'ログインリンクの生成に失敗しました' },
-        { status: 500 }
-      )
+      // Return same response shape to prevent information leakage
+      return NextResponse.json({
+        success: true,
+        redirectUrl: null,
+      })
     }
 
     // リダイレクトURLを返す（クライアント側でリダイレクト）

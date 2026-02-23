@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { otpSendLimiter } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'メールアドレスが必要です' },
         { status: 400 }
+      )
+    }
+
+    // Rate limit by email
+    if (!otpSendLimiter.check(email.toLowerCase())) {
+      return NextResponse.json(
+        { error: 'リクエストが多すぎます。しばらくしてからお試しください' },
+        { status: 429 }
       )
     }
 
@@ -28,10 +37,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileError || !profile) {
-      return NextResponse.json(
-        { error: 'このメールアドレスは登録されていません' },
-        { status: 404 }
-      )
+      // Return the same response as success to prevent email enumeration
+      return NextResponse.json({ success: true })
     }
 
     // Supabaseの組み込みOTPを使用してメール送信
@@ -65,10 +72,8 @@ export async function POST(request: NextRequest) {
         )
       }
       console.error('OTP error:', otpError)
-      return NextResponse.json(
-        { error: otpError.message },
-        { status: 400 }
-      )
+      // Return generic success to prevent information leakage
+      return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({ success: true })

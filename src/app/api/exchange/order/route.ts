@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
+import { exchangeLimiter } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,6 +10,10 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!exchangeLimiter.check(user.id)) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     const body = await request.json()
@@ -23,88 +28,20 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // アイテム存在・有効・在庫チェック
-    const { data: item, error: itemError } = await supabaseAdmin
-      .from('exchange_items')
-      .select('*')
-      .eq('id', item_id)
-      .single()
+    // Atomic exchange via RPC (balance check + deduction + order + stock update)
+    const { data, error } = await supabaseAdmin.rpc('exchange_order', {
+      p_user_id: user.id,
+      p_item_id: item_id,
+    })
 
-    if (itemError || !item) {
-      return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+    if (error) {
+      console.error('Exchange RPC error:', error)
+      return NextResponse.json({ error: 'Server error' }, { status: 500 })
     }
 
-    if (!item.is_active) {
-      return NextResponse.json({ error: 'Item is not available' }, { status: 400 })
-    }
-
-    if (item.stock === 0) {
-      return NextResponse.json({ error: 'Out of stock' }, { status: 400 })
-    }
-
-    // MASUポイント残高チェック（activity_logs全件合計）
-    const { data: logs, error: logsError } = await supabaseAdmin
-      .from('activity_logs')
-      .select('points')
-      .eq('user_id', user.id)
-
-    if (logsError) {
-      return NextResponse.json({ error: 'Failed to check points' }, { status: 500 })
-    }
-
-    const masuPoints = logs.reduce((sum, log) => sum + log.points, 0)
-
-    if (masuPoints < item.points_cost) {
-      return NextResponse.json({ error: 'Insufficient points' }, { status: 400 })
-    }
-
-    // テーマ商品かどうか判定（coupon_codeが "theme:" で始まる）
-    const isThemeItem = item.coupon_code && (item.coupon_code as string).startsWith('theme:')
-    const orderStatus = isThemeItem ? 'approved' : 'pending'
-
-    // exchange_orders に行挿入（テーマ商品は即時approved）
-    const { error: orderError } = await supabaseAdmin
-      .from('exchange_orders')
-      .insert({
-        user_id: user.id,
-        item_id: item.id,
-        points_spent: item.points_cost,
-        status: orderStatus,
-      })
-
-    if (orderError) {
-      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
-    }
-
-    // activity_logs にマイナスエントリ挿入
-    const { error: logError } = await supabaseAdmin
-      .from('activity_logs')
-      .insert({
-        user_id: user.id,
-        type: 'Point Exchange',
-        points: -item.points_cost,
-        note: item.name,
-      })
-
-    if (logError) {
-      return NextResponse.json({ error: 'Failed to record point deduction' }, { status: 500 })
-    }
-
-    // 在庫があればデクリメント（-1=無制限の場合はスキップ）
-    if (item.stock > 0) {
-      await supabaseAdmin
-        .from('exchange_items')
-        .update({ stock: item.stock - 1 })
-        .eq('id', item.id)
-    }
-
-    // テーマ商品の場合、card_themeを即時更新
-    if (isThemeItem) {
-      const themeName = (item.coupon_code as string).replace('theme:', '')
-      await supabaseAdmin
-        .from('profiles')
-        .update({ card_theme: themeName })
-        .eq('id', user.id)
+    // RPC returns { error, status } on failure or { success: true } on success
+    if (data?.error) {
+      return NextResponse.json({ error: data.error }, { status: data.status || 400 })
     }
 
     return NextResponse.json({ success: true })

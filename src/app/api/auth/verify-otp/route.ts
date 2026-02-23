@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { otpVerifyLimiter } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'メールアドレスとOTPが必要です' },
         { status: 400 }
+      )
+    }
+
+    // Rate limit by email
+    if (!otpVerifyLimiter.check(email.toLowerCase())) {
+      return NextResponse.json(
+        { error: 'リクエストが多すぎます。しばらくしてからお試しください' },
+        { status: 429 }
       )
     }
 
