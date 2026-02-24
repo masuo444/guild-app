@@ -116,8 +116,11 @@ export async function GET(request: NextRequest) {
   const token_hash = requestUrl.searchParams.get('token_hash')
   const type = requestUrl.searchParams.get('type')
   let inviteCode = requestUrl.searchParams.get('invite_code')
-  const next = requestUrl.searchParams.get('next') || requestUrl.searchParams.get('redirect') || '/app'
+  const rawNext = requestUrl.searchParams.get('next') || requestUrl.searchParams.get('redirect') || '/app'
   const origin = requestUrl.origin
+
+  // Validate redirect path: must be a relative path starting with / and not //
+  const next = (rawNext.startsWith('/') && !rawNext.startsWith('//')) ? rawNext : '/app'
 
   const cookieStore = await cookies()
 

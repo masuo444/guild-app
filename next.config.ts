@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
         { key: 'X-DNS-Prefetch-Control', value: 'on' },
         { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+        { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://*.stripe.com https://maps.googleapis.com https://maps.gstatic.com https://*.googleusercontent.com https://*.ggpht.com; frame-src https://js.stripe.com https://maps.googleapis.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://maps.googleapis.com; worker-src 'self'; manifest-src 'self'" },
       ],
     },
   ],
