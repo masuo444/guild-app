@@ -68,9 +68,26 @@ type Hub = {
   image_url: string | null
 }
 
+const countryNameJa: Record<string, string> = {
+  Japan: '日本',
+  Ireland: 'アイルランド',
+  USA: 'アメリカ',
+  Portugal: 'ポルトガル',
+  Georgia: 'ジョージア',
+  UAE: 'UAE',
+  Philippines: 'フィリピン',
+  Vietnam: 'ベトナム',
+  Malaysia: 'マレーシア',
+  Taiwan: '台湾',
+}
+
 export function HubGridWithFilter({ hubs }: { hubs: Hub[] }) {
-  const { t } = useLanguage()
+  const { language, t } = useLanguage()
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const localizeCountry = (country: string) =>
+    language === 'ja' ? (countryNameJa[country] || country) : country
 
   const countries = useMemo(() => {
     const countryCount = new Map<string, number>()
@@ -115,42 +132,46 @@ export function HubGridWithFilter({ hubs }: { hubs: Hub[] }) {
                 : 'bg-white/10 text-zinc-300 hover:bg-white/20 border border-zinc-500/30'
             }`}
           >
-            {country} ({count})
+            {localizeCountry(country)} ({count})
           </button>
         ))}
       </div>
 
       {/* Hub grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {filtered.map((hub) => (
-          <div
-            key={hub.id}
-            className="bg-white/10 backdrop-blur rounded-lg border border-zinc-500/30 overflow-hidden hover:border-orange-500/50 transition-colors"
-          >
-            {hub.image_url ? (
-              <img
-                src={hub.image_url}
-                alt={hub.name}
-                className="w-full h-24 sm:h-32 object-cover"
-              />
-            ) : (
-              <div className="w-full h-24 sm:h-32 bg-zinc-800 flex items-center justify-center">
-                <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-            )}
-            <div className="p-2 sm:p-3">
-              <h3 className="font-semibold text-white text-sm sm:text-base line-clamp-1">{hub.name}</h3>
-              <p className="text-xs sm:text-sm text-zinc-400">
-                {hub.country}, {hub.city}
-              </p>
-              {hub.description && (
-                <p className="text-xs text-zinc-300 mt-1 line-clamp-1">{hub.description}</p>
+        {filtered.map((hub) => {
+          const isExpanded = expandedId === hub.id
+          return (
+            <div
+              key={hub.id}
+              className="bg-white/10 backdrop-blur rounded-lg border border-zinc-500/30 overflow-hidden hover:border-orange-500/50 transition-colors cursor-pointer"
+              onClick={() => setExpandedId(isExpanded ? null : hub.id)}
+            >
+              {hub.image_url ? (
+                <img
+                  src={hub.image_url}
+                  alt={hub.name}
+                  className="w-full h-24 sm:h-32 object-cover"
+                />
+              ) : (
+                <div className="w-full h-24 sm:h-32 bg-zinc-800 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
               )}
+              <div className="p-2 sm:p-3">
+                <h3 className={`font-semibold text-white text-sm sm:text-base ${isExpanded ? '' : 'line-clamp-1'}`}>{hub.name}</h3>
+                <p className="text-xs sm:text-sm text-zinc-400">
+                  {localizeCountry(hub.country)}, {hub.city}
+                </p>
+                {hub.description && (
+                  <p className={`text-xs text-zinc-300 mt-1 ${isExpanded ? '' : 'line-clamp-1'}`}>{hub.description}</p>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </>
   )
