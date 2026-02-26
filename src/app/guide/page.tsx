@@ -276,6 +276,290 @@ export default function GuidePage() {
             </ul>
           </section>
 
+          {/* How-To Detailed Guide */}
+          <section className="print-break text-center py-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-stone-800 mb-2">{t.guideHowToTitle}</h2>
+            <p className="text-sm text-stone-500">{t.guideHowToSubtitle}</p>
+          </section>
+
+          {/* Section A: Getting Started */}
+          <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.841m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-semibold text-stone-800">{t.guideGettingStartedTitle}</h2>
+              </div>
+            </div>
+            <p className="text-stone-600 leading-relaxed mb-5">{t.guideGettingStartedDesc}</p>
+            <ol className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                <span className="text-sm text-stone-600">{t.guideGettingStartedStep1}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                <span className="text-sm text-stone-600">{t.guideGettingStartedStep2}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                <span className="text-sm text-stone-600">{t.guideGettingStartedStep3}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">4</span>
+                <span className="text-sm text-stone-600">{t.guideGettingStartedStep4}</span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Section B: Profile Setup */}
+          <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-semibold text-stone-800">{t.guideProfileSetupTitle}</h2>
+              </div>
+            </div>
+            <p className="text-stone-600 leading-relaxed mb-5">{t.guideProfileSetupDesc}</p>
+            <ol className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                <span className="text-sm text-stone-600">{t.guideProfileSetupStep1}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                <span className="text-sm text-stone-600">{t.guideProfileSetupStep2}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                <span className="text-sm text-stone-600">{t.guideProfileSetupStep3}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">4</span>
+                <span className="text-sm text-stone-600">{t.guideProfileSetupStep4}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">5</span>
+                <span className="text-sm text-stone-600">{t.guideProfileSetupStep5}</span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Section C: Card Details */}
+          <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25h-15a2.25 2.25 0 0 0-2.25 2.25v10.5a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-semibold text-stone-800">{t.guideCardDetailTitle}</h2>
+              </div>
+            </div>
+            <p className="text-stone-600 leading-relaxed mb-5">{t.guideCardDetailDesc}</p>
+            <ol className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                <span className="text-sm text-stone-600">{t.guideCardDetailFront}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                <span className="text-sm text-stone-600">{t.guideCardDetailBack}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                <span className="text-sm text-stone-600">{t.guideCardDetailRankPoints}</span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Section D: Map Usage */}
+          <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-semibold text-stone-800">{t.guideMapUsageTitle}</h2>
+              </div>
+            </div>
+            <p className="text-stone-600 leading-relaxed mb-5">{t.guideMapUsageDesc}</p>
+            <ol className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                <span className="text-sm text-stone-600">{t.guideMapUsageStep1}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                <span className="text-sm text-stone-600">{t.guideMapUsageStep2}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                <span className="text-sm text-stone-600">{t.guideMapUsageStep3}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">4</span>
+                <span className="text-sm text-stone-600">{t.guideMapUsageStep4}</span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Section E: Quest How-To */}
+          <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0 1 16.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m4.894-1.228a49.424 49.424 0 0 0-3.933-.956M5.586 8.5a49.424 49.424 0 0 1 3.933-.956m7.962 0c-.092 1.14-.28 2.248-.555 3.309m-7.376-3.31c.093 1.14.282 2.249.556 3.31" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-semibold text-stone-800">{t.guideQuestHowTitle}</h2>
+              </div>
+            </div>
+            <p className="text-stone-600 leading-relaxed mb-5">{t.guideQuestHowDesc}</p>
+            <ol className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                <span className="text-sm text-stone-600">{t.guideQuestHowStep1}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                <span className="text-sm text-stone-600">{t.guideQuestHowStep2}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                <span className="text-sm text-stone-600">{t.guideQuestHowStep3}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">4</span>
+                <span className="text-sm text-stone-600">{t.guideQuestHowStep4}</span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Section F: Point Exchange */}
+          <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-semibold text-stone-800">{t.guideExchangeHowTitle}</h2>
+              </div>
+            </div>
+            <p className="text-stone-600 leading-relaxed mb-5">{t.guideExchangeHowDesc}</p>
+            <ol className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                <span className="text-sm text-stone-600">{t.guideExchangeHowStep1}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                <span className="text-sm text-stone-600">{t.guideExchangeHowStep2}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                <span className="text-sm text-stone-600">{t.guideExchangeHowStep3}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">4</span>
+                <span className="text-sm text-stone-600">{t.guideExchangeHowStep4}</span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Section G: Invite Friends */}
+          <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-semibold text-stone-800">{t.guideInviteHowTitle}</h2>
+              </div>
+            </div>
+            <p className="text-stone-600 leading-relaxed mb-5">{t.guideInviteHowDesc}</p>
+            <ol className="space-y-3">
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                <span className="text-sm text-stone-600">{t.guideInviteHowStep1}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                <span className="text-sm text-stone-600">{t.guideInviteHowStep2}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                <span className="text-sm text-stone-600">{t.guideInviteHowStep3}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">4</span>
+                <span className="text-sm text-stone-600">{t.guideInviteHowStep4}</span>
+              </li>
+            </ol>
+          </section>
+
+          {/* Section H: PWA Install */}
+          <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-semibold text-stone-800">{t.guidePwaInstallTitle}</h2>
+              </div>
+            </div>
+            <p className="text-stone-600 leading-relaxed mb-5">{t.guidePwaInstallDesc}</p>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-bold text-stone-700 mb-2">{t.guidePwaInstallAndroidTitle}</p>
+                <ol className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                    <span className="text-sm text-stone-600">{t.guidePwaInstallAndroid1}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                    <span className="text-sm text-stone-600">{t.guidePwaInstallAndroid2}</span>
+                  </li>
+                </ol>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-stone-700 mb-2">{t.guidePwaInstallIosTitle}</p>
+                <ol className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                    <span className="text-sm text-stone-600">{t.guidePwaInstallIos1}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                    <span className="text-sm text-stone-600">{t.guidePwaInstallIos2}</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                    <span className="text-sm text-stone-600">{t.guidePwaInstallIos3}</span>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </section>
+
           {/* Footer CTA */}
           <section className="print-break bg-gradient-to-br from-stone-800 to-stone-900 rounded-2xl p-6 md:p-8 text-center text-white shadow-lg">
             <h2 className="text-xl md:text-2xl font-semibold mb-3">{t.guideFooterCta}</h2>
