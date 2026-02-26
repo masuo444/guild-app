@@ -427,6 +427,17 @@ const translations = {
     backToLogin: 'ログインページに戻る',
     sixOrMoreChars: '6文字以上',
     enterAgain: 'もう一度入力',
+
+    // PWA Install Banner
+    pwaInstallTitle: 'アプリをホーム画面に追加',
+    pwaInstallDescription: 'ホーム画面に追加して、より快適にご利用いただけます',
+    pwaInstallNotificationNote: 'プッシュ通知はアプリをインストールすると受け取れます',
+    pwaInstallButton: 'インストール',
+    pwaInstallHowTo: '追加方法を見る',
+    pwaInstallLater: 'あとで',
+    pwaIosStep1: '画面下部の共有ボタンをタップ',
+    pwaIosStep2: '「ホーム画面に追加」を選択',
+    pwaIosStep3: '右上の「追加」をタップ',
   },
   en: {
     // Landing Page
@@ -848,6 +859,17 @@ const translations = {
     backToLogin: 'Back to Login',
     sixOrMoreChars: '6 or more characters',
     enterAgain: 'Enter again',
+
+    // PWA Install Banner
+    pwaInstallTitle: 'Add to Home Screen',
+    pwaInstallDescription: 'Install the app for a better experience',
+    pwaInstallNotificationNote: 'Push notifications require the app to be installed',
+    pwaInstallButton: 'Install',
+    pwaInstallHowTo: 'How to Install',
+    pwaInstallLater: 'Later',
+    pwaIosStep1: 'Tap the Share button at the bottom',
+    pwaIosStep2: 'Select "Add to Home Screen"',
+    pwaIosStep3: 'Tap "Add" in the top right',
   },
 }
 
