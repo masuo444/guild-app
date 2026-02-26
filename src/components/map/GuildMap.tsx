@@ -133,27 +133,34 @@ function getMemberAvatarMarkerSvg(base64DataUrl: string, size: number): string {
 }
 
 // Preload avatar image and convert to base64 data URL
-function loadAvatarAsBase64(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      const size = 80 // small enough for marker
-      canvas.width = size
-      canvas.height = size
-      const ctx = canvas.getContext('2d')
-      if (!ctx) { reject('No canvas context'); return }
-      // Draw as square crop
-      const min = Math.min(img.width, img.height)
-      const sx = (img.width - min) / 2
-      const sy = (img.height - min) / 2
-      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
-      resolve(canvas.toDataURL('image/jpeg', 0.7))
-    }
-    img.onerror = () => reject('Failed to load')
-    img.src = url
-  })
+async function loadAvatarAsBase64(url: string): Promise<string> {
+  // Use fetch to avoid CORS issues with crossOrigin='anonymous' on Image
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Failed to fetch image')
+  const blob = await res.blob()
+  const bitmapUrl = URL.createObjectURL(blob)
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const size = 80
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { reject('No canvas context'); return }
+        const min = Math.min(img.width, img.height)
+        const sx = (img.width - min) / 2
+        const sy = (img.height - min) / 2
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
+        resolve(canvas.toDataURL('image/jpeg', 0.7))
+      }
+      img.onerror = () => reject('Failed to load')
+      img.src = bitmapUrl
+    })
+  } finally {
+    URL.revokeObjectURL(bitmapUrl)
+  }
 }
 
 // Generate circle SVG for members without avatar
@@ -840,14 +847,14 @@ function MemberBottomSheet({ member }: { member: MemberMapData }) {
           src={member.avatar_url}
           alt={member.display_name || 'Member'}
           className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
         />
-      ) : (
-        <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-          <span className="text-2xl text-white font-bold">
-            {member.display_name?.[0]?.toUpperCase() || 'M'}
-          </span>
-        </div>
-      )}
+      ) : null}
+      <div className={`w-16 h-16 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 ${member.avatar_url ? 'hidden' : ''}`}>
+        <span className="text-2xl text-white font-bold">
+          {member.display_name?.[0]?.toUpperCase() || 'M'}
+        </span>
+      </div>
 
       <div className="flex-1 min-w-0">
         <h3 className="text-lg font-semibold text-zinc-900 truncate">
@@ -900,14 +907,14 @@ function HubBottomSheet({ hub }: { hub: MasuHub }) {
             src={hub.image_url}
             alt={hub.name}
             className="w-full h-36 object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
           />
-        ) : (
-          <div className="w-full h-36 bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-            <svg className="w-16 h-16 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-        )}
+        ) : null}
+        <div className={`w-full h-36 bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center ${hub.image_url ? 'hidden' : ''}`}>
+          <svg className="w-16 h-16 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        </div>
       </div>
 
       <h3 className="text-lg font-semibold text-zinc-900">{hub.name}</h3>
@@ -966,20 +973,20 @@ function MemberInfoCard({ member }: { member: MemberMapData }) {
           src={member.avatar_url}
           alt={member.display_name || 'Member'}
           className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
         />
-      ) : member.instagram_id ? (
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+      ) : null}
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${member.avatar_url ? 'hidden' : ''} ${member.instagram_id ? 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500' : 'bg-green-500'}`}>
+        {member.instagram_id ? (
           <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
           </svg>
-        </div>
-      ) : (
-        <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+        ) : (
           <span className="text-lg text-white font-bold">
             {member.display_name?.[0]?.toUpperCase() || 'M'}
           </span>
-        </div>
-      )}
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-white truncate">
           {member.display_name || 'Member'}
@@ -1026,14 +1033,14 @@ function HubInfoCard({ hub }: { hub: MasuHub }) {
             src={hub.image_url}
             alt={hub.name}
             className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }}
           />
-        ) : (
-          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-8 h-8 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-        )}
+        ) : null}
+        <div className={`w-16 h-16 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 ${hub.image_url ? 'hidden' : ''}`}>
+          <svg className="w-8 h-8 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white truncate">{hub.name}</p>
           <p className="text-sm text-zinc-400 mb-1">
