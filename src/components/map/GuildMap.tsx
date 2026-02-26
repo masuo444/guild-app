@@ -110,56 +110,70 @@ function getMarkerSize(zoom: number): { base: number; avatar: number } {
   }
 }
 
+// Counter for unique SVG IDs to prevent ID conflicts between markers
+let svgIdCounter = 0
+
 // Generate circle SVG for members with avatar (base64 embedded)
 function getMemberAvatarMarkerSvg(base64DataUrl: string, size: number): string {
+  const id = svgIdCounter++
   const r = size / 2
   const border = Math.max(2, r * 0.12)
   const imgR = r - border
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <defs>
-        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
-        </filter>
-        <clipPath id="avatarClip">
-          <circle cx="${r}" cy="${r}" r="${imgR}"/>
-        </clipPath>
-      </defs>
-      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e" filter="url(#shadow)"/>
-      <circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/>
-      <image href="${base64DataUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice"/>
-    </svg>
-  `
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs><clipPath id="c${id}"><circle cx="${r}" cy="${r}" r="${imgR}"/></clipPath></defs><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e"/><circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/><image href="${base64DataUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#c${id})" preserveAspectRatio="xMidYMid slice"/></svg>`
 }
 
 // Preload avatar image and convert to base64 data URL
 async function loadAvatarAsBase64(url: string): Promise<string> {
-  // Use fetch to avoid CORS issues with crossOrigin='anonymous' on Image
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('Failed to fetch image')
-  const blob = await res.blob()
-  const bitmapUrl = URL.createObjectURL(blob)
   try {
-    return await new Promise<string>((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const size = 80
-        canvas.width = size
-        canvas.height = size
-        const ctx = canvas.getContext('2d')
-        if (!ctx) { reject('No canvas context'); return }
-        const min = Math.min(img.width, img.height)
-        const sx = (img.width - min) / 2
-        const sy = (img.height - min) / 2
-        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
-        resolve(canvas.toDataURL('image/jpeg', 0.7))
+    // Use fetch to get blob, then create object URL to avoid CORS canvas taint
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Fetch failed')
+    const blob = await res.blob()
+    const bitmapUrl = URL.createObjectURL(blob)
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas')
+            const size = 80
+            canvas.width = size
+            canvas.height = size
+            const ctx = canvas.getContext('2d')
+            if (!ctx) { reject('No canvas context'); return }
+            const min = Math.min(img.width, img.height)
+            const sx = (img.width - min) / 2
+            const sy = (img.height - min) / 2
+            ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
+            const result = canvas.toDataURL('image/jpeg', 0.7)
+            if (!result || result.length < 100) { reject('Invalid base64'); return }
+            resolve(result)
+          } catch (err) {
+            reject(err)
+          }
+        }
+        img.onerror = () => reject('Failed to load blob image')
+        img.src = bitmapUrl
+      })
+      return base64
+    } finally {
+      URL.revokeObjectURL(bitmapUrl)
+    }
+  } catch {
+    // Fallback: try with FileReader (no canvas, direct blob to base64)
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Fetch failed')
+    const blob = await res.blob()
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        if (!result || result.length < 100) { reject('Invalid'); return }
+        resolve(result)
       }
-      img.onerror = () => reject('Failed to load')
-      img.src = bitmapUrl
+      reader.onerror = () => reject('FileReader failed')
+      reader.readAsDataURL(blob)
     })
-  } finally {
-    URL.revokeObjectURL(bitmapUrl)
   }
 }
 
@@ -167,73 +181,30 @@ async function loadAvatarAsBase64(url: string): Promise<string> {
 function getMemberDotMarkerSvg(size: number): string {
   const r = size / 2
   const innerR = r * 0.45
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <defs>
-        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
-        </filter>
-      </defs>
-      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e" filter="url(#shadow)"/>
-      <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
-    </svg>
-  `
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e" stroke="white" stroke-width="2"/><circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/></svg>`
 }
 
 // Generate circle SVG for hubs without image
 function getHubMarkerSvg(size: number): string {
   const r = size / 2
   const innerR = r * 0.45
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <defs>
-        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
-        </filter>
-      </defs>
-      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316" filter="url(#shadow)"/>
-      <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
-    </svg>
-  `
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316" stroke="white" stroke-width="2"/><circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/></svg>`
 }
 
 // Generate circle SVG for hubs with image (base64 embedded)
 function getHubImageMarkerSvg(base64DataUrl: string, size: number): string {
+  const id = svgIdCounter++
   const r = size / 2
   const border = Math.max(2, r * 0.12)
   const imgR = r - border
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <defs>
-        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
-        </filter>
-        <clipPath id="hubClip">
-          <circle cx="${r}" cy="${r}" r="${imgR}"/>
-        </clipPath>
-      </defs>
-      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316" filter="url(#shadow)"/>
-      <circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/>
-      <image href="${base64DataUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#hubClip)" preserveAspectRatio="xMidYMid slice"/>
-    </svg>
-  `
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs><clipPath id="h${id}"><circle cx="${r}" cy="${r}" r="${imgR}"/></clipPath></defs><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316"/><circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/><image href="${base64DataUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#h${id})" preserveAspectRatio="xMidYMid slice"/></svg>`
 }
 
 // Generate circle SVG for pending invites (purple)
 function getPendingMarkerSvg(size: number): string {
   const r = size / 2
   const innerR = r * 0.45
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <defs>
-        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
-        </filter>
-      </defs>
-      <circle cx="${r}" cy="${r}" r="${r - 1}" fill="#a855f7" filter="url(#shadow)"/>
-      <circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/>
-    </svg>
-  `
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#a855f7" stroke="white" stroke-width="2"/><circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/></svg>`
 }
 
 interface MemberRole {
