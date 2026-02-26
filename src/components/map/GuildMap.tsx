@@ -110,102 +110,119 @@ function getMarkerSize(zoom: number): { base: number; avatar: number } {
   }
 }
 
-// Counter for unique SVG IDs to prevent ID conflicts between markers
-let svgIdCounter = 0
+// ---- PNG-based marker generation (Canvas) ----
+// All markers are rendered as PNG via canvas to avoid SVG data URL compatibility issues
 
-// Generate circle SVG for members with avatar (base64 embedded)
-function getMemberAvatarMarkerSvg(base64DataUrl: string, size: number): string {
-  const id = svgIdCounter++
-  const r = size / 2
-  const border = Math.max(2, r * 0.12)
-  const imgR = r - border
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs><clipPath id="c${id}"><circle cx="${r}" cy="${r}" r="${imgR}"/></clipPath></defs><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e"/><circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/><image href="${base64DataUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#c${id})" preserveAspectRatio="xMidYMid slice"/></svg>`
+// Cache for generated dot/circle marker PNGs: "color-size" -> data URL
+const dotMarkerCache: Record<string, string> = {}
+
+function drawCircleMarkerPng(size: number, color: string): string {
+  const key = `${color}-${size}`
+  if (dotMarkerCache[key]) return dotMarkerCache[key]
+  const canvas = document.createElement('canvas')
+  const scale = 2
+  canvas.width = size * scale
+  canvas.height = size * scale
+  const ctx = canvas.getContext('2d')!
+  const r = (size * scale) / 2
+  // Outer circle
+  ctx.beginPath()
+  ctx.arc(r, r, r - 1, 0, Math.PI * 2)
+  ctx.fillStyle = color
+  ctx.fill()
+  // White border
+  ctx.beginPath()
+  ctx.arc(r, r, r - 1, 0, Math.PI * 2)
+  ctx.strokeStyle = 'white'
+  ctx.lineWidth = 2 * scale
+  ctx.stroke()
+  // Inner dot
+  ctx.beginPath()
+  ctx.arc(r, r, r * 0.4, 0, Math.PI * 2)
+  ctx.fillStyle = 'white'
+  ctx.fill()
+  const url = canvas.toDataURL('image/png')
+  dotMarkerCache[key] = url
+  return url
+}
+
+// Pre-compose avatar into circle marker as PNG
+function drawAvatarMarkerPng(avatarBase64: string, size: number, color: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const scale = 2
+      canvas.width = size * scale
+      canvas.height = size * scale
+      const ctx = canvas.getContext('2d')!
+      const r = (size * scale) / 2
+      const border = Math.max(2, r * 0.12) * scale
+      const imgR = r - border
+      // Outer circle
+      ctx.beginPath()
+      ctx.arc(r, r, r - 1, 0, Math.PI * 2)
+      ctx.fillStyle = color
+      ctx.fill()
+      // White background
+      ctx.beginPath()
+      ctx.arc(r, r, imgR, 0, Math.PI * 2)
+      ctx.fillStyle = 'white'
+      ctx.fill()
+      // Clip and draw avatar
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(r, r, imgR, 0, Math.PI * 2)
+      ctx.clip()
+      const min = Math.min(img.width, img.height)
+      const sx = (img.width - min) / 2
+      const sy = (img.height - min) / 2
+      ctx.drawImage(img, sx, sy, min, min, r - imgR, r - imgR, imgR * 2, imgR * 2)
+      ctx.restore()
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.onerror = () => resolve(drawCircleMarkerPng(size, color))
+    img.src = avatarBase64
+  })
 }
 
 // Preload avatar image and convert to base64 data URL
 async function loadAvatarAsBase64(url: string): Promise<string> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Fetch failed')
+  const blob = await res.blob()
+  const bitmapUrl = URL.createObjectURL(blob)
   try {
-    // Use fetch to get blob, then create object URL to avoid CORS canvas taint
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Fetch failed')
-    const blob = await res.blob()
-    const bitmapUrl = URL.createObjectURL(blob)
-    try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas')
-            const size = 80
-            canvas.width = size
-            canvas.height = size
-            const ctx = canvas.getContext('2d')
-            if (!ctx) { reject('No canvas context'); return }
-            const min = Math.min(img.width, img.height)
-            const sx = (img.width - min) / 2
-            const sy = (img.height - min) / 2
-            ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
-            const result = canvas.toDataURL('image/jpeg', 0.7)
-            if (!result || result.length < 100) { reject('Invalid base64'); return }
-            resolve(result)
-          } catch (err) {
-            reject(err)
-          }
-        }
-        img.onerror = () => reject('Failed to load blob image')
-        img.src = bitmapUrl
-      })
-      return base64
-    } finally {
-      URL.revokeObjectURL(bitmapUrl)
-    }
-  } catch {
-    // Fallback: try with FileReader (no canvas, direct blob to base64)
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Fetch failed')
-    const blob = await res.blob()
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result as string
-        if (!result || result.length < 100) { reject('Invalid'); return }
-        resolve(result)
+    return await new Promise<string>((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          const s = 80
+          canvas.width = s
+          canvas.height = s
+          const ctx = canvas.getContext('2d')
+          if (!ctx) { reject('No ctx'); return }
+          const min = Math.min(img.width, img.height)
+          const sx = (img.width - min) / 2
+          const sy = (img.height - min) / 2
+          ctx.drawImage(img, sx, sy, min, min, 0, 0, s, s)
+          const result = canvas.toDataURL('image/jpeg', 0.7)
+          if (!result || result.length < 100) { reject('Invalid'); return }
+          resolve(result)
+        } catch (err) { reject(err) }
       }
-      reader.onerror = () => reject('FileReader failed')
-      reader.readAsDataURL(blob)
+      img.onerror = () => reject('Load failed')
+      img.src = bitmapUrl
     })
+  } finally {
+    URL.revokeObjectURL(bitmapUrl)
   }
 }
 
-// Generate circle SVG for members without avatar
-function getMemberDotMarkerSvg(size: number): string {
-  const r = size / 2
-  const innerR = r * 0.45
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#22c55e" stroke="white" stroke-width="2"/><circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/></svg>`
-}
-
-// Generate circle SVG for hubs without image
-function getHubMarkerSvg(size: number): string {
-  const r = size / 2
-  const innerR = r * 0.45
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316" stroke="white" stroke-width="2"/><circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/></svg>`
-}
-
-// Generate circle SVG for hubs with image (base64 embedded)
-function getHubImageMarkerSvg(base64DataUrl: string, size: number): string {
-  const id = svgIdCounter++
-  const r = size / 2
-  const border = Math.max(2, r * 0.12)
-  const imgR = r - border
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs><clipPath id="h${id}"><circle cx="${r}" cy="${r}" r="${imgR}"/></clipPath></defs><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#f97316"/><circle cx="${r}" cy="${r}" r="${imgR}" fill="white"/><image href="${base64DataUrl}" x="${border}" y="${border}" width="${imgR * 2}" height="${imgR * 2}" clip-path="url(#h${id})" preserveAspectRatio="xMidYMid slice"/></svg>`
-}
-
-// Generate circle SVG for pending invites (purple)
-function getPendingMarkerSvg(size: number): string {
-  const r = size / 2
-  const innerR = r * 0.45
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${r}" cy="${r}" r="${r - 1}" fill="#a855f7" stroke="white" stroke-width="2"/><circle cx="${r}" cy="${r}" r="${innerR}" fill="white"/></svg>`
-}
+function getMemberDotPng(size: number): string { return drawCircleMarkerPng(size, '#22c55e') }
+function getHubDotPng(size: number): string { return drawCircleMarkerPng(size, '#f97316') }
+function getPendingDotPng(size: number): string { return drawCircleMarkerPng(size, '#a855f7') }
 
 interface MemberRole {
   role_id: string
@@ -258,15 +275,15 @@ function MapMarkers({
   filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
   filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
   markerSizes: { base: number; avatar: number }
-  avatarCache: Record<string, string>
+  markerPngCache: Record<string, string>
   onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
 }) {
   return (
     <>
       {showMembers &&
         filteredMembers.map((member) => {
-          const cachedBase64 = member.avatar_url ? avatarCache[member.avatar_url] : undefined
-          const size = cachedBase64 ? markerSizes.avatar : markerSizes.base
+          const cachedPng = member.avatar_url ? markerPngCache[member.avatar_url] : undefined
+          const size = cachedPng ? markerSizes.avatar : markerSizes.base
           return (
             <Marker
               key={member.id}
@@ -274,11 +291,7 @@ function MapMarkers({
               onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
               title={member.display_name || 'Member'}
               icon={{
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-                  cachedBase64
-                    ? getMemberAvatarMarkerSvg(cachedBase64, size)
-                    : getMemberDotMarkerSvg(size)
-                ),
+                url: cachedPng || getMemberDotPng(size),
                 scaledSize: { width: size, height: size, equals: () => false },
                 anchor: { x: size / 2, y: size / 2, equals: () => false },
               }}
@@ -287,8 +300,8 @@ function MapMarkers({
         })}
       {showHubs &&
         filteredHubs.map((hub) => {
-          const cachedHubBase64 = hub.image_url ? avatarCache[hub.image_url] : undefined
-          const size = cachedHubBase64 ? markerSizes.avatar : markerSizes.base
+          const cachedPng = hub.image_url ? markerPngCache[hub.image_url] : undefined
+          const size = cachedPng ? markerSizes.avatar : markerSizes.base
           return (
             <Marker
               key={hub.id}
@@ -296,11 +309,7 @@ function MapMarkers({
               onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
               title={hub.name}
               icon={{
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-                  cachedHubBase64
-                    ? getHubImageMarkerSvg(cachedHubBase64, size)
-                    : getHubMarkerSvg(size)
-                ),
+                url: cachedPng || getHubDotPng(size),
                 scaledSize: { width: size, height: size, equals: () => false },
                 anchor: { x: size / 2, y: size / 2, equals: () => false },
               }}
@@ -317,7 +326,7 @@ function MapMarkers({
               onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
               title={invite.target_name || 'Pending'}
               icon={{
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(getPendingMarkerSvg(size)),
+                url: getPendingDotPng(size),
                 scaledSize: { width: size, height: size, equals: () => false },
                 anchor: { x: size / 2, y: size / 2, equals: () => false },
               }}
@@ -346,24 +355,33 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const mapRef = useRef<google.maps.Map | null>(null)
   const fullscreenMapRef = useRef<google.maps.Map | null>(null)
 
-  // Avatar base64 cache: avatar_url -> base64 data URL
-  const [avatarCache, setAvatarCache] = useState<Record<string, string>>({})
+  // Marker PNG cache: avatar_url -> composited marker PNG data URL
+  const [markerPngCache, setMarkerPngCache] = useState<Record<string, string>>({})
+  // Track failed URLs to avoid retrying
+  const failedUrlsRef = useRef<Set<string>>(new Set())
 
-  // Preload avatar/hub images as base64
+  // Preload avatar/hub images and compose into marker PNGs
   useEffect(() => {
-    const urls: string[] = []
-    members.forEach(m => { if (m.avatar_url) urls.push(m.avatar_url) })
-    hubs.forEach(h => { if (h.image_url) urls.push(h.image_url) })
+    const urls: { url: string; color: string; size: number }[] = []
+    members.forEach(m => {
+      if (m.avatar_url) urls.push({ url: m.avatar_url, color: '#22c55e', size: 52 })
+    })
+    hubs.forEach(h => {
+      if (h.image_url) urls.push({ url: h.image_url, color: '#f97316', size: 52 })
+    })
     if (urls.length === 0) return
 
     let mounted = true
-    urls.forEach(url => {
-      if (avatarCache[url]) return // already cached
-      loadAvatarAsBase64(url).then(base64 => {
-        if (mounted) {
-          setAvatarCache(prev => ({ ...prev, [url]: base64 }))
-        }
-      }).catch(() => {/* ignore failed loads */})
+    urls.forEach(({ url, color, size }) => {
+      if (markerPngCache[url] || failedUrlsRef.current.has(url)) return
+      loadAvatarAsBase64(url)
+        .then(base64 => drawAvatarMarkerPng(base64, size, color))
+        .then(pngUrl => {
+          if (mounted) {
+            setMarkerPngCache(prev => ({ ...prev, [url]: pngUrl }))
+          }
+        })
+        .catch(() => { failedUrlsRef.current.add(url) })
     })
 
     return () => { mounted = false }
@@ -489,7 +507,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
                 markerSizes={markerSizes}
-                avatarCache={avatarCache}
+                markerPngCache={markerPngCache}
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
@@ -756,7 +774,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
                 markerSizes={markerSizes}
-                avatarCache={avatarCache}
+                markerPngCache={markerPngCache}
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
