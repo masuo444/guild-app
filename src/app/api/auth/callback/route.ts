@@ -309,16 +309,26 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // 招待者に100ポイント（Invite Bonus）を付与（Service Roleで確実に挿入）
+        // 招待者に100ポイント（Invite Bonus）を付与（重複チェック付き）
         if (invitedBy) {
-          const { error: inviteBonusError } = await supabaseAdmin.from('activity_logs').insert({
-            user_id: invitedBy,
-            type: 'Invite Bonus',
-            note: '新メンバーを招待しました',
-            points: 100,
-          })
-          if (inviteBonusError) {
-            console.error('Failed to insert invite bonus:', inviteBonusError)
+          const { data: existingBonus } = await supabaseAdmin
+            .from('activity_logs')
+            .select('id')
+            .eq('user_id', invitedBy)
+            .eq('type', 'Invite Bonus')
+            .eq('note', user.id)
+            .single()
+
+          if (!existingBonus) {
+            const { error: inviteBonusError } = await supabaseAdmin.from('activity_logs').insert({
+              user_id: invitedBy,
+              type: 'Invite Bonus',
+              note: user.id,
+              points: 100,
+            })
+            if (inviteBonusError) {
+              console.error('Failed to insert invite bonus:', inviteBonusError)
+            }
           }
 
           // 招待クエスト自動達成（無料メンバーのみ。有料はStripe webhookで処理）
