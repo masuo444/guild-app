@@ -110,11 +110,11 @@ function getMarkerSize(zoom: number): { base: number; avatar: number } {
   }
 }
 
-// ---- Marker icon URLs (hosted SVG files) ----
+// ---- Marker icons as inline data URLs (never 404 → never show "?") ----
 const MARKER_URLS = {
-  member: '/markers/member.svg',
-  hub: '/markers/hub.svg',
-  pending: '/markers/pending.svg',
+  member: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iIzIyYzU1ZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+',
+  hub: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iI2Y5NzMxNiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+',
+  pending: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iI2E4NTVmNyIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+',
 } as const
 
 // Generate a circular avatar image as a data URL for use as a map marker
@@ -265,7 +265,11 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
     Promise.allSettled(
       membersWithAvatars.map(async (member) => {
         const dataUrl = await createCircularMarkerIcon(member.avatar_url!, 40)
-        return { id: member.id, dataUrl }
+        // Validate: must be a real PNG data URL with actual content
+        if (dataUrl && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length > 100) {
+          return { id: member.id, dataUrl }
+        }
+        throw new Error('invalid data url')
       })
     ).then((results) => {
       if (cancelled) return
