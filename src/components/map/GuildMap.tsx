@@ -93,77 +93,13 @@ function applyAllCoordinateOffsets(
   return { members: resultMembers, hubs: resultHubs, pending: resultPending }
 }
 
-// Calculate marker size based on zoom level (circle style)
-function getMarkerSize(zoom: number): { base: number; avatar: number } {
-  if (zoom <= 3) {
-    return { base: 20, avatar: 28 }
-  } else if (zoom <= 5) {
-    return { base: 24, avatar: 32 }
-  } else if (zoom <= 8) {
-    return { base: 28, avatar: 36 }
-  } else if (zoom <= 10) {
-    return { base: 32, avatar: 40 }
-  } else if (zoom <= 13) {
-    return { base: 36, avatar: 44 }
-  } else {
-    return { base: 44, avatar: 52 }
-  }
-}
-
-// ---- Generate colored circle PNG via canvas (Google Maps Marker does NOT reliably support SVG data URLs) ----
-function createCirclePng(color: string, size: number): string {
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return ''
-  ctx.beginPath()
-  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
-  ctx.fillStyle = '#ffffff'
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2)
-  ctx.fillStyle = color
-  ctx.fill()
-  return canvas.toDataURL('image/png')
-}
-
-// Generate a circular avatar image as a PNG data URL for use as a map marker
-function createAvatarPng(imageUrl: string, size: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas')
-    canvas.width = size
-    canvas.height = size
-    const ctx = canvas.getContext('2d')
-    if (!ctx) { reject(new Error('no canvas context')); return }
-
-    // White circle border
-    ctx.beginPath()
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
-    ctx.fillStyle = '#ffffff'
-    ctx.fill()
-
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      // Clip to inner circle
-      ctx.beginPath()
-      ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2)
-      ctx.closePath()
-      ctx.clip()
-      // Draw the avatar image
-      ctx.drawImage(img, 2, 2, size - 4, size - 4)
-      const dataUrl = canvas.toDataURL('image/png')
-      if (dataUrl && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length > 200) {
-        resolve(dataUrl)
-      } else {
-        reject(new Error('invalid data url'))
-      }
-    }
-    img.onerror = () => reject(new Error('image load failed'))
-    img.src = imageUrl
-  })
-}
+// ---- Default marker icons using google.maps.Symbol (vector, no image loading, NEVER fails) ----
+// google.maps.SymbolPath.CIRCLE = 0
+const MARKER_SYMBOLS = {
+  member:  { path: 0, scale: 10, fillColor: '#22c55e', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
+  hub:     { path: 0, scale: 10, fillColor: '#f97316', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
+  pending: { path: 0, scale: 10, fillColor: '#a855f7', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
+} as const
 
 interface MemberRole {
   role_id: string
@@ -198,8 +134,7 @@ interface SelectedItem {
 }
 
 // Inner component for rendering map markers
-// IMPORTANT: icon prop must be a valid PNG data URL or undefined (default Google pin).
-// Never pass an invalid/unloadable URL — that causes the "?" icon.
+// Uses google.maps.Symbol objects (vector circles) — no image loading, "?" is impossible.
 function MapMarkers({
   showMembers,
   showHubs,
@@ -207,8 +142,6 @@ function MapMarkers({
   filteredMembers,
   filteredHubs,
   filteredPending,
-  avatarIcons,
-  defaultIcons,
   onMarkerClick,
 }: {
   showMembers: boolean
@@ -217,8 +150,6 @@ function MapMarkers({
   filteredMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[]
   filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
   filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
-  avatarIcons: Record<string, string>
-  defaultIcons: { member: string; hub: string; pending: string } | null
   onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
 }) {
   return (
@@ -230,7 +161,7 @@ function MapMarkers({
             position={{ lat: member.offsetLat, lng: member.offsetLng }}
             onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
             title={member.display_name || 'Member'}
-            icon={avatarIcons[member.id] || defaultIcons?.member || undefined}
+            icon={MARKER_SYMBOLS.member}
           />
         ))}
       {showHubs &&
@@ -240,7 +171,7 @@ function MapMarkers({
             position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
             onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
             title={hub.name}
-            icon={defaultIcons?.hub || undefined}
+            icon={MARKER_SYMBOLS.hub}
           />
         ))}
       {showPending &&
@@ -250,7 +181,7 @@ function MapMarkers({
             position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
             onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
             title={invite.target_name || 'Pending'}
-            icon={defaultIcons?.pending || undefined}
+            icon={MARKER_SYMBOLS.pending}
           />
         ))}
     </>
@@ -275,44 +206,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const mapRef = useRef<google.maps.Map | null>(null)
   const fullscreenMapRef = useRef<google.maps.Map | null>(null)
 
-  // Generate default colored-circle PNG markers (runs once on mount)
-  const [defaultIcons, setDefaultIcons] = useState<{ member: string; hub: string; pending: string } | null>(null)
-  useEffect(() => {
-    setDefaultIcons({
-      member: createCirclePng('#22c55e', 24),
-      hub: createCirclePng('#f97316', 24),
-      pending: createCirclePng('#a855f7', 24),
-    })
-  }, [])
-
-  // Generate circular avatar icons for members with profile images
-  const [avatarIcons, setAvatarIcons] = useState<Record<string, string>>({})
-  useEffect(() => {
-    let cancelled = false
-    const membersWithAvatars = members.filter(m => m.avatar_url)
-    if (membersWithAvatars.length === 0) return
-
-    Promise.allSettled(
-      membersWithAvatars.map(async (member) => {
-        const dataUrl = await createAvatarPng(member.avatar_url!, 40)
-        return { id: member.id, dataUrl }
-      })
-    ).then((results) => {
-      if (cancelled) return
-      const icons: Record<string, string> = {}
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          icons[result.value.id] = result.value.dataUrl
-        }
-      }
-      setAvatarIcons(icons)
-    })
-
-    return () => { cancelled = true }
-  }, [members])
-
-  // Get current marker sizes based on zoom
-  const markerSizes = useMemo(() => getMarkerSize(zoomLevel), [zoomLevel])
+  // Marker sizes no longer needed (using google.maps.Symbol which handles its own sizing)
 
   // Prevent body scroll when fullscreen
   useEffect(() => {
@@ -429,8 +323,6 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredMembers={filteredMembers}
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
-                avatarIcons={avatarIcons}
-                defaultIcons={defaultIcons}
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
@@ -696,8 +588,6 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredMembers={filteredMembers}
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
-                avatarIcons={avatarIcons}
-                defaultIcons={defaultIcons}
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
