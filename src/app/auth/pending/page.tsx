@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { useLanguage, LanguageProvider } from '@/lib/i18n'
 
 function PendingContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const sessionId = searchParams.get('session_id')
   const { t } = useLanguage()
   const [status, setStatus] = useState<'checking' | 'pending' | 'active'>('checking')
   const [attempts, setAttempts] = useState(0)
@@ -15,6 +17,32 @@ function PendingContent() {
 
   useEffect(() => {
     const supabase = createClient()
+    let interval: ReturnType<typeof setInterval> | null = null
+
+    // Stripe session_id がある場合、直接アクティベーションを試行
+    async function activateViaSession(): Promise<boolean> {
+      if (!sessionId) return false
+
+      try {
+        const res = await fetch('/api/stripe/verify-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          if (data.activated) {
+            setStatus('active')
+            setTimeout(() => router.push('/app'), 1500)
+            return true
+          }
+        }
+      } catch {
+        // verify-session失敗時はポーリングにフォールバック
+      }
+      return false
+    }
 
     async function checkStatus() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -32,7 +60,7 @@ function PendingContent() {
 
       if (profile?.subscription_status === 'active' && profile?.membership_status === 'active') {
         setStatus('active')
-        // 少し待ってからリダイレクト
+        if (interval) clearInterval(interval)
         setTimeout(() => router.push('/app'), 1500)
         return
       }
@@ -42,19 +70,28 @@ function PendingContent() {
       setAttempts(attemptsRef.current)
     }
 
-    checkStatus()
+    async function init() {
+      // まずStripeセッションで直接アクティベーション
+      const activated = await activateViaSession()
+      if (activated) return
 
-    // 2秒ごとにステータスをチェック（最大30回 = 1分）
-    const interval = setInterval(() => {
-      if (attemptsRef.current < 30) {
-        checkStatus()
-      } else {
-        clearInterval(interval)
-      }
-    }, 2000)
+      // 失敗時はWebhook待ちのポーリング
+      checkStatus()
+      interval = setInterval(() => {
+        if (attemptsRef.current < 30) {
+          checkStatus()
+        } else {
+          if (interval) clearInterval(interval)
+        }
+      }, 2000)
+    }
 
-    return () => clearInterval(interval)
-  }, [router])
+    init()
+
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [router, sessionId])
 
   if (status === 'checking') {
     return (
@@ -125,7 +162,15 @@ function PendingContent() {
 export default function PendingPage() {
   return (
     <LanguageProvider>
-      <PendingContent />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+            <div className="animate-spin w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full" />
+          </div>
+        }
+      >
+        <PendingContent />
+      </Suspense>
     </LanguageProvider>
   )
 }

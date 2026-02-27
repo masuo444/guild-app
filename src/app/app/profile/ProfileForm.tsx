@@ -15,9 +15,10 @@ import { useLanguage } from '@/lib/i18n'
 interface ProfileFormProps {
   profile: Profile
   email: string
+  renewalCount: number
 }
 
-export function ProfileForm({ profile, email }: ProfileFormProps) {
+export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) {
   const router = useRouter()
   const { language, setLanguage, t } = useLanguage()
   const [saving, setSaving] = useState(false)
@@ -591,6 +592,60 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
               </span>
             </div>
           </div>
+
+          {/* 1年継続バッジ進捗 */}
+          {profile.subscription_status === 'active' && profile.membership_type === 'standard' && (
+            <div className="mt-4 p-4 rounded-xl border border-zinc-500/30" style={{
+              background: profile.badges?.includes('one_year')
+                ? 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(244,208,63,0.08))'
+                : 'rgba(255,255,255,0.03)',
+            }}>
+              {profile.badges?.includes('one_year') ? (
+                <div className="flex items-center gap-3">
+                  <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+                    <path d="M12 30 L8 40 L14 36 L20 40 L20 30" fill="#c0392b" />
+                    <path d="M28 30 L32 40 L26 36 L20 40 L20 30" fill="#e74c3c" />
+                    <circle cx="20" cy="18" r="16" fill="url(#medalGoldProfile)" stroke="#b8860b" strokeWidth="1.5" />
+                    <circle cx="20" cy="18" r="13" fill="none" stroke="#f5e6d3" strokeWidth="0.5" opacity="0.6" />
+                    <text x="20" y="22" textAnchor="middle" fill="#5a3e1b" fontSize="12" fontWeight="bold" fontFamily="serif">1Y</text>
+                    <defs>
+                      <radialGradient id="medalGoldProfile" cx="40%" cy="35%" r="60%">
+                        <stop offset="0%" stopColor="#f4d03f" />
+                        <stop offset="100%" stopColor="#d4af37" />
+                      </radialGradient>
+                    </defs>
+                  </svg>
+                  <div>
+                    <p className="text-amber-300 font-bold text-sm">{t.badgeOneYearTitle}</p>
+                    <p className="text-zinc-400 text-xs">{t.badgeOneYearDesc}</p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg width="20" height="20" viewBox="0 0 40 40" fill="none" opacity="0.5">
+                      <circle cx="20" cy="18" r="16" fill="none" stroke="#a89984" strokeWidth="1.5" />
+                      <text x="20" y="22" textAnchor="middle" fill="#a89984" fontSize="12" fontWeight="bold" fontFamily="serif">1Y</text>
+                    </svg>
+                    <p className="text-zinc-300 text-sm font-medium">{t.badgeOneYearProgress}</p>
+                  </div>
+                  <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden mb-1.5">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(((renewalCount + 1) / 12) * 100, 100)}%`,
+                        background: 'linear-gradient(90deg, #d4af37, #f4d03f)',
+                      }}
+                    />
+                  </div>
+                  <p className="text-zinc-400 text-xs">
+                    {t.badgeMonthsRemaining.replace('{months}', String(Math.max(12 - (renewalCount + 1), 0)))}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {profile.stripe_customer_id && (
             <Button
               variant="outline"

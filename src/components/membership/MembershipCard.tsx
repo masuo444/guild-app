@@ -371,6 +371,28 @@ export const THEME_OVERLAYS: Record<string, () => JSX.Element> = {
   arabian: ArabianOverlay,
 }
 
+// 1年継続バッジ（金メダル型）
+function OneYearBadge({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+      {/* リボン */}
+      <path d="M12 30 L8 40 L14 36 L20 40 L20 30" fill="#c0392b" />
+      <path d="M28 30 L32 40 L26 36 L20 40 L20 30" fill="#e74c3c" />
+      {/* メダル本体 */}
+      <circle cx="20" cy="18" r="16" fill="url(#medalGold)" stroke="#b8860b" strokeWidth="1.5" />
+      <circle cx="20" cy="18" r="13" fill="none" stroke="#f5e6d3" strokeWidth="0.5" opacity="0.6" />
+      {/* テキスト */}
+      <text x="20" y="22" textAnchor="middle" fill="#5a3e1b" fontSize="12" fontWeight="bold" fontFamily="serif">1Y</text>
+      <defs>
+        <radialGradient id="medalGold" cx="40%" cy="35%" r="60%">
+          <stop offset="0%" stopColor="#f4d03f" />
+          <stop offset="100%" stopColor="#d4af37" />
+        </radialGradient>
+      </defs>
+    </svg>
+  )
+}
+
 // ギルドエンブレム（盾型シンボル）
 function GuildEmblem({ primary, bgFrom, bgTo }: { primary: string; bgFrom: string; bgTo: string }) {
   return (
@@ -557,6 +579,7 @@ export function MembershipCard({ profile, points, inviteCount = 0, masuPoints = 
                       {MEMBERSHIP_TYPE_LABELS[membershipType]}
                     </span>
                   )}
+                  {profile.badges?.includes('one_year') && <OneYearBadge size={22} />}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <div

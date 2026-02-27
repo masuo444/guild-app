@@ -58,6 +58,7 @@ export interface Profile {
   show_location_on_map: boolean
   invited_by: string | null
   card_theme: string | null
+  badges: string[]
   serial_number: number | null
   created_at: string
 }

@@ -208,6 +208,30 @@ export async function POST(request: Request) {
           })
         }
 
+        // 1年継続バッジチェック
+        const { count: renewalCount } = await supabase
+          .from('activity_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('type', 'Renewal Bonus')
+
+        if ((renewalCount ?? 0) >= 11) {
+          const { data: badgeProfile } = await supabase
+            .from('profiles')
+            .select('badges')
+            .eq('id', userId)
+            .single()
+
+          if (badgeProfile && !(badgeProfile.badges ?? []).includes('one_year')) {
+            await supabase
+              .from('profiles')
+              .update({
+                badges: [...(badgeProfile.badges ?? []), 'one_year'],
+              })
+              .eq('id', userId)
+          }
+        }
+
         break
       }
     }

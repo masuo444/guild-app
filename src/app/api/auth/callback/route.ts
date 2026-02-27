@@ -250,7 +250,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (inviteCode) {
-      console.log('Processing invite code:', inviteCode)
       // 招待コードを取得（Service Roleで確実に取得）
       const { data: invite, error: inviteError } = await supabaseAdmin
         .from('invites')
@@ -261,8 +260,6 @@ export async function GET(request: NextRequest) {
       if (inviteError) {
         console.error('Failed to fetch invite:', inviteError)
       }
-
-      console.log('Invite data:', invite)
 
       // reusable の場合は used フラグを無視
       const isInviteValid = invite && (invite.reusable ? true : !invite.used)
@@ -275,8 +272,6 @@ export async function GET(request: NextRequest) {
         targetCity = invite.target_city || null
         targetLat = invite.target_lat ?? null
         targetLng = invite.target_lng ?? null
-        console.log('Setting membershipType from invite:', membershipType)
-
         // 無料メンバータイプの場合はfreeに
         if (isFreeMembershipType(membershipType)) {
           subscriptionStatus = 'free'
@@ -386,7 +381,6 @@ export async function GET(request: NextRequest) {
 
     if (profile) {
       // トリガーで作成された不完全プロフィールを更新
-      console.log('Updating incomplete profile with data:', profileUpdateData)
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({
@@ -406,7 +400,6 @@ export async function GET(request: NextRequest) {
         ...profileUpdateData,
         membership_id: newMembershipId,
       }
-      console.log('Creating profile with data:', profileData)
       const { error: profileError } = await supabaseAdmin.from('profiles').insert(profileData)
 
       if (profileError) {

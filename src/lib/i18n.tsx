@@ -551,6 +551,12 @@ const translations = {
     aboutBrandMasukame: 'MASUKAME',
     aboutBrandSagishima: 'Sagishima Gallery',
     aboutBrandArchitecture: 'Architecture',
+
+    // Badge
+    badgeOneYearTitle: '1年継続バッジ',
+    badgeOneYearDesc: '有料メンバーシップを1年間継続しました！',
+    badgeOneYearProgress: '1年継続バッジへの道',
+    badgeMonthsRemaining: 'あと{months}ヶ月で獲得！',
   },
   en: {
     // Landing Page
@@ -1096,6 +1102,12 @@ const translations = {
     aboutBrandMasukame: 'MASUKAME',
     aboutBrandSagishima: 'Sagishima Gallery',
     aboutBrandArchitecture: 'Architecture',
+
+    // Badge
+    badgeOneYearTitle: '1-Year Badge',
+    badgeOneYearDesc: 'Maintained paid membership for 1 year!',
+    badgeOneYearProgress: 'Road to 1-Year Badge',
+    badgeMonthsRemaining: '{months} months to go!',
   },
 }
 
