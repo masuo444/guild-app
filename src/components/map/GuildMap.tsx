@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { APIProvider, Map, Marker, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, Marker, AdvancedMarker } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
@@ -155,6 +155,22 @@ function ImageMarker({ src, name, color }: { src: string; name: string; color: s
   )
 }
 
+// Simple colored circle marker (no image, just a colored dot)
+function CircleMarker({ color, label }: { color: string; label?: string }) {
+  return (
+    <div style={{
+      width: 28, height: 28, borderRadius: '50%',
+      border: '3px solid #ffffff', background: color,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+    }}>
+      {label && (
+        <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>{label}</span>
+      )}
+    </div>
+  )
+}
+
 // Inner component for rendering map markers
 // With MAP_ID: uses AdvancedMarker (HTML/CSS rendering, profile images, colored pins)
 // Without MAP_ID: uses regular Marker with NO icon prop (default red pin, "?" is impossible)
@@ -190,7 +206,7 @@ function MapMarkers({
               {member.avatar_url ? (
                 <ImageMarker src={member.avatar_url} name={member.display_name || 'M'} color="#22c55e" />
               ) : (
-                <Pin background="#22c55e" borderColor="#ffffff" glyphColor="#ffffff" />
+                <CircleMarker color="#22c55e" />
               )}
             </AdvancedMarker>
           ))}
@@ -205,7 +221,7 @@ function MapMarkers({
               {hub.image_url ? (
                 <ImageMarker src={hub.image_url} name={hub.name} color="#f97316" />
               ) : (
-                <Pin background="#f97316" borderColor="#ffffff" glyphColor="#ffffff" />
+                <CircleMarker color="#f97316" />
               )}
             </AdvancedMarker>
           ))}
@@ -217,7 +233,7 @@ function MapMarkers({
               onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
               title={invite.target_name || 'Pending'}
             >
-              <Pin background="#a855f7" borderColor="#ffffff" glyphColor="#ffffff" />
+              <CircleMarker color="#a855f7" />
             </AdvancedMarker>
           ))}
       </>
