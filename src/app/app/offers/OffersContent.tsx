@@ -64,31 +64,40 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
       {/* カテゴリカード（2x2グリッド） */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         {([
-          { key: 'quests' as Tab, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', label: t.quests, badge: activeQuests.length > 0 ? activeQuests.length : null },
-          { key: 'exchange' as Tab, icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', label: t.pointExchange, badge: null },
-          { key: 'services' as Tab, icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t.fomusServices, badge: null },
-          { key: 'articles' as Tab, icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z', label: t.exclusiveArticles, badge: null },
-        ]).map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(activeTab === tab.key ? tab.key : tab.key)}
-            className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl text-sm font-medium transition-colors border ${
-              activeTab === tab.key
-                ? 'bg-[#c0c0c0]/15 text-white border-[#c0c0c0]/40'
-                : 'bg-white/5 text-zinc-400 hover:bg-white/10 border-zinc-700/50'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
-            </svg>
-            <span className="text-xs">{tab.label}</span>
-            {tab.badge && (
-              <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/30 text-amber-300">
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
+          { key: 'quests' as Tab, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', label: t.quests, badge: activeQuests.length > 0 ? activeQuests.length : null, color: 'green' },
+          { key: 'exchange' as Tab, icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', label: t.pointExchange, badge: null, color: 'amber' },
+          { key: 'services' as Tab, icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t.fomusServices, badge: null, color: 'blue' },
+          { key: 'articles' as Tab, icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z', label: t.exclusiveArticles, badge: null, color: 'purple' },
+        ]).map((tab) => {
+          const colorMap = {
+            green:  { active: 'bg-green-500/15 text-green-300 border-green-500/40', icon: 'text-green-400', badge: 'bg-green-500/30 text-green-300' },
+            amber:  { active: 'bg-amber-500/15 text-amber-300 border-amber-500/40', icon: 'text-amber-400', badge: 'bg-amber-500/30 text-amber-300' },
+            blue:   { active: 'bg-blue-500/15 text-blue-300 border-blue-500/40', icon: 'text-blue-400', badge: 'bg-blue-500/30 text-blue-300' },
+            purple: { active: 'bg-purple-500/15 text-purple-300 border-purple-500/40', icon: 'text-purple-400', badge: 'bg-purple-500/30 text-purple-300' },
+          }
+          const c = colorMap[tab.color as keyof typeof colorMap]
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl text-sm font-medium transition-colors border ${
+                activeTab === tab.key
+                  ? c.active
+                  : 'bg-white/5 text-zinc-400 hover:bg-white/10 border-zinc-700/50'
+              }`}
+            >
+              <svg className={`w-5 h-5 ${activeTab === tab.key ? c.icon : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
+              </svg>
+              <span className="text-xs">{tab.label}</span>
+              {tab.badge && (
+                <span className={`absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${c.badge}`}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* クエストタブ */}
@@ -194,18 +203,47 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
       {/* 限定記事タブ */}
       {activeTab === 'articles' && (
         <div>
-          <Card>
-            <CardContent className="py-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                </svg>
+          <Card className="overflow-hidden">
+            {/* サムネイル画像（後ほど配置） */}
+            <div className="aspect-video overflow-hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50">
+              <img
+                src="/articles/massu-thumbnail.jpg"
+                alt={language === 'ja' ? 'まっすー海外活動記' : 'Massu Overseas Activities'}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const el = e.currentTarget
+                  el.style.display = 'none'
+                  el.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-16 h-16 text-purple-400/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg></div>'
+                }}
+              />
+            </div>
+            <CardContent className="py-5">
+              <h3 className="text-lg font-bold text-white mb-2">
+                {language === 'ja' ? 'まっすー海外活動記' : 'Massu Overseas Activities'}
+              </h3>
+
+              {/* パスワード案内 */}
+              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 mb-4">
+                <p className="text-sm text-purple-200 mb-1.5">{t.articlePasswordNote}</p>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-xs text-zinc-400">Password:</span>
+                  <code className="px-2 py-0.5 bg-white/10 rounded text-sm font-mono text-white">{t.articlePasswordValue}</code>
+                </div>
+                <p className="text-xs text-red-400">{t.articlePasswordWarning}</p>
               </div>
-              <p className="text-zinc-300">{t.noArticlesAvailable}</p>
-              <p className="text-zinc-500 text-sm mt-1">{t.stayTunedArticles}</p>
-              <span className="inline-block mt-3 px-3 py-1 text-xs font-medium rounded-full bg-amber-500/20 text-amber-300">
-                {t.comingSoon}
-              </span>
+
+              {/* 記事を読むボタン */}
+              <a
+                href="https://note.com/massu_kaigai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                {t.articleReadButton}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
             </CardContent>
           </Card>
         </div>
