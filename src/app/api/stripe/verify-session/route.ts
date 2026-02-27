@@ -5,13 +5,6 @@ import { generateMembershipId } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { sessionId } = await request.json()
 
     if (!sessionId) {
@@ -25,38 +18,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment not completed' }, { status: 400 })
     }
 
-    // Verify the session belongs to this user (by email match)
-    if (session.customer_details?.email !== user.email) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // 決済確認済み → プロフィールを直接アクティベート（Webhook待ち不要）
+    // 認証済みユーザーがいる場合はプロフィールを直接アクティベート
     let activated = false
-    const supabaseAdmin = createServiceClient()
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('subscription_status, membership_id')
-      .eq('id', user.id)
-      .single()
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (profile && profile.subscription_status !== 'active') {
-      const updateData: Record<string, string> = {
-        stripe_customer_id: session.customer as string,
-        stripe_subscription_id: session.subscription as string,
-        subscription_status: 'active',
-        membership_status: 'active',
-      }
-
-      if (!profile.membership_id) {
-        updateData.membership_id = generateMembershipId()
-      }
-
-      await supabaseAdmin
+    if (user && session.customer_details?.email === user.email) {
+      const supabaseAdmin = createServiceClient()
+      const { data: profile } = await supabaseAdmin
         .from('profiles')
-        .update(updateData)
+        .select('subscription_status, membership_id')
         .eq('id', user.id)
+        .single()
 
-      activated = true
+      if (profile && profile.subscription_status !== 'active') {
+        const updateData: Record<string, string> = {
+          stripe_customer_id: session.customer as string,
+          stripe_subscription_id: session.subscription as string,
+          subscription_status: 'active',
+          membership_status: 'active',
+        }
+
+        if (!profile.membership_id) {
+          updateData.membership_id = generateMembershipId()
+        }
+
+        await supabaseAdmin
+          .from('profiles')
+          .update(updateData)
+          .eq('id', user.id)
+
+        activated = true
+      } else if (profile?.subscription_status === 'active') {
+        activated = true
+      }
     }
 
     return NextResponse.json({
@@ -64,7 +59,7 @@ export async function POST(request: NextRequest) {
       subscriptionId: session.subscription,
       customerId: session.customer,
       inviteCode: session.metadata?.invite_code,
-      activated: activated || profile?.subscription_status === 'active',
+      activated,
     })
   } catch {
     return NextResponse.json(
