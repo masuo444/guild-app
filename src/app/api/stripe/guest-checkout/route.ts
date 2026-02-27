@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient()
     const { data: invite, error } = await supabase
       .from('invites')
-      .select('code, used, membership_type, reusable')
+      .select('code, used, membership_type, reusable, use_count')
       .eq('code', inviteCode)
       .single()
 
@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invite code not found' }, { status: 400 })
     }
 
-    // reusable の場合は used フラグを無視
-    const isValid = invite.reusable ? true : !invite.used
+    // reusable の場合は use_count < 10 で判定
+    const isValid = invite.reusable ? (invite.use_count || 0) < 10 : !invite.used
     if (!isValid) {
       return NextResponse.json({ error: 'Invite code already used' }, { status: 400 })
     }

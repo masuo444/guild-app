@@ -563,6 +563,12 @@ const translations = {
     onboardingTitle: 'ようこそ FOMUS GUILD へ！',
     onboardingSubtitle: 'まずはプロフィールを設定しましょう',
     onboardingComplete: '設定完了！',
+
+    // Invite Quest
+    inviteCreateLink: '招待リンクを作成',
+    inviteUsage: '{count}/10 使用済み',
+    inviteMaxReached: '上限に達しました',
+    inviteNewCode: '新しい招待リンクを作成',
   },
   en: {
     // Landing Page
@@ -1120,6 +1126,12 @@ const translations = {
     onboardingTitle: 'Welcome to FOMUS GUILD!',
     onboardingSubtitle: 'Let\'s set up your profile first',
     onboardingComplete: 'Setup Complete!',
+
+    // Invite Quest
+    inviteCreateLink: 'Create Invite Link',
+    inviteUsage: '{count}/10 used',
+    inviteMaxReached: 'Limit reached',
+    inviteNewCode: 'Create New Invite Link',
   },
 }
 

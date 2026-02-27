@@ -292,8 +292,8 @@ export async function GET(request: NextRequest) {
         console.error('Failed to fetch invite:', inviteError)
       }
 
-      // reusable の場合は used フラグを無視
-      const isInviteValid = invite && (invite.reusable ? true : !invite.used)
+      // reusable の場合は use_count < 10 で判定、通常は used フラグで判定
+      const isInviteValid = invite && (invite.reusable ? (invite.use_count || 0) < 10 : !invite.used)
 
       if (isInviteValid) {
         invitedBy = invite.invited_by

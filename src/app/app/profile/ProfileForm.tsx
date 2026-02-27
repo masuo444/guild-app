@@ -32,7 +32,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
 
   // 招待コード関連
   const [creatingInvite, setCreatingInvite] = useState(false)
-  const [myInvites, setMyInvites] = useState<Array<{ code: string; used: boolean; created_at: string }>>([])
+  const [myInvites, setMyInvites] = useState<Array<{ code: string; used: boolean; reusable?: boolean; use_count?: number; created_at: string }>>([])
   const [invitesLoaded, setInvitesLoaded] = useState(false)
   const [copiedInviteCode, setCopiedInviteCode] = useState<string | null>(null)
   const [lastCreatedInvite, setLastCreatedInvite] = useState<string | null>(null)
@@ -233,7 +233,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
     const supabase = createClient()
     const { data } = await supabase
       .from('invites')
-      .select('code, used, created_at')
+      .select('code, used, reusable, use_count, created_at')
       .eq('invited_by', profile.id)
       .order('created_at', { ascending: false })
       .limit(10)
@@ -244,7 +244,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
     setInvitesLoaded(true)
   }
 
-  // 招待コードを発行
+  // 招待コードを発行（reusable: 1コードで最大10人まで招待可能）
   const handleCreateInvite = async () => {
     setCreatingInvite(true)
     const supabase = createClient()
@@ -254,7 +254,8 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
       code,
       invited_by: profile.id,
       used: false,
-      membership_type: 'standard', // 一般ユーザーはスタンダードのみ
+      membership_type: 'standard',
+      reusable: true,
     }).select().single()
 
     setCreatingInvite(false)
@@ -263,7 +264,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
       console.error('招待コード作成エラー:', error)
       alert(`エラー: ${error.message}`)
     } else if (data) {
-      setMyInvites(prev => [{ code: data.code, used: false, created_at: data.created_at }, ...prev])
+      setMyInvites(prev => [{ code: data.code, used: false, reusable: true, use_count: 0, created_at: data.created_at }, ...prev])
       setLastCreatedInvite(code)
       // クリップボードにコピー
       const url = `${window.location.origin}/invite/${code}`
@@ -721,29 +722,38 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
 
             {invitesLoaded && myInvites.length > 0 && (
               <div className="mt-3 space-y-2">
-                {myInvites.map((invite) => (
-                  <div
-                    key={invite.code}
-                    className={`flex items-center justify-between p-2 rounded-lg ${
-                      invite.used ? 'bg-zinc-700/50' : 'bg-white/5'
-                    }`}
-                  >
-                    <div>
-                      <span className="font-mono text-sm text-white">{invite.code}</span>
-                      <span className={`ml-2 text-xs ${invite.used ? 'text-zinc-500' : 'text-green-400'}`}>
-                        {invite.used ? t.used : t.unused}
-                      </span>
+                {myInvites.map((invite) => {
+                  const isReusable = invite.reusable
+                  const useCount = invite.use_count || 0
+                  const isMaxed = isReusable && useCount >= 10
+                  const isUsed = isReusable ? isMaxed : invite.used
+
+                  return (
+                    <div
+                      key={invite.code}
+                      className={`flex items-center justify-between p-2 rounded-lg ${
+                        isUsed ? 'bg-zinc-700/50' : 'bg-white/5'
+                      }`}
+                    >
+                      <div>
+                        <span className="font-mono text-sm text-white">{invite.code}</span>
+                        <span className={`ml-2 text-xs ${isUsed ? 'text-zinc-500' : 'text-green-400'}`}>
+                          {isReusable
+                            ? t.inviteUsage.replace('{count}', String(useCount))
+                            : (invite.used ? t.used : t.unused)}
+                        </span>
+                      </div>
+                      {!isUsed && (
+                        <button
+                          onClick={() => copyInviteUrl(invite.code)}
+                          className="text-xs text-[#c0c0c0] hover:text-white transition-colors"
+                        >
+                          {copiedInviteCode === invite.code ? t.copied : t.copyUrl}
+                        </button>
+                      )}
                     </div>
-                    {!invite.used && (
-                      <button
-                        onClick={() => copyInviteUrl(invite.code)}
-                        className="text-xs text-[#c0c0c0] hover:text-white transition-colors"
-                      >
-                        {copiedInviteCode === invite.code ? t.copied : t.copyUrl}
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 

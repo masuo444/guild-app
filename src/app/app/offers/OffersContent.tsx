@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { GuildQuest, QuestSubmission, ExchangeItem, ExchangeOrder } from '@/types/database'
 import { Card, CardContent } from '@/components/ui/Card'
 import { QuestCard } from './QuestCard'
+import { InviteQuestCard } from './InviteQuestCard'
 import { QuestSubmitModal } from './QuestSubmitModal'
 import { useLanguage } from '@/lib/i18n'
 import { formatDate } from '@/lib/utils'
@@ -106,12 +107,21 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
           {activeQuests.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
               {activeQuests.map((quest) => (
-                <QuestCard
-                  key={quest.id}
-                  quest={quest}
-                  submissions={submissions.filter(s => s.quest_id === quest.id)}
-                  onSubmit={setSelectedQuest}
-                />
+                quest.title === '友達をGuildに招待しよう' ? (
+                  <InviteQuestCard
+                    key={quest.id}
+                    quest={quest}
+                    submissions={submissions.filter(s => s.quest_id === quest.id)}
+                    userId={userId}
+                  />
+                ) : (
+                  <QuestCard
+                    key={quest.id}
+                    quest={quest}
+                    submissions={submissions.filter(s => s.quest_id === quest.id)}
+                    onSubmit={setSelectedQuest}
+                  />
+                )
               ))}
             </div>
           ) : (

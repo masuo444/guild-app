@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid invite code' }, { status: 400 })
   }
 
-  const isValid = invite.reusable ? true : !invite.used
+  const isValid = invite.reusable ? (invite.use_count || 0) < 10 : !invite.used
   if (!isValid) {
     return NextResponse.json({ error: 'Invite code already used' }, { status: 400 })
   }

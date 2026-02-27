@@ -155,7 +155,7 @@ export default function LoginPage() {
 
     const { data, error } = await supabase
       .from('invites')
-      .select('code, used, membership_type, reusable')
+      .select('code, used, membership_type, reusable, use_count')
       .eq('code', inviteCode.toUpperCase().trim())
       .single()
 
@@ -165,7 +165,7 @@ export default function LoginPage() {
       return
     }
 
-    if (data.used && !data.reusable) {
+    if (data.reusable ? (data.use_count || 0) >= 10 : data.used) {
       setInviteError(t.codeAlreadyUsed)
       setInviteLoading(false)
       return
