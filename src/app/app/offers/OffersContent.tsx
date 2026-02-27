@@ -234,7 +234,7 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
 
               {/* 記事を読むボタン */}
               <a
-                href="https://note.com/massu_kaigai"
+                href="https://masu-blog.fomus.jp/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
