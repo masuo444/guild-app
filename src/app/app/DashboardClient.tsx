@@ -119,7 +119,7 @@ export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs,
         />
       </div>
 
-      {/* ガイド & Aboutリンク */}
+      {/* ガイドリンク */}
       <div className="flex items-center gap-3 mb-4">
         <Link
           href="/guide"
@@ -129,18 +129,7 @@ export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs,
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
           </svg>
           <span className="text-sm text-white font-medium">
-            {language === 'ja' ? 'アプリの使い方' : 'How to Use'}
-          </span>
-        </Link>
-        <Link
-          href="/about"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-zinc-500/30 transition-colors"
-        >
-          <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-          </svg>
-          <span className="text-sm text-white font-medium">
-            {language === 'ja' ? 'GUILDについて' : 'About'}
+            {language === 'ja' ? 'ガイド' : 'Guide'}
           </span>
         </Link>
       </div>

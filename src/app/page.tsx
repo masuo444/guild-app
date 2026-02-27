@@ -108,20 +108,13 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Guide & About Links */}
+              {/* Guide Link */}
               <div className="mt-4 flex items-center gap-3 justify-center md:justify-start">
                 <Link
                   href="/guide"
                   className="text-xs text-stone-400 hover:text-stone-600 transition-colors underline underline-offset-2"
                 >
-                  {language === 'ja' ? '使い方ガイドを見る' : 'View Guide'}
-                </Link>
-                <span className="text-xs text-stone-300">|</span>
-                <Link
-                  href="/about"
-                  className="text-xs text-stone-400 hover:text-stone-600 transition-colors underline underline-offset-2"
-                >
-                  {language === 'ja' ? 'FOMUS GUILDについて' : 'About'}
+                  {language === 'ja' ? 'ガイドを見る' : 'View Guide'}
                 </Link>
               </div>
             </div>

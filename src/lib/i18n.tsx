@@ -417,6 +417,10 @@ const translations = {
     guideFooterCtaDesc: '招待コードを持っている方は、今すぐギルドに参加できます。',
     guidePrintNote: 'このページはブラウザの「印刷」機能でPDF保存できます',
 
+    // Guide Page - Hero / Intro
+    guideHeroIntro: '日本の伝統工芸「枡」を起点に、世界中の仲間をつなぐ招待制コミュニティ。',
+    guideScreenshotAlt: 'スクリーンショット',
+
     // Update Password Page
     updatePassword: 'パスワードを更新',
     newPassword: '新しいパスワード',
@@ -953,6 +957,10 @@ const translations = {
     guideFooterCta: 'Join FOMUS GUILD',
     guideFooterCtaDesc: 'If you have an invite code, you can join the guild right now.',
     guidePrintNote: 'You can save this page as PDF using your browser\'s Print function',
+
+    // Guide Page - Hero / Intro
+    guideHeroIntro: 'An invitation-only community connecting people worldwide through the Japanese traditional craft of MASU.',
+    guideScreenshotAlt: 'Screenshot',
 
     // Update Password Page
     updatePassword: 'Update Password',
