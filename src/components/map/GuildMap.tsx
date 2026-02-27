@@ -117,6 +117,38 @@ const MARKER_URLS = {
   pending: '/markers/pending.svg',
 } as const
 
+// Generate a circular avatar image as a data URL for use as a map marker
+function createCircularMarkerIcon(imageUrl: string, size: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) { reject(new Error('no canvas context')); return }
+
+    // White circle border
+    ctx.beginPath()
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
+    ctx.fillStyle = '#ffffff'
+    ctx.fill()
+
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      // Clip to inner circle
+      ctx.beginPath()
+      ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2)
+      ctx.closePath()
+      ctx.clip()
+      // Draw the avatar image
+      ctx.drawImage(img, 2, 2, size - 4, size - 4)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.onerror = () => reject(new Error('image load failed'))
+    img.src = imageUrl
+  })
+}
+
 interface MemberRole {
   role_id: string
   role: CustomRole
@@ -157,6 +189,7 @@ function MapMarkers({
   filteredMembers,
   filteredHubs,
   filteredPending,
+  avatarIcons,
   onMarkerClick,
 }: {
   showMembers: boolean
@@ -165,6 +198,7 @@ function MapMarkers({
   filteredMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[]
   filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
   filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
+  avatarIcons: Record<string, string>
   onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
 }) {
   return (
@@ -176,7 +210,7 @@ function MapMarkers({
             position={{ lat: member.offsetLat, lng: member.offsetLng }}
             onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
             title={member.display_name || 'Member'}
-            icon={MARKER_URLS.member}
+            icon={avatarIcons[member.id] || MARKER_URLS.member}
           />
         ))}
       {showHubs &&
@@ -220,6 +254,32 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const [zoomLevel, setZoomLevel] = useState(3)
   const mapRef = useRef<google.maps.Map | null>(null)
   const fullscreenMapRef = useRef<google.maps.Map | null>(null)
+
+  // Generate circular avatar icons for members with profile images
+  const [avatarIcons, setAvatarIcons] = useState<Record<string, string>>({})
+  useEffect(() => {
+    let cancelled = false
+    const membersWithAvatars = members.filter(m => m.avatar_url)
+    if (membersWithAvatars.length === 0) return
+
+    Promise.allSettled(
+      membersWithAvatars.map(async (member) => {
+        const dataUrl = await createCircularMarkerIcon(member.avatar_url!, 40)
+        return { id: member.id, dataUrl }
+      })
+    ).then((results) => {
+      if (cancelled) return
+      const icons: Record<string, string> = {}
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          icons[result.value.id] = result.value.dataUrl
+        }
+      }
+      setAvatarIcons(icons)
+    })
+
+    return () => { cancelled = true }
+  }, [members])
 
   // Get current marker sizes based on zoom
   const markerSizes = useMemo(() => getMarkerSize(zoomLevel), [zoomLevel])
@@ -339,8 +399,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredMembers={filteredMembers}
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
-
-
+                avatarIcons={avatarIcons}
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
@@ -606,8 +665,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredMembers={filteredMembers}
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
-
-
+                avatarIcons={avatarIcons}
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
