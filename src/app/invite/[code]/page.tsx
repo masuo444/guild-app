@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { MembershipType, isFreeMembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
+import { getInviteMaxUses } from '@/lib/utils'
 import { Language, getInitialLanguage, getTranslations } from '@/lib/i18n'
 import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
@@ -50,7 +51,7 @@ export default function InvitePage() {
     async function checkInvite() {
       const { data, error } = await supabase
         .from('invites')
-        .select('used, membership_type, reusable, use_count')
+        .select('used, membership_type, reusable, use_count, invited_by')
         .eq('code', code)
         .single()
 
@@ -59,8 +60,18 @@ export default function InvitePage() {
         return
       }
 
-      // reusable の場合は use_count < 10 で判定
-      const isValid = data.reusable ? (data.use_count || 0) < 10 : !data.used
+      // reusable の場合は動的上限で判定
+      let isValid = !data.used
+      if (data.reusable) {
+        const { data: allInvites } = await supabase
+          .from('invites')
+          .select('use_count')
+          .eq('invited_by', data.invited_by)
+          .eq('reusable', true)
+        const totalInvites = allInvites?.reduce((sum, inv) => sum + (inv.use_count || 0), 0) || 0
+        const maxUses = getInviteMaxUses(totalInvites)
+        isValid = (data.use_count || 0) < maxUses
+      }
       if (!isValid) {
         setStatus('used')
         return

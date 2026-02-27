@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { MembershipType, isFreeMembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
+import { getInviteMaxUses } from '@/lib/utils'
 import { Language, getInitialLanguage, getTranslations } from '@/lib/i18n'
 import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
@@ -155,7 +156,7 @@ export default function LoginPage() {
 
     const { data, error } = await supabase
       .from('invites')
-      .select('code, used, membership_type, reusable, use_count')
+      .select('code, used, membership_type, reusable, use_count, invited_by')
       .eq('code', inviteCode.toUpperCase().trim())
       .single()
 
@@ -165,7 +166,18 @@ export default function LoginPage() {
       return
     }
 
-    if (data.reusable ? (data.use_count || 0) >= 10 : data.used) {
+    let isUsed = data.used
+    if (data.reusable) {
+      const { data: allInvites } = await supabase
+        .from('invites')
+        .select('use_count')
+        .eq('invited_by', data.invited_by)
+        .eq('reusable', true)
+      const totalInvites = allInvites?.reduce((sum, inv) => sum + (inv.use_count || 0), 0) || 0
+      const maxUses = getInviteMaxUses(totalInvites)
+      isUsed = (data.use_count || 0) >= maxUses
+    }
+    if (isUsed) {
       setInviteError(t.codeAlreadyUsed)
       setInviteLoading(false)
       return

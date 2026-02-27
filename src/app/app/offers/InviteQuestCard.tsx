@@ -5,7 +5,7 @@ import { GuildQuest, QuestSubmission } from '@/types/database'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
-import { generateInviteCode } from '@/lib/utils'
+import { generateInviteCode, getInviteMaxUses } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n'
 
 interface InviteQuestCardProps {
@@ -18,9 +18,11 @@ export function InviteQuestCard({ quest, submissions, userId }: InviteQuestCardP
   const { language, t } = useLanguage()
   const [creating, setCreating] = useState(false)
   const [activeInvite, setActiveInvite] = useState<{ code: string; use_count: number } | null>(null)
+  const [totalInvites, setTotalInvites] = useState(0)
   const [loaded, setLoaded] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  const maxUses = getInviteMaxUses(totalInvites)
   const approvedCount = submissions.filter(s => s.status === 'approved').length
 
   const title = (language === 'en' && quest.title_en) ? quest.title_en : quest.title
@@ -32,24 +34,33 @@ export function InviteQuestCard({ quest, submissions, userId }: InviteQuestCardP
       ? t.questTypeCheckin
       : t.questTypeAction
 
-  // ユーザーのアクティブな招待コードを取得
+  // ユーザーの招待コード情報を取得
   useEffect(() => {
-    const loadInvite = async () => {
+    const loadInvites = async () => {
       const supabase = createClient()
+
+      // 全reusableコードを取得して合計use_countを計算
       const { data } = await supabase
         .from('invites')
         .select('code, use_count')
         .eq('invited_by', userId)
         .eq('reusable', true)
         .order('created_at', { ascending: false })
-        .limit(1)
 
-      if (data && data.length > 0 && (data[0].use_count || 0) < 10) {
-        setActiveInvite({ code: data[0].code, use_count: data[0].use_count || 0 })
+      if (data) {
+        const total = data.reduce((sum, inv) => sum + (inv.use_count || 0), 0)
+        setTotalInvites(total)
+
+        const max = getInviteMaxUses(total)
+        // アクティブなコード（上限未到達）を探す
+        const active = data.find(inv => (inv.use_count || 0) < max)
+        if (active) {
+          setActiveInvite({ code: active.code, use_count: active.use_count || 0 })
+        }
       }
       setLoaded(true)
     }
-    loadInvite()
+    loadInvites()
   }, [userId])
 
   const handleCreate = async () => {
@@ -71,7 +82,6 @@ export function InviteQuestCard({ quest, submissions, userId }: InviteQuestCardP
       console.error('Invite creation error:', error)
     } else if (data) {
       setActiveInvite({ code: data.code, use_count: 0 })
-      // クリップボードにコピー
       const url = `${window.location.origin}/invite/${data.code}`
       navigator.clipboard.writeText(url)
       setCopied(true)
@@ -86,6 +96,8 @@ export function InviteQuestCard({ quest, submissions, userId }: InviteQuestCardP
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const isMaxed = activeInvite ? activeInvite.use_count >= maxUses : false
 
   return (
     <Card className="overflow-hidden">
@@ -131,9 +143,8 @@ export function InviteQuestCard({ quest, submissions, userId }: InviteQuestCardP
         {/* 招待リンクセクション */}
         {loaded && (
           <div className="border-t border-zinc-500/30 pt-4 mt-2">
-            {activeInvite ? (
+            {activeInvite && !isMaxed ? (
               <div className="space-y-3">
-                {/* 招待リンク表示 */}
                 <button
                   onClick={handleCopy}
                   className="w-full flex items-center justify-between p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors border border-zinc-500/30"
@@ -151,27 +162,21 @@ export function InviteQuestCard({ quest, submissions, userId }: InviteQuestCardP
                   </span>
                 </button>
 
-                {/* 使用状況 */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-zinc-400">
-                    {t.inviteUsage.replace('{count}', String(activeInvite.use_count))}
+                    {t.inviteUsage.replace('{count}', String(activeInvite.use_count)).replace('{max}', String(maxUses))}
                   </span>
-                  {activeInvite.use_count >= 10 ? (
-                    <span className="text-xs text-red-400">{t.inviteMaxReached}</span>
-                  ) : null}
                 </div>
-
-                {/* 上限到達時は新規作成ボタン */}
-                {activeInvite.use_count >= 10 && (
-                  <Button onClick={handleCreate} loading={creating} className="w-full" size="sm">
-                    {t.inviteNewCode}
-                  </Button>
-                )}
               </div>
             ) : (
-              <Button onClick={handleCreate} loading={creating} className="w-full">
-                {t.inviteCreateLink}
-              </Button>
+              <div className="space-y-3">
+                {isMaxed && (
+                  <p className="text-xs text-zinc-400 text-center">{t.inviteMaxReached}</p>
+                )}
+                <Button onClick={handleCreate} loading={creating} className="w-full">
+                  {isMaxed ? t.inviteNewCode : t.inviteCreateLink}
+                </Button>
+              </div>
             )}
           </div>
         )}

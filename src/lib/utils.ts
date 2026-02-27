@@ -25,3 +25,11 @@ export function formatDate(date: string | Date): string {
 export function cn(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ')
 }
+
+/**
+ * 招待コードの上限数を計算
+ * 累計10人招待済み → 次は30人まで招待可能
+ */
+export function getInviteMaxUses(totalInvites: number): number {
+  return totalInvites >= 10 ? 30 : 10
+}

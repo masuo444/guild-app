@@ -566,7 +566,7 @@ const translations = {
 
     // Invite Quest
     inviteCreateLink: '招待リンクを作成',
-    inviteUsage: '{count}/10 使用済み',
+    inviteUsage: '{count}/{max} 使用済み',
     inviteMaxReached: '上限に達しました',
     inviteNewCode: '新しい招待リンクを作成',
   },
@@ -1129,7 +1129,7 @@ const translations = {
 
     // Invite Quest
     inviteCreateLink: 'Create Invite Link',
-    inviteUsage: '{count}/10 used',
+    inviteUsage: '{count}/{max} used',
     inviteMaxReached: 'Limit reached',
     inviteNewCode: 'Create New Invite Link',
   },

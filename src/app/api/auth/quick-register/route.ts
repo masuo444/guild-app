@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { ADMIN_EMAILS } from '@/lib/access'
 import { isFreeMembershipType, MembershipType } from '@/types/database'
+import { getInviteMaxUses } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   const supabaseAdmin = createClient(
@@ -33,7 +34,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid invite code' }, { status: 400 })
   }
 
-  const isValid = invite.reusable ? (invite.use_count || 0) < 10 : !invite.used
+  let isValid = !invite.used
+  if (invite.reusable) {
+    const { data: allInvites } = await supabaseAdmin
+      .from('invites')
+      .select('use_count')
+      .eq('invited_by', invite.invited_by)
+      .eq('reusable', true)
+    const totalInvites = allInvites?.reduce((sum, inv) => sum + (inv.use_count || 0), 0) || 0
+    const maxUses = getInviteMaxUses(totalInvites)
+    isValid = (invite.use_count || 0) < maxUses
+  }
   if (!isValid) {
     return NextResponse.json({ error: 'Invite code already used' }, { status: 400 })
   }

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { ADMIN_EMAILS } from '@/lib/access'
 import { isFreeMembershipType, MembershipType } from '@/types/database'
+import { getInviteMaxUses } from '@/lib/utils'
 import { stripe } from '@/lib/stripe/server'
 
 async function checkAutoQuests(
@@ -292,8 +293,23 @@ export async function GET(request: NextRequest) {
         console.error('Failed to fetch invite:', inviteError)
       }
 
-      // reusable の場合は use_count < 10 で判定、通常は used フラグで判定
-      const isInviteValid = invite && (invite.reusable ? (invite.use_count || 0) < 10 : !invite.used)
+      // reusable の場合は動的上限で判定、通常は used フラグで判定
+      let isInviteValid = false
+      if (invite) {
+        if (invite.reusable) {
+          // 招待者の全reusableコードの合計use_countを取得して動的上限を計算
+          const { data: allInvites } = await supabaseAdmin
+            .from('invites')
+            .select('use_count')
+            .eq('invited_by', invite.invited_by)
+            .eq('reusable', true)
+          const totalInvites = allInvites?.reduce((sum, inv) => sum + (inv.use_count || 0), 0) || 0
+          const maxUses = getInviteMaxUses(totalInvites)
+          isInviteValid = (invite.use_count || 0) < maxUses
+        } else {
+          isInviteValid = !invite.used
+        }
+      }
 
       if (isInviteValid) {
         invitedBy = invite.invited_by

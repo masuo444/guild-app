@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
-import { generateInviteCode } from '@/lib/utils'
+import { generateInviteCode, getInviteMaxUses } from '@/lib/utils'
 import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps'
 import { useLanguage } from '@/lib/i18n'
 
@@ -236,7 +236,6 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
       .select('code, used, reusable, use_count, created_at')
       .eq('invited_by', profile.id)
       .order('created_at', { ascending: false })
-      .limit(10)
 
     if (data) {
       setMyInvites(data)
@@ -722,10 +721,13 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
 
             {invitesLoaded && myInvites.length > 0 && (
               <div className="mt-3 space-y-2">
-                {myInvites.map((invite) => {
+                {(() => {
+                  const totalInvites = myInvites.reduce((sum, inv) => sum + (inv.use_count || 0), 0)
+                  const dynamicMax = getInviteMaxUses(totalInvites)
+                  return myInvites.map((invite) => {
                   const isReusable = invite.reusable
                   const useCount = invite.use_count || 0
-                  const isMaxed = isReusable && useCount >= 10
+                  const isMaxed = isReusable && useCount >= dynamicMax
                   const isUsed = isReusable ? isMaxed : invite.used
 
                   return (
@@ -739,7 +741,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
                         <span className="font-mono text-sm text-white">{invite.code}</span>
                         <span className={`ml-2 text-xs ${isUsed ? 'text-zinc-500' : 'text-green-400'}`}>
                           {isReusable
-                            ? t.inviteUsage.replace('{count}', String(useCount))
+                            ? t.inviteUsage.replace('{count}', String(useCount)).replace('{max}', String(dynamicMax))
                             : (invite.used ? t.used : t.unused)}
                         </span>
                       </div>
@@ -753,7 +755,8 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
                       )}
                     </div>
                   )
-                })}
+                })
+                })()} {/* end IIFE */}
               </div>
             )}
 
