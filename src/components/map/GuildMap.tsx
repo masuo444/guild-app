@@ -94,7 +94,8 @@ function applyAllCoordinateOffsets(
 }
 
 // Map ID for AdvancedMarker (required for custom HTML markers)
-const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || ''
+// DEMO_MAP_ID is a built-in Google Maps ID that enables AdvancedMarker
+const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'
 
 interface MemberRole {
   role_id: string
