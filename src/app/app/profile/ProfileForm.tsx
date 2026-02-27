@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
 import { generateInviteCode } from '@/lib/utils'
-import { APIProvider, Map as GoogleMap, Marker } from '@vis.gl/react-google-maps'
+import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps'
 import { useLanguage } from '@/lib/i18n'
 
 interface ProfileFormProps {
@@ -453,7 +453,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
             </div>
 
             {/* ミニマップ: ピン位置調整 */}
-            {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (formData.home_city || formData.home_state || formData.home_country) && (
+            {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm text-zinc-300">{t.pinLocation}</label>
@@ -476,6 +476,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
                     <GoogleMap
                       defaultCenter={formData.lat !== 0 || formData.lng !== 0 ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
                       defaultZoom={formData.lat !== 0 || formData.lng !== 0 ? 12 : 3}
+                      mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'}
                       style={{ width: '100%', height: '100%' }}
                       gestureHandling="greedy"
                       disableDefaultUI={false}
@@ -496,7 +497,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
                       }}
                     >
                       {(formData.lat !== 0 || formData.lng !== 0) && (
-                        <Marker
+                        <AdvancedMarker
                           position={{ lat: formData.lat, lng: formData.lng }}
                         />
                       )}
@@ -511,6 +512,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
               <div>
                 <p className="text-sm font-medium text-white">{t.showLocationOnMap}</p>
                 <p className="text-xs text-zinc-400">{t.showLocationDesc}</p>
+                <p className="text-xs text-zinc-500 mt-1">{t.showLocationApproxNote}</p>
               </div>
               <button
                 type="button"

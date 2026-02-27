@@ -3,6 +3,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { SUPER_ADMIN_EMAIL } from '@/config/admin'
 import { AppLayoutClient } from './AppLayoutClient'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 
 export default async function AppLayout({
   children,
@@ -19,7 +20,7 @@ export default async function AppLayout({
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, subscription_status')
+      .select('role, subscription_status, display_name, home_country, home_city')
       .eq('id', user.id)
       .single()
 
@@ -34,6 +35,15 @@ export default async function AppLayout({
 
     if (!hasAccess) {
       redirect('/auth/subscribe')
+    }
+
+    // プロフィール完成チェック: display_name AND (home_country OR home_city) が必要
+    const isProfileComplete = !!(profile?.display_name && (profile?.home_country || profile?.home_city))
+    const headersList = await headers()
+    const pathname = headersList.get('x-pathname') || ''
+
+    if (!isProfileComplete && pathname !== '/app/onboarding') {
+      redirect('/app/onboarding')
     }
   }
 

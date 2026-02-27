@@ -343,6 +343,7 @@ const translations = {
     setPinDesc: '住所から位置を取得中...マップをタップしてピンを設置',
     showLocationOnMap: 'マップに位置を表示',
     showLocationDesc: '他のメンバーがギルドマップであなたの位置を確認できます',
+    showLocationApproxNote: '※ 正確な位置情報は取得していません。お住まいの地域の大体の位置でご登録ください。',
     saveChanges: '変更を保存',
     membership: 'メンバーシップ',
     membershipIdLabel: 'メンバーシップID',
@@ -557,6 +558,11 @@ const translations = {
     badgeOneYearDesc: '有料メンバーシップを1年間継続しました！',
     badgeOneYearProgress: '1年継続バッジへの道',
     badgeMonthsRemaining: 'あと{months}ヶ月で獲得！',
+
+    // Onboarding
+    onboardingTitle: 'ようこそ FOMUS GUILD へ！',
+    onboardingSubtitle: 'まずはプロフィールを設定しましょう',
+    onboardingComplete: '設定完了！',
   },
   en: {
     // Landing Page
@@ -894,6 +900,7 @@ const translations = {
     setPinDesc: 'Locating from address... Tap map to set pin',
     showLocationOnMap: 'Show location on map',
     showLocationDesc: 'Allow other members to see your location on the Guild Map',
+    showLocationApproxNote: 'We do not collect precise location data. Please register your approximate location.',
     saveChanges: 'Save Changes',
     membership: 'Membership',
     membershipIdLabel: 'Membership ID',
@@ -1108,6 +1115,11 @@ const translations = {
     badgeOneYearDesc: 'Maintained paid membership for 1 year!',
     badgeOneYearProgress: 'Road to 1-Year Badge',
     badgeMonthsRemaining: '{months} months to go!',
+
+    // Onboarding
+    onboardingTitle: 'Welcome to FOMUS GUILD!',
+    onboardingSubtitle: 'Let\'s set up your profile first',
+    onboardingComplete: 'Setup Complete!',
   },
 }
 

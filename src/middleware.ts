@@ -2,8 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  const { supabaseResponse, user } = await updateSession(request)
   const pathname = request.nextUrl.pathname
+  // Server Componentsでpathname参照できるようにリクエストヘッダーにセット
+  request.headers.set('x-pathname', pathname)
+  const { supabaseResponse, user } = await updateSession(request)
 
   // ログイン済みユーザーが /auth/login にアクセスした場合、/app にリダイレクト
   if (pathname === '/auth/login' && user) {
