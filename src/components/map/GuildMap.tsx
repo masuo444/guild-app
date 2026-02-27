@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
@@ -110,20 +110,47 @@ function getMarkerSize(zoom: number): { base: number; avatar: number } {
   }
 }
 
-// ---- Marker icon helpers ----
-// Use hosted SVG files to avoid data URL / canvas issues on iOS Safari
-const MARKER_ICONS = {
-  member: '/markers/member.svg',
-  hub: '/markers/hub.svg',
-  pending: '/markers/pending.svg',
-} as const
+// ---- Marker dot component ----
+function MarkerDot({ size, color }: { size: number; color: string }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        backgroundColor: color,
+        border: '2px solid white',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        cursor: 'pointer',
+      }}
+    />
+  )
+}
 
-function makeDotIcon(type: 'member' | 'hub' | 'pending', size: number): google.maps.Icon {
-  return {
-    url: MARKER_ICONS[type],
-    scaledSize: new google.maps.Size(size, size),
-    anchor: new google.maps.Point(size / 2, size / 2),
-  }
+function AvatarMarker({ src, size, color }: { src: string; size: number; color: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return <MarkerDot size={size} color={color} />
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        border: `3px solid ${color}`,
+        overflow: 'hidden',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        background: color,
+        cursor: 'pointer',
+      }}
+    >
+      <img
+        src={src}
+        alt=""
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        onError={() => setFailed(true)}
+      />
+    </div>
+  )
 }
 
 interface MemberRole {
@@ -158,7 +185,7 @@ interface SelectedItem {
   data: MemberMapData | MasuHub | PendingInviteMapData
 }
 
-// Inner component that can use useMap() hook inside <Map>
+// Inner component for rendering markers with AdvancedMarker (HTML-based, no icon prop)
 function MapMarkers({
   showMembers,
   showHubs,
@@ -182,33 +209,44 @@ function MapMarkers({
     <>
       {showMembers &&
         filteredMembers.map((member) => (
-          <Marker
+          <AdvancedMarker
             key={member.id}
             position={{ lat: member.offsetLat, lng: member.offsetLng }}
             onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
             title={member.display_name || 'Member'}
-            icon={makeDotIcon('member', markerSizes.base)}
-          />
+          >
+            {member.avatar_url ? (
+              <AvatarMarker src={member.avatar_url} size={markerSizes.avatar} color="#22c55e" />
+            ) : (
+              <MarkerDot size={markerSizes.base} color="#22c55e" />
+            )}
+          </AdvancedMarker>
         ))}
       {showHubs &&
         filteredHubs.map((hub) => (
-          <Marker
+          <AdvancedMarker
             key={hub.id}
             position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
             onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
             title={hub.name}
-            icon={makeDotIcon('hub', markerSizes.base)}
-          />
+          >
+            {hub.image_url ? (
+              <AvatarMarker src={hub.image_url} size={markerSizes.avatar} color="#f97316" />
+            ) : (
+              <MarkerDot size={markerSizes.base} color="#f97316" />
+            )}
+          </AdvancedMarker>
         ))}
       {showPending &&
         filteredPending.map((invite) => (
-          <Marker
+          <AdvancedMarker
             key={`pending-${invite.id}`}
             position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
             onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
             title={invite.target_name || 'Pending'}
-            icon={makeDotIcon('pending', markerSizes.base)}
-          />
+          >
+            <MarkerDot size={markerSizes.base} color="#a855f7" />
+          </AdvancedMarker>
         ))}
     </>
   )
