@@ -110,119 +110,63 @@ function getMarkerSize(zoom: number): { base: number; avatar: number } {
   }
 }
 
-// ---- PNG-based marker generation (Canvas) ----
-// All markers are rendered as PNG via canvas to avoid SVG data URL compatibility issues
+// ---- Marker icon helpers ----
 
-// Cache for generated dot/circle marker PNGs: "color-size" -> data URL
-const dotMarkerCache: Record<string, string> = {}
-
-function drawCircleMarkerPng(size: number, color: string): string {
-  const key = `${color}-${size}`
-  if (dotMarkerCache[key]) return dotMarkerCache[key]
-  const canvas = document.createElement('canvas')
-  const scale = 2
-  canvas.width = size * scale
-  canvas.height = size * scale
-  const ctx = canvas.getContext('2d')!
-  const r = (size * scale) / 2
-  // Outer circle
-  ctx.beginPath()
-  ctx.arc(r, r, r - 1, 0, Math.PI * 2)
-  ctx.fillStyle = color
-  ctx.fill()
-  // White border
-  ctx.beginPath()
-  ctx.arc(r, r, r - 1, 0, Math.PI * 2)
-  ctx.strokeStyle = 'white'
-  ctx.lineWidth = 2 * scale
-  ctx.stroke()
-  // Inner dot
-  ctx.beginPath()
-  ctx.arc(r, r, r * 0.4, 0, Math.PI * 2)
-  ctx.fillStyle = 'white'
-  ctx.fill()
-  const url = canvas.toDataURL('image/png')
-  dotMarkerCache[key] = url
-  return url
-}
-
-// Pre-compose avatar into circle marker as PNG
-function drawAvatarMarkerPng(avatarBase64: string, size: number, color: string): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      const scale = 2
-      canvas.width = size * scale
-      canvas.height = size * scale
-      const ctx = canvas.getContext('2d')!
-      const r = (size * scale) / 2
-      const border = Math.max(2, r * 0.12) * scale
-      const imgR = r - border
-      // Outer circle
-      ctx.beginPath()
-      ctx.arc(r, r, r - 1, 0, Math.PI * 2)
-      ctx.fillStyle = color
-      ctx.fill()
-      // White background
-      ctx.beginPath()
-      ctx.arc(r, r, imgR, 0, Math.PI * 2)
-      ctx.fillStyle = 'white'
-      ctx.fill()
-      // Clip and draw avatar
-      ctx.save()
-      ctx.beginPath()
-      ctx.arc(r, r, imgR, 0, Math.PI * 2)
-      ctx.clip()
-      const min = Math.min(img.width, img.height)
-      const sx = (img.width - min) / 2
-      const sy = (img.height - min) / 2
-      ctx.drawImage(img, sx, sy, min, min, r - imgR, r - imgR, imgR * 2, imgR * 2)
-      ctx.restore()
-      resolve(canvas.toDataURL('image/png'))
-    }
-    img.onerror = () => resolve(drawCircleMarkerPng(size, color))
-    img.src = avatarBase64
-  })
-}
-
-// Preload avatar image and convert to base64 data URL
-async function loadAvatarAsBase64(url: string): Promise<string> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('Fetch failed')
-  const blob = await res.blob()
-  const bitmapUrl = URL.createObjectURL(blob)
-  try {
-    return await new Promise<string>((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas')
-          const s = 80
-          canvas.width = s
-          canvas.height = s
-          const ctx = canvas.getContext('2d')
-          if (!ctx) { reject('No ctx'); return }
-          const min = Math.min(img.width, img.height)
-          const sx = (img.width - min) / 2
-          const sy = (img.height - min) / 2
-          ctx.drawImage(img, sx, sy, min, min, 0, 0, s, s)
-          const result = canvas.toDataURL('image/jpeg', 0.7)
-          if (!result || result.length < 100) { reject('Invalid'); return }
-          resolve(result)
-        } catch (err) { reject(err) }
-      }
-      img.onerror = () => reject('Load failed')
-      img.src = bitmapUrl
-    })
-  } finally {
-    URL.revokeObjectURL(bitmapUrl)
+// Google Maps Symbol for dot markers (no custom image needed - guaranteed to work)
+function makeDotSymbol(color: string, size: number): google.maps.Symbol {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    scale: size / 2,
+    fillColor: color,
+    fillOpacity: 1,
+    strokeColor: 'white',
+    strokeWeight: 2,
   }
 }
 
-function getMemberDotPng(size: number): string { return drawCircleMarkerPng(size, '#22c55e') }
-function getHubDotPng(size: number): string { return drawCircleMarkerPng(size, '#f97316') }
-function getPendingDotPng(size: number): string { return drawCircleMarkerPng(size, '#a855f7') }
+// Compose avatar into a circular PNG marker via Canvas
+function composeAvatarPng(imageUrl: string, size: number, color: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const scale = 2
+        const canvas = document.createElement('canvas')
+        canvas.width = size * scale
+        canvas.height = size * scale
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(''); return }
+        const r = (size * scale) / 2
+        const border = Math.max(2, r * 0.12)
+        const imgR = r - border
+        // Outer colored circle
+        ctx.beginPath()
+        ctx.arc(r, r, r - 1, 0, Math.PI * 2)
+        ctx.fillStyle = color
+        ctx.fill()
+        // White ring
+        ctx.beginPath()
+        ctx.arc(r, r, imgR, 0, Math.PI * 2)
+        ctx.fillStyle = 'white'
+        ctx.fill()
+        // Clip and draw avatar
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(r, r, imgR - 1, 0, Math.PI * 2)
+        ctx.clip()
+        const min = Math.min(img.width, img.height)
+        const sx = (img.width - min) / 2
+        const sy = (img.height - min) / 2
+        ctx.drawImage(img, sx, sy, min, min, r - imgR + 1, r - imgR + 1, (imgR - 1) * 2, (imgR - 1) * 2)
+        ctx.restore()
+        resolve(canvas.toDataURL('image/png'))
+      } catch { resolve('') }
+    }
+    img.onerror = () => resolve('')
+    img.src = imageUrl
+  })
+}
 
 interface MemberRole {
   role_id: string
@@ -265,7 +209,7 @@ function MapMarkers({
   filteredHubs,
   filteredPending,
   markerSizes,
-  avatarCache,
+  markerPngCache,
   onMarkerClick,
 }: {
   showMembers: boolean
@@ -283,56 +227,71 @@ function MapMarkers({
       {showMembers &&
         filteredMembers.map((member) => {
           const cachedPng = member.avatar_url ? markerPngCache[member.avatar_url] : undefined
-          const size = cachedPng ? markerSizes.avatar : markerSizes.base
+          if (cachedPng) {
+            const size = markerSizes.avatar
+            return (
+              <Marker
+                key={member.id}
+                position={{ lat: member.offsetLat, lng: member.offsetLng }}
+                onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
+                title={member.display_name || 'Member'}
+                icon={{
+                  url: cachedPng,
+                  scaledSize: { width: size, height: size, equals: () => false },
+                  anchor: { x: size / 2, y: size / 2, equals: () => false },
+                }}
+              />
+            )
+          }
           return (
             <Marker
               key={member.id}
               position={{ lat: member.offsetLat, lng: member.offsetLng }}
               onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
               title={member.display_name || 'Member'}
-              icon={{
-                url: cachedPng || getMemberDotPng(size),
-                scaledSize: { width: size, height: size, equals: () => false },
-                anchor: { x: size / 2, y: size / 2, equals: () => false },
-              }}
+              icon={makeDotSymbol('#22c55e', markerSizes.base)}
             />
           )
         })}
       {showHubs &&
         filteredHubs.map((hub) => {
           const cachedPng = hub.image_url ? markerPngCache[hub.image_url] : undefined
-          const size = cachedPng ? markerSizes.avatar : markerSizes.base
+          if (cachedPng) {
+            const size = markerSizes.avatar
+            return (
+              <Marker
+                key={hub.id}
+                position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
+                onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
+                title={hub.name}
+                icon={{
+                  url: cachedPng,
+                  scaledSize: { width: size, height: size, equals: () => false },
+                  anchor: { x: size / 2, y: size / 2, equals: () => false },
+                }}
+              />
+            )
+          }
           return (
             <Marker
               key={hub.id}
               position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
               onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
               title={hub.name}
-              icon={{
-                url: cachedPng || getHubDotPng(size),
-                scaledSize: { width: size, height: size, equals: () => false },
-                anchor: { x: size / 2, y: size / 2, equals: () => false },
-              }}
+              icon={makeDotSymbol('#f97316', markerSizes.base)}
             />
           )
         })}
       {showPending &&
-        filteredPending.map((invite) => {
-          const size = markerSizes.base
-          return (
-            <Marker
-              key={`pending-${invite.id}`}
-              position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
-              onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
-              title={invite.target_name || 'Pending'}
-              icon={{
-                url: getPendingDotPng(size),
-                scaledSize: { width: size, height: size, equals: () => false },
-                anchor: { x: size / 2, y: size / 2, equals: () => false },
-              }}
-            />
-          )
-        })}
+        filteredPending.map((invite) => (
+          <Marker
+            key={`pending-${invite.id}`}
+            position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
+            onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
+            title={invite.target_name || 'Pending'}
+            icon={makeDotSymbol('#a855f7', markerSizes.base)}
+          />
+        ))}
     </>
   )
 }
@@ -374,11 +333,12 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
     let mounted = true
     urls.forEach(({ url, color, size }) => {
       if (markerPngCache[url] || failedUrlsRef.current.has(url)) return
-      loadAvatarAsBase64(url)
-        .then(base64 => drawAvatarMarkerPng(base64, size, color))
+      composeAvatarPng(url, size, color)
         .then(pngUrl => {
-          if (mounted) {
+          if (mounted && pngUrl) {
             setMarkerPngCache(prev => ({ ...prev, [url]: pngUrl }))
+          } else {
+            failedUrlsRef.current.add(url)
           }
         })
         .catch(() => { failedUrlsRef.current.add(url) })
