@@ -129,13 +129,13 @@ interface SelectedItem {
   data: MemberMapData | MasuHub | PendingInviteMapData
 }
 
-// Avatar marker for members with profile images (pure CSS circle, no image loading for the marker itself)
-function AvatarMarker({ src, name }: { src: string; name: string }) {
+// Circular image marker (pure CSS circle with image, fallback to initial letter)
+function ImageMarker({ src, name, color }: { src: string; name: string; color: string }) {
   const [imgError, setImgError] = useState(false)
   return (
     <div style={{
       width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
-      border: '3px solid #22c55e', background: '#22c55e',
+      border: `3px solid ${color}`, background: color,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
     }}>
@@ -148,7 +148,7 @@ function AvatarMarker({ src, name }: { src: string; name: string }) {
         />
       ) : (
         <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>
-          {name?.[0]?.toUpperCase() || 'M'}
+          {name?.[0]?.toUpperCase() || '?'}
         </span>
       )}
     </div>
@@ -188,7 +188,7 @@ function MapMarkers({
               title={member.display_name || 'Member'}
             >
               {member.avatar_url ? (
-                <AvatarMarker src={member.avatar_url} name={member.display_name || 'M'} />
+                <ImageMarker src={member.avatar_url} name={member.display_name || 'M'} color="#22c55e" />
               ) : (
                 <Pin background="#22c55e" borderColor="#ffffff" glyphColor="#ffffff" />
               )}
@@ -202,7 +202,11 @@ function MapMarkers({
               onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
               title={hub.name}
             >
-              <Pin background="#f97316" borderColor="#ffffff" glyphColor="#ffffff" />
+              {hub.image_url ? (
+                <ImageMarker src={hub.image_url} name={hub.name} color="#f97316" />
+              ) : (
+                <Pin background="#f97316" borderColor="#ffffff" glyphColor="#ffffff" />
+              )}
             </AdvancedMarker>
           ))}
         {showPending &&
