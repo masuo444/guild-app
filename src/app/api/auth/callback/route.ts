@@ -249,6 +249,37 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Cookie に Stripe session がない場合、メールアドレスから既存のサブスクリプションを検索
+    // （決済完了後にエラーが出てログインページ経由で入り直した場合の救済）
+    if (!stripeSubscriptionId && user.email) {
+      try {
+        const customers = await stripe.customers.list({ email: user.email, limit: 1 })
+        if (customers.data.length > 0) {
+          const customer = customers.data[0]
+          const subscriptions = await stripe.subscriptions.list({
+            customer: customer.id,
+            status: 'active',
+            limit: 1,
+          })
+          if (subscriptions.data.length > 0) {
+            const sub = subscriptions.data[0]
+            subscriptionStatus = 'active'
+            stripeCustomerId = customer.id
+            stripeSubscriptionId = sub.id
+
+            // user_id を metadata に追加
+            if (!sub.metadata.supabase_user_id) {
+              await stripe.subscriptions.update(sub.id, {
+                metadata: { supabase_user_id: user.id }
+              })
+            }
+          }
+        }
+      } catch {
+        // Stripe検索エラーは無視（ログインは継続）
+      }
+    }
+
     if (inviteCode) {
       // 招待コードを取得（Service Roleで確実に取得）
       const { data: invite, error: inviteError } = await supabaseAdmin
