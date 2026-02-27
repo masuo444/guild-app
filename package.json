@@ -14,6 +14,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "@vis.gl/react-google-maps": "^1.7.1",
+    "lucide-react": "^0.575.0",
     "next": "16.1.4",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
