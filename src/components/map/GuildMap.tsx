@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, Marker, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
@@ -93,13 +93,8 @@ function applyAllCoordinateOffsets(
   return { members: resultMembers, hubs: resultHubs, pending: resultPending }
 }
 
-// ---- Default marker icons using google.maps.Symbol (vector, no image loading, NEVER fails) ----
-// google.maps.SymbolPath.CIRCLE = 0
-const MARKER_SYMBOLS = {
-  member:  { path: 0, scale: 10, fillColor: '#22c55e', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
-  hub:     { path: 0, scale: 10, fillColor: '#f97316', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
-  pending: { path: 0, scale: 10, fillColor: '#a855f7', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
-} as const
+// Map ID for AdvancedMarker (required for custom HTML markers)
+const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || ''
 
 interface MemberRole {
   role_id: string
@@ -133,8 +128,35 @@ interface SelectedItem {
   data: MemberMapData | MasuHub | PendingInviteMapData
 }
 
+// Avatar marker for members with profile images (pure CSS circle, no image loading for the marker itself)
+function AvatarMarker({ src, name }: { src: string; name: string }) {
+  const [imgError, setImgError] = useState(false)
+  return (
+    <div style={{
+      width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
+      border: '3px solid #22c55e', background: '#22c55e',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+    }}>
+      {!imgError ? (
+        <img
+          src={src}
+          alt={name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>
+          {name?.[0]?.toUpperCase() || 'M'}
+        </span>
+      )}
+    </div>
+  )
+}
+
 // Inner component for rendering map markers
-// Uses google.maps.Symbol objects (vector circles) — no image loading, "?" is impossible.
+// With MAP_ID: uses AdvancedMarker (HTML/CSS rendering, profile images, colored pins)
+// Without MAP_ID: uses regular Marker with NO icon prop (default red pin, "?" is impossible)
 function MapMarkers({
   showMembers,
   showHubs,
@@ -152,6 +174,52 @@ function MapMarkers({
   filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
   onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
 }) {
+  // If MAP_ID is set, use AdvancedMarker for custom styled markers
+  if (MAP_ID) {
+    return (
+      <>
+        {showMembers &&
+          filteredMembers.map((member) => (
+            <AdvancedMarker
+              key={member.id}
+              position={{ lat: member.offsetLat, lng: member.offsetLng }}
+              onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
+              title={member.display_name || 'Member'}
+            >
+              {member.avatar_url ? (
+                <AvatarMarker src={member.avatar_url} name={member.display_name || 'M'} />
+              ) : (
+                <Pin background="#22c55e" borderColor="#ffffff" glyphColor="#ffffff" />
+              )}
+            </AdvancedMarker>
+          ))}
+        {showHubs &&
+          filteredHubs.map((hub) => (
+            <AdvancedMarker
+              key={hub.id}
+              position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
+              onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
+              title={hub.name}
+            >
+              <Pin background="#f97316" borderColor="#ffffff" glyphColor="#ffffff" />
+            </AdvancedMarker>
+          ))}
+        {showPending &&
+          filteredPending.map((invite) => (
+            <AdvancedMarker
+              key={`pending-${invite.id}`}
+              position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
+              onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
+              title={invite.target_name || 'Pending'}
+            >
+              <Pin background="#a855f7" borderColor="#ffffff" glyphColor="#ffffff" />
+            </AdvancedMarker>
+          ))}
+      </>
+    )
+  }
+
+  // Fallback: no MAP_ID — use regular Marker WITHOUT icon (default Google pin, NEVER shows "?")
   return (
     <>
       {showMembers &&
@@ -161,7 +229,6 @@ function MapMarkers({
             position={{ lat: member.offsetLat, lng: member.offsetLng }}
             onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
             title={member.display_name || 'Member'}
-            icon={MARKER_SYMBOLS.member}
           />
         ))}
       {showHubs &&
@@ -171,7 +238,6 @@ function MapMarkers({
             position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
             onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
             title={hub.name}
-            icon={MARKER_SYMBOLS.hub}
           />
         ))}
       {showPending &&
@@ -181,7 +247,6 @@ function MapMarkers({
             position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
             onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
             title={invite.target_name || 'Pending'}
-            icon={MARKER_SYMBOLS.pending}
           />
         ))}
     </>
@@ -205,8 +270,6 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const [zoomLevel, setZoomLevel] = useState(3)
   const mapRef = useRef<google.maps.Map | null>(null)
   const fullscreenMapRef = useRef<google.maps.Map | null>(null)
-
-  // Marker sizes no longer needed (using google.maps.Symbol which handles its own sizing)
 
   // Prevent body scroll when fullscreen
   useEffect(() => {
@@ -306,6 +369,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
             <Map
               defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
               defaultZoom={3}
+              mapId={MAP_ID || undefined}
               style={{ width: '100%', height: '100%' }}
               gestureHandling="greedy"
               disableDefaultUI={true}
@@ -576,6 +640,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
             <Map
               defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
               defaultZoom={3}
+              mapId={MAP_ID || undefined}
               style={{ width: '100%', height: '100%' }}
               gestureHandling="greedy"
               onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
