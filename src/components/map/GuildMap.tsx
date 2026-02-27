@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
@@ -110,48 +110,12 @@ function getMarkerSize(zoom: number): { base: number; avatar: number } {
   }
 }
 
-// ---- Marker dot component ----
-function MarkerDot({ size, color }: { size: number; color: string }) {
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        backgroundColor: color,
-        border: '2px solid white',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-        cursor: 'pointer',
-      }}
-    />
-  )
-}
-
-function AvatarMarker({ src, size, color }: { src: string; size: number; color: string }) {
-  const [failed, setFailed] = useState(false)
-  if (failed) return <MarkerDot size={size} color={color} />
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        border: `3px solid ${color}`,
-        overflow: 'hidden',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-        background: color,
-        cursor: 'pointer',
-      }}
-    >
-      <img
-        src={src}
-        alt=""
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        onError={() => setFailed(true)}
-      />
-    </div>
-  )
-}
+// ---- Marker icon URLs (hosted SVG files) ----
+const MARKER_URLS = {
+  member: '/markers/member.svg',
+  hub: '/markers/hub.svg',
+  pending: '/markers/pending.svg',
+} as const
 
 interface MemberRole {
   role_id: string
@@ -185,7 +149,7 @@ interface SelectedItem {
   data: MemberMapData | MasuHub | PendingInviteMapData
 }
 
-// Inner component for rendering markers with AdvancedMarker (HTML-based, no icon prop)
+// Inner component for rendering map markers
 function MapMarkers({
   showMembers,
   showHubs,
@@ -193,7 +157,6 @@ function MapMarkers({
   filteredMembers,
   filteredHubs,
   filteredPending,
-  markerSizes,
   onMarkerClick,
 }: {
   showMembers: boolean
@@ -202,51 +165,39 @@ function MapMarkers({
   filteredMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[]
   filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
   filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
-  markerSizes: { base: number; avatar: number }
   onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
 }) {
   return (
     <>
       {showMembers &&
         filteredMembers.map((member) => (
-          <AdvancedMarker
+          <Marker
             key={member.id}
             position={{ lat: member.offsetLat, lng: member.offsetLng }}
             onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
             title={member.display_name || 'Member'}
-          >
-            {member.avatar_url ? (
-              <AvatarMarker src={member.avatar_url} size={markerSizes.avatar} color="#22c55e" />
-            ) : (
-              <MarkerDot size={markerSizes.base} color="#22c55e" />
-            )}
-          </AdvancedMarker>
+            icon={MARKER_URLS.member}
+          />
         ))}
       {showHubs &&
         filteredHubs.map((hub) => (
-          <AdvancedMarker
+          <Marker
             key={hub.id}
             position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
             onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
             title={hub.name}
-          >
-            {hub.image_url ? (
-              <AvatarMarker src={hub.image_url} size={markerSizes.avatar} color="#f97316" />
-            ) : (
-              <MarkerDot size={markerSizes.base} color="#f97316" />
-            )}
-          </AdvancedMarker>
+            icon={MARKER_URLS.hub}
+          />
         ))}
       {showPending &&
         filteredPending.map((invite) => (
-          <AdvancedMarker
+          <Marker
             key={`pending-${invite.id}`}
             position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
             onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
             title={invite.target_name || 'Pending'}
-          >
-            <MarkerDot size={markerSizes.base} color="#a855f7" />
-          </AdvancedMarker>
+            icon={MARKER_URLS.pending}
+          />
         ))}
     </>
   )
@@ -388,7 +339,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredMembers={filteredMembers}
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
-                markerSizes={markerSizes}
+
 
                 onMarkerClick={handleMarkerClick}
               />
@@ -655,7 +606,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredMembers={filteredMembers}
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
-                markerSizes={markerSizes}
+
 
                 onMarkerClick={handleMarkerClick}
               />
