@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { APIProvider, Map, Marker, useMap } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 
@@ -111,61 +111,19 @@ function getMarkerSize(zoom: number): { base: number; avatar: number } {
 }
 
 // ---- Marker icon helpers ----
+// Use hosted SVG files to avoid data URL / canvas issues on iOS Safari
+const MARKER_ICONS = {
+  member: '/markers/member.svg',
+  hub: '/markers/hub.svg',
+  pending: '/markers/pending.svg',
+} as const
 
-// Google Maps Symbol for dot markers (no custom image needed - guaranteed to work)
-function makeDotSymbol(color: string, size: number): google.maps.Symbol {
+function makeDotIcon(type: 'member' | 'hub' | 'pending', size: number): google.maps.Icon {
   return {
-    path: google.maps.SymbolPath.CIRCLE,
-    scale: size / 2,
-    fillColor: color,
-    fillOpacity: 1,
-    strokeColor: 'white',
-    strokeWeight: 2,
+    url: MARKER_ICONS[type],
+    scaledSize: new google.maps.Size(size, size),
+    anchor: new google.maps.Point(size / 2, size / 2),
   }
-}
-
-// Compose avatar into a circular PNG marker via Canvas
-function composeAvatarPng(imageUrl: string, size: number, color: string): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      try {
-        const scale = 2
-        const canvas = document.createElement('canvas')
-        canvas.width = size * scale
-        canvas.height = size * scale
-        const ctx = canvas.getContext('2d')
-        if (!ctx) { resolve(''); return }
-        const r = (size * scale) / 2
-        const border = Math.max(2, r * 0.12)
-        const imgR = r - border
-        // Outer colored circle
-        ctx.beginPath()
-        ctx.arc(r, r, r - 1, 0, Math.PI * 2)
-        ctx.fillStyle = color
-        ctx.fill()
-        // White ring
-        ctx.beginPath()
-        ctx.arc(r, r, imgR, 0, Math.PI * 2)
-        ctx.fillStyle = 'white'
-        ctx.fill()
-        // Clip and draw avatar
-        ctx.save()
-        ctx.beginPath()
-        ctx.arc(r, r, imgR - 1, 0, Math.PI * 2)
-        ctx.clip()
-        const min = Math.min(img.width, img.height)
-        const sx = (img.width - min) / 2
-        const sy = (img.height - min) / 2
-        ctx.drawImage(img, sx, sy, min, min, r - imgR + 1, r - imgR + 1, (imgR - 1) * 2, (imgR - 1) * 2)
-        ctx.restore()
-        resolve(canvas.toDataURL('image/png'))
-      } catch { resolve('') }
-    }
-    img.onerror = () => resolve('')
-    img.src = imageUrl
-  })
 }
 
 interface MemberRole {
@@ -209,7 +167,6 @@ function MapMarkers({
   filteredHubs,
   filteredPending,
   markerSizes,
-  markerPngCache,
   onMarkerClick,
 }: {
   showMembers: boolean
@@ -219,69 +176,30 @@ function MapMarkers({
   filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
   filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
   markerSizes: { base: number; avatar: number }
-  markerPngCache: Record<string, string>
   onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
 }) {
   return (
     <>
       {showMembers &&
-        filteredMembers.map((member) => {
-          const cachedPng = member.avatar_url ? markerPngCache[member.avatar_url] : undefined
-          if (cachedPng) {
-            const size = markerSizes.avatar
-            return (
-              <Marker
-                key={member.id}
-                position={{ lat: member.offsetLat, lng: member.offsetLng }}
-                onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
-                title={member.display_name || 'Member'}
-                icon={{
-                  url: cachedPng,
-                  scaledSize: { width: size, height: size, equals: () => false },
-                  anchor: { x: size / 2, y: size / 2, equals: () => false },
-                }}
-              />
-            )
-          }
-          return (
-            <Marker
-              key={member.id}
-              position={{ lat: member.offsetLat, lng: member.offsetLng }}
-              onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
-              title={member.display_name || 'Member'}
-              icon={makeDotSymbol('#22c55e', markerSizes.base)}
-            />
-          )
-        })}
+        filteredMembers.map((member) => (
+          <Marker
+            key={member.id}
+            position={{ lat: member.offsetLat, lng: member.offsetLng }}
+            onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
+            title={member.display_name || 'Member'}
+            icon={makeDotIcon('member', markerSizes.base)}
+          />
+        ))}
       {showHubs &&
-        filteredHubs.map((hub) => {
-          const cachedPng = hub.image_url ? markerPngCache[hub.image_url] : undefined
-          if (cachedPng) {
-            const size = markerSizes.avatar
-            return (
-              <Marker
-                key={hub.id}
-                position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
-                onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
-                title={hub.name}
-                icon={{
-                  url: cachedPng,
-                  scaledSize: { width: size, height: size, equals: () => false },
-                  anchor: { x: size / 2, y: size / 2, equals: () => false },
-                }}
-              />
-            )
-          }
-          return (
-            <Marker
-              key={hub.id}
-              position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
-              onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
-              title={hub.name}
-              icon={makeDotSymbol('#f97316', markerSizes.base)}
-            />
-          )
-        })}
+        filteredHubs.map((hub) => (
+          <Marker
+            key={hub.id}
+            position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
+            onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
+            title={hub.name}
+            icon={makeDotIcon('hub', markerSizes.base)}
+          />
+        ))}
       {showPending &&
         filteredPending.map((invite) => (
           <Marker
@@ -289,7 +207,7 @@ function MapMarkers({
             position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
             onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
             title={invite.target_name || 'Pending'}
-            icon={makeDotSymbol('#a855f7', markerSizes.base)}
+            icon={makeDotIcon('pending', markerSizes.base)}
           />
         ))}
     </>
@@ -313,40 +231,6 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const [zoomLevel, setZoomLevel] = useState(3)
   const mapRef = useRef<google.maps.Map | null>(null)
   const fullscreenMapRef = useRef<google.maps.Map | null>(null)
-
-  // Marker PNG cache: avatar_url -> composited marker PNG data URL
-  const [markerPngCache, setMarkerPngCache] = useState<Record<string, string>>({})
-  // Track failed URLs to avoid retrying
-  const failedUrlsRef = useRef<Set<string>>(new Set())
-
-  // Preload avatar/hub images and compose into marker PNGs
-  useEffect(() => {
-    const urls: { url: string; color: string; size: number }[] = []
-    members.forEach(m => {
-      if (m.avatar_url) urls.push({ url: m.avatar_url, color: '#22c55e', size: 52 })
-    })
-    hubs.forEach(h => {
-      if (h.image_url) urls.push({ url: h.image_url, color: '#f97316', size: 52 })
-    })
-    if (urls.length === 0) return
-
-    let mounted = true
-    urls.forEach(({ url, color, size }) => {
-      if (markerPngCache[url] || failedUrlsRef.current.has(url)) return
-      composeAvatarPng(url, size, color)
-        .then(pngUrl => {
-          if (mounted && pngUrl) {
-            setMarkerPngCache(prev => ({ ...prev, [url]: pngUrl }))
-          } else {
-            failedUrlsRef.current.add(url)
-          }
-        })
-        .catch(() => { failedUrlsRef.current.add(url) })
-    })
-
-    return () => { mounted = false }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members, hubs])
 
   // Get current marker sizes based on zoom
   const markerSizes = useMemo(() => getMarkerSize(zoomLevel), [zoomLevel])
@@ -467,7 +351,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
                 markerSizes={markerSizes}
-                markerPngCache={markerPngCache}
+
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
@@ -734,7 +618,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 filteredHubs={filteredHubs}
                 filteredPending={filteredPending}
                 markerSizes={markerSizes}
-                markerPngCache={markerPngCache}
+
                 onMarkerClick={handleMarkerClick}
               />
             </Map>
