@@ -208,7 +208,7 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
             <div className="aspect-video overflow-hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50">
               <img
                 src="/articles/massu-thumbnail.jpg"
-                alt={language === 'ja' ? 'まっすー海外活動記' : 'Massu Overseas Activities'}
+                alt={language === 'ja' ? 'まっすー海外活動記' : 'MaSU Overseas Activities'}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const el = e.currentTarget
@@ -219,7 +219,7 @@ export function OffersContent({ quests, submissions, userId, exchangeItems = [],
             </div>
             <CardContent className="py-5">
               <h3 className="text-lg font-bold text-white mb-2">
-                {language === 'ja' ? 'まっすー海外活動記' : 'Massu Overseas Activities'}
+                {language === 'ja' ? 'まっすー海外活動記' : 'MaSU Overseas Activities'}
               </h3>
 
               {/* パスワード案内 */}
