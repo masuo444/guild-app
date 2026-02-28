@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ADMIN_EMAILS } from '@/lib/access'
 import { isFreeMembershipType, MembershipType } from '@/types/database'
 import { getInviteMaxUses } from '@/lib/utils'
+import { notifyAdminNewMember } from '@/lib/notifications'
 
 /**
  * レート制限時のフォールバック: メール送信なしで招待登録を完了する
@@ -216,6 +217,16 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+
+      // 管理者にメール通知
+      await notifyAdminNewMember({
+        email,
+        displayName: profileData.display_name,
+        membershipType: profileData.membership_type as string,
+        subscriptionStatus: profileData.subscription_status,
+        invitedBy: invite.invited_by,
+        inviteCode,
+      }).catch(e => console.error('Admin notification error:', e))
     }
 
     // 招待コード使用記録

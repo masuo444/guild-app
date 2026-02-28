@@ -6,6 +6,7 @@ import { ADMIN_EMAILS } from '@/lib/access'
 import { isFreeMembershipType, MembershipType } from '@/types/database'
 import { getInviteMaxUses } from '@/lib/utils'
 import { stripe } from '@/lib/stripe/server'
+import { notifyAdminNewMember } from '@/lib/notifications'
 
 async function checkAutoQuests(
   supabase: SupabaseClient,
@@ -486,6 +487,16 @@ export async function GET(request: NextRequest) {
       if (welcomeBonusError) {
         console.error('Failed to insert welcome bonus:', welcomeBonusError)
       }
+
+      // 管理者にメール通知
+      await notifyAdminNewMember({
+        email: user.email || '',
+        displayName: profileUpdateData.display_name,
+        membershipType: profileUpdateData.membership_type,
+        subscriptionStatus: profileUpdateData.subscription_status,
+        invitedBy: invitedBy,
+        inviteCode: inviteCode,
+      }).catch(e => console.error('Admin notification error:', e))
     }
 
     // スタンダード会員（有料）で未決済の場合は決済ページへリダイレクト
