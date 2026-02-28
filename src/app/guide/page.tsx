@@ -178,7 +178,12 @@ export default function GuidePage() {
             title={t.guideGettingStartedTitle}
             desc={t.guideGettingStartedDesc}
             steps={[t.guideGettingStartedStep1, t.guideGettingStartedStep2, t.guideGettingStartedStep3, t.guideGettingStartedStep4]}
-            screenshot="/screenshots/login.png"
+            screenshots={[
+              { src: '/screenshots/guide-welcome.jpg', label: 'STEP 1' },
+              { src: '/screenshots/guide-payment.jpg', label: 'STEP 2' },
+              { src: '/screenshots/guide-payment-complete.jpg', label: 'STEP 3' },
+              { src: '/screenshots/guide-email-verify.jpg', label: 'STEP 4' },
+            ]}
             screenshotAlt={t.guideScreenshotAlt}
           />
 
@@ -190,7 +195,7 @@ export default function GuidePage() {
             title={t.guideCardDetailTitle}
             desc={t.guideCardDetailDesc}
             steps={[t.guideCardDetailFront, t.guideCardDetailBack, t.guideCardDetailRankPoints]}
-            screenshot="/screenshots/card.png"
+            screenshot="/screenshots/guide-dashboard.jpg"
             screenshotAlt={t.guideScreenshotAlt}
           >
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 mt-4">
@@ -219,7 +224,7 @@ export default function GuidePage() {
             title={t.guideQuestHowTitle}
             desc={t.guideQuestHowDesc}
             steps={[t.guideQuestHowStep1, t.guideQuestHowStep2, t.guideQuestHowStep3, t.guideQuestHowStep4]}
-            screenshot="/screenshots/quests.png"
+            screenshot="/screenshots/guide-quests.jpg"
             screenshotAlt={t.guideScreenshotAlt}
           >
             {/* Login Bonus sub-section */}
@@ -250,7 +255,7 @@ export default function GuidePage() {
             title={t.guideProfileTitle}
             desc={t.guideProfileDesc}
             steps={[t.guideProfileSetupStep1, t.guideProfileSetupStep2, t.guideProfileSetupStep3, t.guideProfileSetupStep4, t.guideInviteHowStep2, t.guideInviteHowStep3]}
-            screenshot="/screenshots/profile.png"
+            screenshot="/screenshots/guide-profile.jpg"
             screenshotAlt={t.guideScreenshotAlt}
           />
 
@@ -352,6 +357,7 @@ function HowToSection({
   desc,
   steps,
   screenshot,
+  screenshots,
   screenshotAlt,
   children,
 }: {
@@ -361,16 +367,18 @@ function HowToSection({
   title: string
   desc: string
   steps: string[]
-  screenshot: string
+  screenshot?: string
+  screenshots?: { src: string; label?: string }[]
   screenshotAlt: string
   children?: React.ReactNode
 }) {
   const c = colorMap[color] ?? colorMap.orange
   const isLeft = direction === 'left'
+  const hasMultiple = screenshots && screenshots.length > 1
 
   return (
     <section className="print-break bg-white/80 backdrop-blur rounded-2xl p-6 md:p-8 shadow-sm">
-      <div className={`flex flex-col ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'} gap-6 md:gap-8 items-start`}>
+      <div className={`flex flex-col ${!hasMultiple ? (isLeft ? 'md:flex-row' : 'md:flex-row-reverse') : ''} gap-6 md:gap-8 items-start`}>
         {/* Text side */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-4 mb-4">
@@ -393,9 +401,28 @@ function HowToSection({
           {children}
         </div>
         {/* Screenshot side */}
-        <div className="w-full md:w-auto flex-shrink-0 flex justify-center">
-          <ScreenshotFrame src={screenshot} alt={screenshotAlt} />
-        </div>
+        {hasMultiple ? (
+          <div className="w-full overflow-x-auto -mx-2 px-2">
+            <div className="flex gap-4 pb-2 justify-start md:justify-center">
+              {screenshots.map((s, i) => (
+                <div key={i} className="flex flex-col items-center gap-2 flex-shrink-0">
+                  <div className="relative w-[160px] sm:w-[180px] aspect-[9/16] rounded-[1.5rem] border-[3px] border-stone-300 bg-stone-100 shadow-md overflow-hidden">
+                    <Image src={s.src} alt={screenshotAlt} fill className="object-cover" />
+                  </div>
+                  {s.label && (
+                    <span className={`text-[10px] font-medium ${c.text} bg-white/80 px-2 py-0.5 rounded-full`}>
+                      {s.label}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="w-full md:w-auto flex-shrink-0 flex justify-center">
+            <ScreenshotFrame src={screenshot || (screenshots?.[0]?.src ?? '')} alt={screenshotAlt} />
+          </div>
+        )}
       </div>
     </section>
   )
