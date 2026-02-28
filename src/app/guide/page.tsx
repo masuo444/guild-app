@@ -13,13 +13,13 @@ function ScreenshotFrame({ src, alt }: { src: string; alt: string }) {
   const [hasError, setHasError] = useState(false)
 
   return (
-    <div className="relative w-full max-w-[260px] mx-auto aspect-[9/16] rounded-[2rem] border-4 border-stone-300 bg-stone-100 shadow-lg overflow-hidden">
+    <div className="relative w-full max-w-[260px] mx-auto aspect-[9/19] rounded-[2rem] border-4 border-stone-300 bg-stone-900 shadow-lg overflow-hidden">
       {!hasError ? (
         <Image
           src={src}
           alt={alt}
           fill
-          className="object-cover"
+          className="object-contain"
           onError={() => setHasError(true)}
         />
       ) : (
@@ -212,7 +212,7 @@ export default function GuidePage() {
             title={t.guideMapUsageTitle}
             desc={t.guideMapUsageDesc}
             steps={[t.guideMapUsageStep1, t.guideMapUsageStep2, t.guideMapUsageStep3, t.guideMapUsageStep4]}
-            screenshot="/screenshots/map.png"
+            screenshot="/screenshots/guide-map.jpg"
             screenshotAlt={t.guideScreenshotAlt}
           />
 
@@ -406,8 +406,8 @@ function HowToSection({
             <div className="flex gap-4 pb-2 justify-start md:justify-center">
               {screenshots.map((s, i) => (
                 <div key={i} className="flex flex-col items-center gap-2 flex-shrink-0">
-                  <div className="relative w-[160px] sm:w-[180px] aspect-[9/16] rounded-[1.5rem] border-[3px] border-stone-300 bg-stone-100 shadow-md overflow-hidden">
-                    <Image src={s.src} alt={screenshotAlt} fill className="object-cover" />
+                  <div className="relative w-[160px] sm:w-[180px] aspect-[9/19] rounded-[1.5rem] border-[3px] border-stone-300 bg-stone-900 shadow-md overflow-hidden">
+                    <Image src={s.src} alt={screenshotAlt} fill className="object-contain" />
                   </div>
                   {s.label && (
                     <span className={`text-[10px] font-medium ${c.text} bg-white/80 px-2 py-0.5 rounded-full`}>
