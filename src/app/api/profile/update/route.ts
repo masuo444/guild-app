@@ -186,19 +186,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient()
 
+    const updateData: Record<string, unknown> = {
+      display_name: data.display_name,
+      instagram_id: data.instagram_id,
+      avatar_url: data.avatar_url,
+      home_country: data.home_country,
+      home_state: data.home_state,
+      home_city: data.home_city,
+      lat: data.lat,
+      lng: data.lng,
+    }
+    // show_location_on_map が明示的に送信された場合のみ更新（未送信時は既存値を維持）
+    if (typeof data.show_location_on_map === 'boolean') {
+      updateData.show_location_on_map = data.show_location_on_map
+    }
+
     const { error } = await supabase
       .from('profiles')
-      .update({
-        display_name: data.display_name,
-        instagram_id: data.instagram_id,
-        avatar_url: data.avatar_url,
-        home_country: data.home_country,
-        home_state: data.home_state,
-        home_city: data.home_city,
-        lat: data.lat,
-        lng: data.lng,
-        show_location_on_map: data.show_location_on_map,
-      })
+      .update(updateData)
       .eq('id', data.userId)
 
     if (error) {

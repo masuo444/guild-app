@@ -1098,6 +1098,13 @@ function MembersTab({ members, memberPoints: initialMemberPoints, customRoles, m
                             <span className="font-mono">No.{String(member.serial_number).padStart(4, '0')}</span>
                           </>
                         )}
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          member.subscription_status === 'active'
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : 'bg-zinc-600/30 text-zinc-400'
+                        }`}>
+                          {member.subscription_status === 'active' ? '有料' : '無料'}
+                        </span>
                         <span>•</span>
                         <span>{currentPoints}pt</span>
                         {member.home_city && member.home_country && (
