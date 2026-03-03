@@ -118,3 +118,11 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Hide Google Maps auth error dialog and watermark */
+.gm-err-container,
+.gm-err-title,
+.gm-err-message,
+.dismissButton {
+  display: none !important;
+}

@@ -289,8 +289,19 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const [searchQuery, setSearchQuery] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(3)
+  const [mapError, setMapError] = useState(false)
   const mapRef = useRef<google.maps.Map | null>(null)
   const fullscreenMapRef = useRef<google.maps.Map | null>(null)
+
+  // Intercept Google Maps auth failure to suppress error dialog
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).gm_authFailure = () => {
+      setMapError(true)
+    }
+    return () => {
+      delete (window as unknown as Record<string, unknown>).gm_authFailure
+    }
+  }, [])
 
   // Prevent body scroll when fullscreen
   useEffect(() => {
@@ -372,10 +383,18 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
-  if (!apiKey) {
+  if (!apiKey || mapError) {
     return (
-      <div className="w-full h-[500px] bg-white/10 backdrop-blur rounded-xl flex items-center justify-center border border-zinc-500/30">
-        <p className="text-zinc-300">Google Maps API key is not configured</p>
+      <div className="w-full h-[500px] bg-white/10 backdrop-blur rounded-xl flex flex-col items-center justify-center border border-zinc-500/30 gap-3">
+        <svg className="w-12 h-12 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+        </svg>
+        <p className="text-zinc-300 text-sm">
+          {language === 'ja' ? 'マップを読み込めませんでした' : 'Map could not be loaded'}
+        </p>
+        <p className="text-zinc-500 text-xs">
+          {language === 'ja' ? 'しばらくしてからもう一度お試しください' : 'Please try again later'}
+        </p>
       </div>
     )
   }
