@@ -153,7 +153,7 @@ export default function ShopClient({ userEmail, userName }: Props) {
         <div className="mb-8">
           <p className="text-[10px] tracking-[0.25em] uppercase text-zinc-500 mb-2">FOMUS GUILD Members</p>
           <h1 className="text-2xl font-light text-white">Shop</h1>
-          <p className="text-xs text-zinc-400 mt-2">GUILD会員限定価格 ・ 送料無料</p>
+          <p className="text-xs text-zinc-400 mt-2">GUILD会員限定価格 ・ 日本国内発送のみ（送料 ¥800）</p>
         </div>
 
         {/* Product Detail View */}
@@ -196,7 +196,7 @@ export default function ShopClient({ userEmail, userName }: Props) {
                     </span>
                   )}
                 </div>
-                <p className="text-[10px] text-teal-400 tracking-wide mb-4">GUILD会員価格 ・ 送料無料</p>
+                <p className="text-[10px] text-teal-400 tracking-wide mb-4">GUILD会員価格 ・ 送料 ¥800</p>
 
                 {selectedProduct.made_to_order && (
                   <p className="text-xs text-zinc-500 mb-4">
@@ -277,11 +277,11 @@ export default function ShopClient({ userEmail, userName }: Props) {
               </div>
               <div className="flex justify-between items-center mb-4">
                 <span className="text-sm text-zinc-400">送料</span>
-                <span className="text-sm text-teal-400">無料</span>
+                <span className="text-sm text-zinc-300">¥800</span>
               </div>
               <div className="border-t border-zinc-700 pt-4 flex justify-between items-center">
                 <span className="text-sm font-medium text-white">合計</span>
-                <span className="text-xl font-light text-white">¥{(getPrice(selectedProduct) * quantity).toLocaleString()}</span>
+                <span className="text-xl font-light text-white">¥{(getPrice(selectedProduct) * quantity + 800).toLocaleString()}</span>
               </div>
             </div>
 
