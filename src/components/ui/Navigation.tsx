@@ -49,7 +49,7 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
     },
     {
       label: t.shop,
-      href: '/api/shop-sso',
+      href: '/app/shop',
       ariaLabel: 'Go to FOMUS Shop',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
