@@ -118,6 +118,7 @@ const translations = {
     card: 'カード',
     map: 'マップ',
     offers: 'クエスト',
+    shop: 'ショップ',
     profile: 'プロフィール',
     admin: '管理',
 
@@ -681,6 +682,7 @@ const translations = {
     card: 'Card',
     map: 'Map',
     offers: 'Quests',
+    shop: 'Shop',
     profile: 'Profile',
     admin: 'Admin',
 
