@@ -377,6 +377,8 @@ export default function InvitePage() {
     )
   }
 
+  const isShopInvite = code === 'FOMUS-SHOP'
+
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50">
       <div className="absolute top-4 right-4">
@@ -386,17 +388,52 @@ export default function InvitePage() {
           className="text-zinc-600"
         />
       </div>
+
+      {/* LP Section for FOMUS-SHOP invite */}
+      {isShopInvite && (
+        <div className="bg-zinc-900 text-white">
+          <div className="max-w-4xl mx-auto px-6 py-16 md:py-24">
+            <p className="text-[10px] tracking-[0.3em] uppercase text-zinc-400 mb-4">Invitation-Only Community</p>
+            <h1 className="text-3xl md:text-5xl font-light leading-tight mb-6">
+              FOMUS GUILD
+            </h1>
+            <p className="text-sm md:text-base text-zinc-400 leading-relaxed max-w-lg mb-12">
+              枡（ます）を愛するグローバルコミュニティ。
+              <br />会員限定の特別価格、限定アイテム、世界中のメンバーとのつながり。
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              {[
+                { title: '会員限定価格', desc: 'FOMUS Shopの対象商品を特別価格で購入できます' },
+                { title: 'デジタル会員証', desc: 'ランクアップ制度付きのデジタルメンバーカード' },
+                { title: 'グローバルネットワーク', desc: '世界中の枡愛好家とつながるマップ＆コミュニティ' },
+              ].map((item) => (
+                <div key={item.title} className="border border-zinc-700 rounded-xl p-5">
+                  <h3 className="text-sm font-medium text-white mb-2">{item.title}</h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-zinc-500">
+              <span className="bg-zinc-800 px-3 py-1 rounded-full">月額 $10</span>
+              <span>いつでも解約可能</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-md w-full">
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-zinc-900 mb-2">
-                {t.welcomeToGuild}
+                {isShopInvite ? 'FOMUS GUILDに参加する' : t.welcomeToGuild}
               </h1>
               <p className="text-zinc-600">
-                {t.youveBeenInvited}
+                {isShopInvite ? 'メールアドレスを入力して会員登録を開始' : t.youveBeenInvited}
               </p>
-              {isFree && (
+              {isFree && !isShopInvite && (
                 <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium">
                   {MEMBERSHIP_TYPE_LABELS[membershipType]} {t.freeInvitation.replace('（', '(').replace('）', ')')}
                 </div>
@@ -448,15 +485,30 @@ export default function InvitePage() {
                   className="w-full"
                   size="lg"
                 >
-                  {t.proceedToPayment}
+                  {isShopInvite ? '会員登録を始める（$10/月）' : t.proceedToPayment}
                 </Button>
               </div>
             )}
 
             <p className="text-xs text-zinc-500 text-center mt-6">
-              {isFree ? t.freeAccess : t.afterVerification}
+              {isShopInvite
+                ? 'メール確認後、$10/月のサブスクリプションで会員登録が完了します。いつでも解約可能です。'
+                : isFree ? t.freeAccess : t.afterVerification
+              }
             </p>
           </div>
+
+          {/* Already a member */}
+          {isShopInvite && (
+            <div className="text-center mt-6">
+              <a
+                href="/auth/login"
+                className="text-sm text-zinc-500 hover:text-zinc-700 underline underline-offset-4 transition-colors"
+              >
+                既にGUILD会員の方はログイン
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>
