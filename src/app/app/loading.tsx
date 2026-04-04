@@ -12,16 +12,6 @@ export default function DashboardLoading() {
         <div className="h-48 bg-white/10 rounded-2xl border border-zinc-500/30" />
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white/10 rounded-xl p-4 border border-zinc-500/30">
-            <div className="h-3 w-16 bg-white/5 rounded mb-2" />
-            <div className="h-6 w-12 bg-white/5 rounded" />
-          </div>
-        ))}
-      </div>
-
       {/* Guild Services */}
       <div className="mb-8">
         <div className="h-4 w-28 bg-white/10 rounded mb-3" />

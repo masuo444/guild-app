@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Profile, ActivityLog } from '@/types/database'
 import { MembershipCard } from '@/components/membership/MembershipCard'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
-import { calculateRank, getPointsToNextRank } from '@/config/rank'
+import { calculateRank } from '@/config/rank'
 import { formatDate } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n'
 import type { LoginBonusResult } from './page'
@@ -21,7 +21,6 @@ interface DashboardClientProps {
 
 export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs, inviteCount, loginBonusResult }: DashboardClientProps) {
   const rank = calculateRank(statusPoints)
-  const pointsToNext = getPointsToNextRank(statusPoints)
   const { language, setLanguage, t } = useLanguage()
   const [showBonusBanner, setShowBonusBanner] = useState(false)
 
@@ -95,28 +94,6 @@ export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs,
       {/* 会員証 */}
       <div className="mb-8">
         <MembershipCard profile={profile} points={statusPoints} inviteCount={inviteCount} masuPoints={masuPoints} translations={cardTranslations} />
-      </div>
-
-      {/* ステータスカード */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          label={t.rank}
-          value={rank}
-          sublabel={pointsToNext ? `${pointsToNext} ${t.ptsToNext}` : t.maxRank}
-        />
-        <StatCard
-          label={t.masuPoints}
-          value={masuPoints.toLocaleString()}
-        />
-        <StatCard
-          label={t.memberSince}
-          value={new Date(profile.created_at).getFullYear().toString()}
-        />
-        <StatCard
-          label={t.location}
-          value={profile.home_city || t.notSet}
-          sublabel={profile.home_country || ''}
-        />
       </div>
 
       {/* GUILD SERVICES */}
@@ -223,24 +200,6 @@ export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs,
           )}
         </CardContent>
       </Card>
-    </div>
-  )
-}
-
-function StatCard({
-  label,
-  value,
-  sublabel,
-}: {
-  label: string
-  value: string
-  sublabel?: string
-}) {
-  return (
-    <div className="bg-white/10 backdrop-blur rounded-xl p-4 border border-zinc-500/30">
-      <p className="text-xs text-zinc-300 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-xl font-bold text-white">{value}</p>
-      {sublabel && <p className="text-xs text-zinc-300 mt-1">{sublabel}</p>}
     </div>
   )
 }
