@@ -304,62 +304,87 @@ export default function ShopClient({ userEmail, userName }: Props) {
             </p>
           </div>
         ) : (
-          /* Product Grid */
-          <div className="space-y-4">
-            {products.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-zinc-500 text-sm">現在購入可能な商品はありません</p>
-              </div>
-            ) : (
-              products.map((product) => {
-                const memberPrice = getPrice(product)
-                const hasDiscount = product.member_price != null && product.member_price < product.price
+          <div className="space-y-8">
+            {/* GUILD Exclusive Products */}
+            {(() => {
+              const guildProducts = products.filter(p => p.member_price != null && p.member_price < p.price)
+              const hasGuildProducts = guildProducts.length > 0
 
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => setSelectedProduct(product)}
-                    className="w-full bg-white/5 backdrop-blur rounded-2xl border border-zinc-700/50 overflow-hidden hover:border-zinc-500/50 transition-colors text-left"
-                  >
-                    <div className="flex gap-4 p-4">
-                      {product.images?.[0] && (
-                        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 relative">
-                          <Image
-                            src={product.images[0]}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                            sizes="96px"
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-white line-clamp-1">{product.name}</h3>
-                        {product.made_to_order && (
-                          <p className="text-[10px] text-zinc-500 mt-0.5">完全受注生産 — 数量限定</p>
-                        )}
-                        <div className="mt-2 flex items-baseline gap-2">
-                          <span className="text-lg font-light text-white">
-                            ¥{memberPrice.toLocaleString()}
-                          </span>
-                          {hasDiscount && (
-                            <span className="text-xs text-zinc-500 line-through">
-                              ¥{product.price.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                        {hasDiscount && (
-                          <span className="text-[10px] text-teal-400 tracking-wide">GUILD会員価格</span>
-                        )}
-                      </div>
-                      <div className="flex items-center">
-                        <svg className="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" /></svg>
+              return (
+                <>
+                  {hasGuildProducts && (
+                    <div>
+                      <p className="text-[10px] tracking-[0.2em] uppercase text-teal-400 mb-4">GUILD Member Exclusive</p>
+                      <div className="space-y-4">
+                        {guildProducts.map((product) => (
+                          <button
+                            key={product.id}
+                            onClick={() => setSelectedProduct(product)}
+                            className="w-full bg-white/5 backdrop-blur rounded-2xl border border-teal-500/20 overflow-hidden hover:border-teal-500/50 transition-colors text-left"
+                          >
+                            <div className="flex gap-4 p-4">
+                              {product.images?.[0] && (
+                                <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 relative">
+                                  <Image
+                                    src={product.images[0]}
+                                    alt={product.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="96px"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-sm font-medium text-white line-clamp-1">{product.name}</h3>
+                                {product.made_to_order && (
+                                  <p className="text-[10px] text-zinc-500 mt-0.5">完全受注生産 — 数量限定</p>
+                                )}
+                                <div className="mt-2 flex items-baseline gap-2">
+                                  <span className="text-lg font-light text-white">
+                                    ¥{product.member_price!.toLocaleString()}
+                                  </span>
+                                  <span className="text-xs text-zinc-500 line-through">
+                                    ¥{product.price.toLocaleString()}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-teal-400 tracking-wide">GUILD会員価格</span>
+                              </div>
+                              <div className="flex items-center">
+                                <svg className="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" /></svg>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  </button>
-                )
-              })
-            )}
+                  )}
+
+                  {!hasGuildProducts && (
+                    <div className="text-center py-12">
+                      <p className="text-zinc-500 text-sm">現在GUILD会員限定商品はありません</p>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
+
+            {/* Link to FOMUS SHOP */}
+            <div className="border-t border-zinc-700/50 pt-8">
+              <p className="text-[10px] tracking-[0.2em] uppercase text-zinc-500 mb-4">All Products</p>
+              <a
+                href="https://shop.fomus.jp/shop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full bg-white/5 backdrop-blur rounded-2xl border border-zinc-700/50 overflow-hidden hover:border-zinc-500/50 transition-colors p-5 text-center"
+              >
+                <p className="text-sm font-medium text-white mb-1">FOMUS SHOPで全商品を見る</p>
+                <p className="text-[10px] text-zinc-500">枡・SILVA・ランニングウェアなど</p>
+                <div className="mt-3 inline-flex items-center gap-2 text-[10px] tracking-[0.15em] uppercase text-zinc-400">
+                  <span>shop.fomus.jp</span>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </div>
+              </a>
+            </div>
           </div>
         )}
       </div>
