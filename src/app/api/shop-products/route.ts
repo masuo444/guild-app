@@ -6,15 +6,20 @@ const SHOP_SUPABASE_URL = process.env.SHOP_SUPABASE_URL || ''
 const SHOP_SUPABASE_ANON_KEY = process.env.SHOP_SUPABASE_ANON_KEY || ''
 
 export async function GET() {
-  // Verify guild member is authenticated
-  const guild = await createGuildClient()
-  const { data: { user } } = await guild.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   if (!SHOP_SUPABASE_URL || !SHOP_SUPABASE_ANON_KEY) {
     return NextResponse.json({ error: 'Shop not configured', url: !!SHOP_SUPABASE_URL, key: !!SHOP_SUPABASE_ANON_KEY }, { status: 500 })
+  }
+
+  // Verify guild member is authenticated
+  try {
+    const guild = await createGuildClient()
+    const { data: { user } } = await guild.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  } catch (authError) {
+    console.error('Auth check failed:', authError)
+    return NextResponse.json({ error: 'Auth check failed' }, { status: 401 })
   }
 
   const shop = createBrowserClient(SHOP_SUPABASE_URL, SHOP_SUPABASE_ANON_KEY)

@@ -49,6 +49,7 @@ export default function ShopClient({ userEmail, userName }: Props) {
     try {
       const res = await fetch('/api/shop-products')
       const data = await res.json()
+      console.log('Shop products response:', res.status, data)
       if (res.ok && Array.isArray(data)) {
         // Filter by sale period
         const now = new Date()
@@ -57,9 +58,14 @@ export default function ShopClient({ userEmail, userName }: Props) {
           if (p.sale_end_date && now > new Date(p.sale_end_date)) return false
           return true
         })
+        console.log('Filtered products:', filtered.length, 'Guild exclusive:', filtered.filter((p: Product) => p.member_price != null && p.member_price < p.price).length)
         setProducts(filtered)
       } else {
-        console.error('Shop products error:', data)
+        console.error('Shop products error:', res.status, data)
+        // Fallback: try to use data anyway if it looks like an array
+        if (Array.isArray(data)) {
+          setProducts(data)
+        }
       }
     } catch (e) {
       console.error('Failed to fetch products:', e)
