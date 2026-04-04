@@ -31,7 +31,6 @@ export default function ShopClient({ userEmail, userName }: Props) {
   const [quantity, setQuantity] = useState(1)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [error, setError] = useState('')
-  const [debugInfo, setDebugInfo] = useState('')
 
   // Shipping form
   const [shippingName, setShippingName] = useState(userName)
@@ -50,7 +49,6 @@ export default function ShopClient({ userEmail, userName }: Props) {
     try {
       const res = await fetch('/api/shop-products')
       const data = await res.json()
-      setDebugInfo(`Status: ${res.status} | Items: ${Array.isArray(data) ? data.length : 'not array'} | ${JSON.stringify(data).slice(0, 200)}`)
       if (res.ok && Array.isArray(data)) {
         const now = new Date()
         const filtered = data.filter((p: Product) => {
@@ -63,7 +61,7 @@ export default function ShopClient({ userEmail, userName }: Props) {
         setProducts(data)
       }
     } catch (e) {
-      setDebugInfo(`Fetch error: ${e instanceof Error ? e.message : String(e)}`)
+      console.error('Failed to fetch products:', e)
     } finally {
       setLoading(false)
     }
@@ -145,7 +143,6 @@ export default function ShopClient({ userEmail, userName }: Props) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center flex-col gap-2">
         <div className="animate-pulse text-zinc-500">読み込み中...</div>
-        {debugInfo && <p className="text-[10px] text-red-400 px-4 break-all">{debugInfo}</p>}
       </div>
     )
   }
@@ -158,7 +155,6 @@ export default function ShopClient({ userEmail, userName }: Props) {
           <p className="text-[10px] tracking-[0.25em] uppercase text-zinc-500 mb-2">FOMUS GUILD Members</p>
           <h1 className="text-2xl font-light text-white">Shop</h1>
           <p className="text-xs text-zinc-400 mt-2">GUILD会員限定価格 ・ 日本国内発送のみ（送料 ¥800）</p>
-          {debugInfo && <p className="text-[10px] text-red-400 mt-2 break-all">{debugInfo}</p>}
         </div>
 
         {/* Product Detail View */}
