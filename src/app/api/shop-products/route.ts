@@ -14,7 +14,7 @@ export async function GET() {
   }
 
   if (!SHOP_SUPABASE_URL || !SHOP_SUPABASE_ANON_KEY) {
-    return NextResponse.json({ error: 'Shop not configured' }, { status: 500 })
+    return NextResponse.json({ error: 'Shop not configured', url: !!SHOP_SUPABASE_URL, key: !!SHOP_SUPABASE_ANON_KEY }, { status: 500 })
   }
 
   const shop = createBrowserClient(SHOP_SUPABASE_URL, SHOP_SUPABASE_ANON_KEY)
@@ -31,10 +31,10 @@ export async function GET() {
 
   const shopIds = shops.map((s: { id: string }) => s.id)
 
-  // Get published physical products with options
+  // Get published physical products
   const { data: products, error } = await shop
     .from('products')
-    .select('*, product_options(*, choices:product_option_choices(*))')
+    .select('*')
     .in('shop_id', shopIds)
     .eq('is_published', true)
     .eq('item_type', 'physical')
@@ -42,7 +42,7 @@ export async function GET() {
 
   if (error) {
     console.error('Shop products fetch error:', error)
-    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
+    return NextResponse.json({ error: `Failed to fetch products: ${error.message}` }, { status: 500 })
   }
 
   return NextResponse.json(products || [])

@@ -48,8 +48,8 @@ export default function ShopClient({ userEmail, userName }: Props) {
   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/shop-products')
-      if (res.ok) {
-        const data = await res.json()
+      const data = await res.json()
+      if (res.ok && Array.isArray(data)) {
         // Filter by sale period
         const now = new Date()
         const filtered = data.filter((p: Product) => {
@@ -58,6 +58,8 @@ export default function ShopClient({ userEmail, userName }: Props) {
           return true
         })
         setProducts(filtered)
+      } else {
+        console.error('Shop products error:', data)
       }
     } catch (e) {
       console.error('Failed to fetch products:', e)
