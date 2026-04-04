@@ -63,7 +63,7 @@ export default function ShopClient({ userEmail, userName }: Props) {
         setProducts(data)
       }
     } catch (e) {
-      console.error('Failed to fetch products:', e)
+      setDebugInfo(`Fetch error: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setLoading(false)
     }
@@ -143,8 +143,9 @@ export default function ShopClient({ userEmail, userName }: Props) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center flex-col gap-2">
         <div className="animate-pulse text-zinc-500">読み込み中...</div>
+        {debugInfo && <p className="text-[10px] text-red-400 px-4 break-all">{debugInfo}</p>}
       </div>
     )
   }
