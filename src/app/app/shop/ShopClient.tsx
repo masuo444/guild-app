@@ -31,6 +31,7 @@ export default function ShopClient({ userEmail, userName }: Props) {
   const [quantity, setQuantity] = useState(1)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [error, setError] = useState('')
+  const [debugInfo, setDebugInfo] = useState('')
 
   // Shipping form
   const [shippingName, setShippingName] = useState(userName)
@@ -49,23 +50,17 @@ export default function ShopClient({ userEmail, userName }: Props) {
     try {
       const res = await fetch('/api/shop-products')
       const data = await res.json()
-      console.log('Shop products response:', res.status, data)
+      setDebugInfo(`Status: ${res.status} | Items: ${Array.isArray(data) ? data.length : 'not array'} | ${JSON.stringify(data).slice(0, 200)}`)
       if (res.ok && Array.isArray(data)) {
-        // Filter by sale period
         const now = new Date()
         const filtered = data.filter((p: Product) => {
           if (p.sale_start_date && now < new Date(p.sale_start_date)) return false
           if (p.sale_end_date && now > new Date(p.sale_end_date)) return false
           return true
         })
-        console.log('Filtered products:', filtered.length, 'Guild exclusive:', filtered.filter((p: Product) => p.member_price != null && p.member_price < p.price).length)
         setProducts(filtered)
-      } else {
-        console.error('Shop products error:', res.status, data)
-        // Fallback: try to use data anyway if it looks like an array
-        if (Array.isArray(data)) {
-          setProducts(data)
-        }
+      } else if (Array.isArray(data)) {
+        setProducts(data)
       }
     } catch (e) {
       console.error('Failed to fetch products:', e)
@@ -162,6 +157,7 @@ export default function ShopClient({ userEmail, userName }: Props) {
           <p className="text-[10px] tracking-[0.25em] uppercase text-zinc-500 mb-2">FOMUS GUILD Members</p>
           <h1 className="text-2xl font-light text-white">Shop</h1>
           <p className="text-xs text-zinc-400 mt-2">GUILD会員限定価格 ・ 日本国内発送のみ（送料 ¥800）</p>
+          {debugInfo && <p className="text-[10px] text-red-400 mt-2 break-all">{debugInfo}</p>}
         </div>
 
         {/* Product Detail View */}
