@@ -33,19 +33,12 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    // ユーザーが存在するか確認（profilesテーブルで検索）
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
+    // auth.usersでユーザー存在確認
+    const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers()
+    const userExists = !userError && users.some(u => u.email?.toLowerCase() === email.toLowerCase())
 
-    if (profileError || !profile) {
-      // Return same response shape to prevent email enumeration
-      return NextResponse.json({
-        success: true,
-        redirectUrl: null,
-      })
+    if (!userExists) {
+      return NextResponse.json({ success: true, redirectUrl: null })
     }
 
     // マジックリンクを生成（管理者APIを使用、メール送信なし）

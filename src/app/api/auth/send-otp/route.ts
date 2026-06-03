@@ -29,15 +29,11 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // ユーザーが存在するか確認（profilesテーブルで検索）
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
+    // auth.usersでユーザー存在確認
+    const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers()
+    const userExists = !userError && users.some(u => u.email?.toLowerCase() === email.toLowerCase())
 
-    if (profileError || !profile) {
-      // Return the same response as success to prevent email enumeration
+    if (!userExists) {
       return NextResponse.json({ success: true })
     }
 
