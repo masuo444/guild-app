@@ -122,6 +122,52 @@ export default function HomePage() {
         </div>
       </main>
 
+      {/* Benefits */}
+      <section className="w-full px-6 md:px-8 pb-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="border-t border-stone-200 pt-10">
+            <p className="text-xs text-stone-400 tracking-widest uppercase text-center mb-8">
+              {language === 'ja' ? 'メンバー特典' : 'Member Benefits'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-2xl mb-3">🏔️</div>
+                <h3 className="text-sm font-medium text-stone-700 mb-2">
+                  {language === 'ja' ? '笛吹BASEへの訪問権' : 'Access to Fuefuki BASE'}
+                </h3>
+                <p className="text-xs text-stone-500 leading-relaxed">
+                  {language === 'ja'
+                    ? 'まっすーの山梨・笛吹の拠点に立ち寄れます。ドリンク片手に語りましょう。'
+                    : "Drop by MaSU's base in Fuefuki, Yamanashi. Let's talk over drinks."}
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl mb-3">🌍</div>
+                <h3 className="text-sm font-medium text-stone-700 mb-2">
+                  {language === 'ja' ? 'グローバルな仲間' : 'Global Community'}
+                </h3>
+                <p className="text-xs text-stone-500 leading-relaxed">
+                  {language === 'ja'
+                    ? '世界各地のメンバーとつながり、文化・挑戦・日常をシェアする場。'
+                    : 'Connect with members around the world. Share culture, challenges, and everyday life.'}
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl mb-3">🎴</div>
+                <h3 className="text-sm font-medium text-stone-700 mb-2">
+                  {language === 'ja' ? '限定コンテンツ＆特典' : 'Exclusive Content & Perks'}
+                </h3>
+                <p className="text-xs text-stone-500 leading-relaxed">
+                  {language === 'ja'
+                    ? 'クエスト、ポイント、限定ショップなど、メンバーだけの体験を。'
+                    : 'Quests, points, exclusive shop — experiences only for members.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="w-full p-6 md:p-8">
         <div className="max-w-4xl mx-auto text-center">
