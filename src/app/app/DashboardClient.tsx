@@ -149,6 +149,23 @@ export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs,
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
             </svg>
           </a>
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 p-4 col-span-2">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <span className="text-lg">🏔️</span>
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">
+                  {language === 'ja' ? '笛吹BASE' : 'Fuefuki BASE'}
+                </p>
+                <p className="text-zinc-400 text-xs mt-0.5 leading-relaxed">
+                  {language === 'ja'
+                    ? 'まっすーの山梨・笛吹の拠点に立ち寄れます。ドリンク片手に語りましょう。訪問希望はDMで。'
+                    : "Drop by MaSU's base in Fuefuki, Yamanashi. Let's talk over drinks. DM to arrange a visit."}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
