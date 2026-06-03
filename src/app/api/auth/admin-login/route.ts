@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { otpSendLimiter } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,6 +10,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'メールアドレスが必要です' },
         { status: 400 }
+      )
+    }
+
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    if (!otpSendLimiter.check(ip)) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429 }
       )
     }
 
