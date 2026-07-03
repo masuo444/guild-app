@@ -27,11 +27,15 @@ export default async function AppLayout({
     isAdmin = profile?.role === 'admin'
     isSuperAdmin = user.email === SUPER_ADMIN_EMAIL
 
-    // サブスクリプションチェック: active/free以外かつadminでもない場合はリダイレクト
+    // 半オープン化: 無料登録(free_tier)も /app に入れる。
+    // マップ等の有料機能はページ側で access.ts のゲートにより制限する。
+    // active/free/free_tier いずれでもない（inactive/past_due/canceled）場合のみ
+    // アップグレード導線へ誘導する。
     const subscriptionStatus = profile?.subscription_status
     const hasAccess = isAdmin || isSuperAdmin
       || subscriptionStatus === 'active'
       || subscriptionStatus === 'free'
+      || subscriptionStatus === 'free_tier'
 
     if (!hasAccess) {
       redirect('/auth/subscribe')

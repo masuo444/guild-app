@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { MembershipType, isFreeMembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
-import { getInviteMaxUses } from '@/lib/utils'
 import { Language, getInitialLanguage, getTranslations } from '@/lib/i18n'
 import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
@@ -38,12 +37,23 @@ export default function LoginPage() {
   const [registerLoading, setRegisterLoading] = useState(false)
   const [registerError, setRegisterError] = useState('')
   const [registerCode, setRegisterCode] = useState('')
+  // 招待コードなしの無料参加（半オープン化）
+  const [freeJoin, setFreeJoin] = useState(false)
 
   const supabase = createClient()
 
   useEffect(() => {
     const lang = getInitialLanguage()
     setLanguageState(lang)
+
+    // ランディングの「無料で参加する」から来た場合は無料参加ステップを開く
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('join') === 'free') {
+      setMode('register')
+      setFreeJoin(true)
+      setValidatedInvite(null)
+      setRegisterStep('email')
+    }
   }, [])
 
   const setLanguage = (lang: Language) => {
@@ -52,32 +62,6 @@ export default function LoginPage() {
   }
 
   const t = getTranslations(language)
-
-  // 直接ログイン（レート制限回避用）
-  const handleDirectLogin = async () => {
-    try {
-      const response = await fetch('/api/auth/admin-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setLoginMessage({ type: 'error', text: data.error || 'Login failed' })
-        setLoginLoading(false)
-        return
-      }
-
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl
-      }
-    } catch {
-      setLoginMessage({ type: 'error', text: 'Network error' })
-      setLoginLoading(false)
-    }
-  }
 
   // 既存ユーザーログイン - OTPコード送信
   const handleLogin = async (e: React.FormEvent) => {
@@ -100,10 +84,15 @@ export default function LoginPage() {
         return
       }
 
-      // レート制限の場合は直接ログイン
+      // レート制限時はOTPを送れないため、時間を置いて再試行してもらう
       if (data.rateLimited) {
-        setLoginMessage({ type: 'success', text: t.loggingIn })
-        await handleDirectLogin()
+        setLoginMessage({
+          type: 'error',
+          text: language === 'ja'
+            ? 'リクエストが多すぎます。少し時間をおいてからもう一度お試しください。'
+            : 'Too many requests. Please wait a moment and try again.',
+        })
+        setLoginLoading(false)
         return
       }
 
@@ -154,49 +143,45 @@ export default function LoginPage() {
     setInviteLoading(true)
     setInviteError('')
 
-    const { data, error } = await supabase
-      .from('invites')
-      .select('code, used, membership_type, reusable, use_count, invited_by')
-      .eq('code', inviteCode.toUpperCase().trim())
-      .single()
+    const code = inviteCode.toUpperCase().trim()
 
-    if (error || !data) {
+    try {
+      const res = await fetch('/api/auth/validate-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const result = await res.json()
+
+      if (!res.ok || result.status === 'invalid') {
+        setInviteError(t.invalidCode)
+        setInviteLoading(false)
+        return
+      }
+      if (result.status === 'used') {
+        setInviteError(t.codeAlreadyUsed)
+        setInviteLoading(false)
+        return
+      }
+
+      const membershipType = (result.membershipType || 'standard') as MembershipType
+      setValidatedInvite({
+        code,
+        membershipType,
+        isFree: result.isFree ?? isFreeMembershipType(membershipType),
+      })
+      setRegisterStep('email')
+      setInviteLoading(false)
+    } catch {
       setInviteError(t.invalidCode)
       setInviteLoading(false)
-      return
     }
-
-    let isUsed = data.used
-    if (data.reusable) {
-      const { data: allInvites } = await supabase
-        .from('invites')
-        .select('use_count')
-        .eq('invited_by', data.invited_by)
-        .eq('reusable', true)
-      const totalInvites = allInvites?.reduce((sum, inv) => sum + (inv.use_count || 0), 0) || 0
-      const maxUses = getInviteMaxUses(totalInvites)
-      isUsed = (data.use_count || 0) >= maxUses
-    }
-    if (isUsed) {
-      setInviteError(t.codeAlreadyUsed)
-      setInviteLoading(false)
-      return
-    }
-
-    const membershipType = (data.membership_type || 'standard') as MembershipType
-    setValidatedInvite({
-      code: data.code,
-      membershipType,
-      isFree: isFreeMembershipType(membershipType),
-    })
-    setRegisterStep('email')
-    setInviteLoading(false)
   }
 
   // 新規登録 - OTPコード送信
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validatedInvite) return
+    if (!validatedInvite && !freeJoin) return
 
     setRegisterLoading(true)
     setRegisterError('')
@@ -204,9 +189,11 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: registerEmail,
       options: {
-        data: {
-          invite_code: validatedInvite.code,
-        },
+        // 無料参加は新規ユーザー作成を許可。招待経由は招待コードをメタデータに付与。
+        shouldCreateUser: true,
+        ...(validatedInvite
+          ? { data: { invite_code: validatedInvite.code } }
+          : {}),
       },
     })
 
@@ -223,12 +210,12 @@ export default function LoginPage() {
   // 新規登録 - OTPコード検証
   const handleVerifyRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validatedInvite) return
+    if (!validatedInvite && !freeJoin) return
 
     setRegisterLoading(true)
     setRegisterError('')
 
-    const { data, error } = await supabase.auth.verifyOtp({
+    const { error } = await supabase.auth.verifyOtp({
       email: registerEmail,
       token: registerCode,
       type: 'email',
@@ -240,9 +227,23 @@ export default function LoginPage() {
       return
     }
 
-    // 認証成功 - callbackを経由してプロフィール設定
-    // callbackルートがinvite_codeを処理してmembership_type, show_location_on_mapを正しく設定する
-    const callbackUrl = `/api/auth/callback?invite_code=${encodeURIComponent(validatedInvite.code)}&next=${validatedInvite.isFree ? '/app' : '/auth/subscribe'}`
+    // 招待なしの無料参加: セッション確立済み → free_tier プロフィールを作成
+    if (freeJoin) {
+      try {
+        const res = await fetch('/api/auth/register-free', { method: 'POST' })
+        if (!res.ok) {
+          window.location.href = '/api/auth/callback?next=/app'
+          return
+        }
+        window.location.href = '/app'
+      } catch {
+        window.location.href = '/api/auth/callback?next=/app'
+      }
+      return
+    }
+
+    // 招待経由: callback が invite_code を処理して membership_type 等を設定
+    const callbackUrl = `/api/auth/callback?invite_code=${encodeURIComponent(validatedInvite!.code)}&next=${validatedInvite!.isFree ? '/app' : '/auth/subscribe'}`
     window.location.href = callbackUrl
   }
 
@@ -266,7 +267,7 @@ export default function LoginPage() {
         {/* Mode Tabs */}
         <div className="flex gap-1 p-1 bg-white/5 rounded-xl mb-6">
           <button
-            onClick={() => { setMode('register'); setRegisterStep('invite'); }}
+            onClick={() => { setMode('register'); setRegisterStep('invite'); setFreeJoin(false); setValidatedInvite(null); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
               mode === 'register'
                 ? 'bg-[#c0c0c0] text-zinc-900'
@@ -474,11 +475,33 @@ export default function LoginPage() {
                   )}
                 </button>
               </form>
+
+              {/* 招待コードなしでも無料で参加できる（半オープン化） */}
+              <div className="mt-6 pt-6 border-t border-zinc-700/50 text-center">
+                <p className="text-xs text-zinc-500 mb-3">
+                  {language === 'ja'
+                    ? '招待コードをお持ちでない方も、無料で参加できます。'
+                    : 'No invite code? You can still join for free.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFreeJoin(true)
+                    setValidatedInvite(null)
+                    setInviteError('')
+                    setRegisterError('')
+                    setRegisterStep('email')
+                  }}
+                  className="w-full px-4 py-3 border border-[#c0c0c0]/40 text-[#e5e5e5] rounded-lg font-medium hover:bg-white/5 transition-colors"
+                >
+                  {language === 'ja' ? '無料で参加する' : 'Join for free'}
+                </button>
+              </div>
             </>
           )}
 
           {/* 新規登録 - ステップ2: メールアドレス */}
-          {mode === 'register' && registerStep === 'email' && validatedInvite && (
+          {mode === 'register' && registerStep === 'email' && (validatedInvite || freeJoin) && (
             <>
               <div className="text-center mb-6">
                 <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -486,8 +509,19 @@ export default function LoginPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-medium text-white mb-2">{t.inviteConfirmed}</h2>
-                {validatedInvite.isFree && (
+                <h2 className="text-xl font-medium text-white mb-2">
+                  {freeJoin
+                    ? (language === 'ja' ? '無料で参加' : 'Join for free')
+                    : t.inviteConfirmed}
+                </h2>
+                {freeJoin && (
+                  <p className="text-sm text-zinc-400 mt-1">
+                    {language === 'ja'
+                      ? 'メールに届く認証コードで登録します。'
+                      : 'Register with the code sent to your email.'}
+                  </p>
+                )}
+                {validatedInvite?.isFree && (
                   <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium mt-2">
                     {MEMBERSHIP_TYPE_LABELS[validatedInvite.membershipType]} {t.freeInvite}
                   </div>
@@ -536,15 +570,21 @@ export default function LoginPage() {
 
                 <button
                   type="button"
-                  onClick={() => { setRegisterStep('invite'); setValidatedInvite(null); }}
+                  onClick={() => { setRegisterStep('invite'); setValidatedInvite(null); setFreeJoin(false); }}
                   className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
                 >
-                  {t.changeInviteCode}
+                  {freeJoin
+                    ? (language === 'ja' ? '戻る' : 'Back')
+                    : t.changeInviteCode}
                 </button>
               </form>
 
               <p className="text-xs text-zinc-500 text-center mt-4">
-                {validatedInvite.isFree ? t.freeJoinGuild : t.paidJoinGuild}
+                {freeJoin
+                  ? (language === 'ja'
+                      ? '無料プランで参加します。マップなど一部機能は有料会員限定です。'
+                      : 'Joining on the free plan. Some features (like the member map) are for paid members.')
+                  : validatedInvite?.isFree ? t.freeJoinGuild : t.paidJoinGuild}
               </p>
             </>
           )}

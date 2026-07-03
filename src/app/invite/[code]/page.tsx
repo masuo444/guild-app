@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { MembershipType, isFreeMembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
-import { getInviteMaxUses } from '@/lib/utils'
 import { Language, getInitialLanguage, getTranslations } from '@/lib/i18n'
 import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 import ShopInviteLP from './ShopInviteLP'
@@ -47,82 +46,42 @@ export default function InvitePage() {
   const t = getTranslations(language)
 
   useEffect(() => {
-    const supabase = createClient()
-
     async function checkInvite() {
-      const { data, error } = await supabase
-        .from('invites')
-        .select('used, membership_type, reusable, use_count, invited_by')
-        .eq('code', code)
-        .single()
+      try {
+        const res = await fetch('/api/auth/validate-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        })
+        const result = await res.json()
 
-      if (error || !data) {
+        if (!res.ok || result.status === 'invalid') {
+          setStatus('invalid')
+          return
+        }
+        if (result.status === 'used') {
+          setStatus('used')
+          return
+        }
+
+        const type = (result.membershipType || 'standard') as MembershipType
+        setMembershipType(type)
+        setIsFree(result.isFree ?? isFreeMembershipType(type))
+        setStatus('valid')
+      } catch {
         setStatus('invalid')
-        return
       }
-
-      // reusable の場合は動的上限で判定
-      let isValid = !data.used
-      if (data.reusable) {
-        const { data: allInvites } = await supabase
-          .from('invites')
-          .select('use_count')
-          .eq('invited_by', data.invited_by)
-          .eq('reusable', true)
-        const totalInvites = allInvites?.reduce((sum, inv) => sum + (inv.use_count || 0), 0) || 0
-        const maxUses = getInviteMaxUses(totalInvites)
-        isValid = (data.use_count || 0) < maxUses
-      }
-      if (!isValid) {
-        setStatus('used')
-        return
-      }
-
-      const type = (data.membership_type || 'standard') as MembershipType
-      setMembershipType(type)
-      setIsFree(isFreeMembershipType(type))
-      setStatus('valid')
     }
 
     checkInvite()
   }, [code])
 
-  // レート制限時のフォールバック: サーバー側で直接登録＋ログイン
-  const handleDirectRegister = async () => {
-    setStatus('redirecting')
-    try {
-      const res = await fetch('/api/auth/invite-direct-register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, inviteCode: code }),
-      })
-
-      const result = await res.json()
-
-      if (!res.ok || !result.callbackUrl) {
-        setError(t.serverError)
-        setStatus('valid')
-        return
-      }
-
-      window.location.href = result.callbackUrl
-    } catch {
-      setError(t.serverError)
-      setStatus('valid')
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (isFree) {
-      // 無料招待: OTP不要。サーバー側で直接登録→即ログイン
-      await handleDirectRegister()
-      return
-    }
-
-    // 有料招待: OTP認証フロー
+    // 無料・有料いずれもメール所有確認のOTP認証を必須とする。
+    // （検証なしにセッションを発行すると、他人のメールで登録・ログインできてしまう）
     setStatus('submitting')
 
     const supabase = createClient()
@@ -197,32 +156,26 @@ export default function InvitePage() {
       return
     }
 
-    // OTP検証成功 → quick-register でプロフィール作成 & magic link token 取得
+    // OTP検証成功 → セッション確立済み。quick-register でプロフィール作成。
+    // userId / email はサーバー側でセッションから取得するため送らない。
     setStatus('redirecting')
 
     try {
       const res = await fetch('/api/auth/quick-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: data.user.id,
-          email,
-          inviteCode: code,
-        }),
+        body: JSON.stringify({ inviteCode: code }),
       })
 
-      const result = await res.json()
-
-      if (!res.ok || !result.callbackUrl) {
-        // quick-register 失敗時は従来のフローにフォールバック
+      if (!res.ok) {
+        // quick-register 失敗時は callback 経由でプロフィール確認にフォールバック
         window.location.href = `/api/auth/callback?invite_code=${code}&next=/app`
         return
       }
 
-      // callback に token_hash 付きでリダイレクト → サーバー側で確実にセッション確立
-      window.location.href = result.callbackUrl
+      window.location.href = '/app'
     } catch {
-      // ネットワークエラー時は従来のフローにフォールバック
+      // ネットワークエラー時は callback 経由にフォールバック
       window.location.href = `/api/auth/callback?invite_code=${code}&next=/app`
     }
   }

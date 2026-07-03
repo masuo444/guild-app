@@ -41,7 +41,7 @@ export default function HomePage() {
               FOMUS GUILD
             </h1>
             <p className="text-xs text-stone-500 tracking-widest mt-0.5">
-              Invitation Only
+              {language === 'ja' ? '文化共創コミュニティ' : 'Culture Co-creation'}
             </p>
           </div>
           <StandaloneLanguageSwitcher
@@ -83,9 +83,9 @@ export default function HomePage() {
               {/* Sub Copy */}
               <p className="text-sm md:text-base text-stone-600 leading-relaxed mb-8">
                 {language === 'ja' ? (
-                  <>FOMUS GUILDは、日本の伝統工芸「枡」を起点に生まれた招待制のコミュニティです。</>
+                  <>FOMUS GUILDは、日本の伝統工芸「枡」を起点に生まれた文化共創コミュニティです。<strong className="font-medium text-stone-700">無料で参加</strong>して、まずは中を覗いてみてください。</>
                 ) : (
-                  <>FOMUS GUILD is an invitation-only community born from the Japanese craft of Masu.</>
+                  <>FOMUS GUILD is a culture co-creation community born from the Japanese craft of Masu. <strong className="font-medium text-stone-700">Join for free</strong> and take a look inside.</>
                 )}
               </p>
 
@@ -99,12 +99,18 @@ export default function HomePage() {
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 md:justify-start justify-center">
+              <div className="flex flex-col sm:flex-row items-center gap-3 md:justify-start justify-center">
                 <Link
-                  href="/auth/login"
+                  href="/auth/login?join=free"
                   className="inline-flex items-center justify-center px-8 py-3.5 bg-stone-800 text-white rounded-full font-medium text-sm md:text-base hover:bg-stone-700 transition-colors min-w-[180px] shadow-lg"
                 >
-                  {language === 'ja' ? 'ギルドに入る' : 'Enter the Guild'}
+                  {language === 'ja' ? '無料で参加する' : 'Join for free'}
+                </Link>
+                <Link
+                  href="/auth/login"
+                  className="inline-flex items-center justify-center px-6 py-3.5 text-stone-600 rounded-full font-medium text-sm md:text-base hover:text-stone-900 transition-colors"
+                >
+                  {language === 'ja' ? '招待コードをお持ちの方' : 'Have an invite code'}
                 </Link>
               </div>
 
@@ -122,45 +128,69 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Benefits */}
+      {/* Plans: Free vs Paid */}
       <section className="w-full px-6 md:px-8 pb-12">
         <div className="max-w-4xl mx-auto">
           <div className="border-t border-stone-200 pt-10">
             <p className="text-xs text-stone-400 tracking-widest uppercase text-center mb-8">
-              {language === 'ja' ? 'メンバー特典' : 'Member Benefits'}
+              {language === 'ja' ? 'できること' : 'What You Get'}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-2xl mb-3">🏔️</div>
-                <h3 className="text-sm font-medium text-stone-700 mb-2">
-                  {language === 'ja' ? '笛吹BASEへの訪問権' : 'Access to Fuefuki BASE'}
-                </h3>
-                <p className="text-xs text-stone-500 leading-relaxed">
-                  {language === 'ja'
-                    ? 'まっすーの山梨・笛吹の拠点に立ち寄れます。ドリンク片手に語りましょう。'
-                    : "Drop by MaSU's base in Fuefuki, Yamanashi. Let's talk over drinks."}
-                </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Free plan */}
+              <div className="rounded-2xl border border-stone-200 bg-white/60 p-6">
+                <div className="flex items-baseline justify-between mb-4">
+                  <h3 className="text-base font-semibold text-stone-800">
+                    {language === 'ja' ? '無料で参加' : 'Free'}
+                  </h3>
+                  <span className="text-xs text-stone-400">
+                    {language === 'ja' ? '招待コード不要' : 'No invite needed'}
+                  </span>
+                </div>
+                <ul className="space-y-2.5 text-sm text-stone-600">
+                  {(language === 'ja'
+                    ? ['クエストに挑戦してポイントを貯める', '限定ショップで交換', 'メンバーカード＆プロフィール', '枡拠点マップの閲覧']
+                    : ['Take on quests and earn points', 'Redeem in the members shop', 'Member card & profile', 'Browse the Masu hub map']
+                  ).map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span className="text-emerald-600 mt-0.5">✓</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/auth/login?join=free"
+                  className="mt-6 inline-flex w-full items-center justify-center px-6 py-3 bg-stone-800 text-white rounded-full font-medium text-sm hover:bg-stone-700 transition-colors"
+                >
+                  {language === 'ja' ? '無料で参加する' : 'Join for free'}
+                </Link>
               </div>
-              <div className="text-center">
-                <div className="text-2xl mb-3">🌍</div>
-                <h3 className="text-sm font-medium text-stone-700 mb-2">
-                  {language === 'ja' ? 'グローバルな仲間' : 'Global Community'}
-                </h3>
-                <p className="text-xs text-stone-500 leading-relaxed">
-                  {language === 'ja'
-                    ? '世界各地のメンバーとつながり、文化・挑戦・日常をシェアする場。'
-                    : 'Connect with members around the world. Share culture, challenges, and everyday life.'}
+
+              {/* Paid plan */}
+              <div className="rounded-2xl border border-amber-300 bg-gradient-to-b from-amber-50 to-white p-6 shadow-sm">
+                <div className="flex items-baseline justify-between mb-4">
+                  <h3 className="text-base font-semibold text-stone-800">
+                    {language === 'ja' ? '有料会員' : 'Paid Member'}
+                  </h3>
+                  <span className="text-xs font-medium text-amber-700">
+                    {language === 'ja' ? '月980円〜' : 'from ¥980/mo'}
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500 mb-4">
+                  {language === 'ja' ? '無料でできること + 下記' : 'Everything in Free, plus:'}
                 </p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl mb-3">🎴</div>
-                <h3 className="text-sm font-medium text-stone-700 mb-2">
-                  {language === 'ja' ? '限定コンテンツ＆特典' : 'Exclusive Content & Perks'}
-                </h3>
-                <p className="text-xs text-stone-500 leading-relaxed">
-                  {language === 'ja'
-                    ? 'クエスト、ポイント、限定ショップなど、メンバーだけの体験を。'
-                    : 'Quests, points, exclusive shop — experiences only for members.'}
+                <ul className="space-y-2.5 text-sm text-stone-700">
+                  {(language === 'ja'
+                    ? ['世界のメンバーMAP（誰がどこにいるか）', 'まっすーの限定記事・フィード', '笛吹BASEへの訪問権', 'イベント・企画への優先参加']
+                    : ['Global member MAP (who is where)', "MaSU's exclusive articles & feed", 'Access to Fuefuki BASE', 'Priority access to events & projects']
+                  ).map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span className="text-amber-600 mt-0.5">★</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-6 text-center text-xs text-stone-400">
+                  {language === 'ja' ? '参加後、アプリ内からいつでもアップグレードできます' : 'Upgrade anytime from inside the app'}
                 </p>
               </div>
             </div>

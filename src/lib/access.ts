@@ -27,12 +27,19 @@ export function isPaidMember(status: SubscriptionStatus): boolean {
   return PAID_STATUSES.includes(status)
 }
 
-// メンバー位置を閲覧できるか（登録済みユーザーは全員閲覧可能）
+// メンバーMAP（位置・メンバーピン）を閲覧できるか
+// → 有料会員(active)・特別会員(free)のみ。無料登録(free_tier)は不可。
 export function canViewMembers(status: SubscriptionStatus): boolean {
-  return true
+  return FULL_ACCESS_STATUSES.includes(status)
 }
 
-// オファーを閲覧できるか（登録済みユーザーは全員閲覧可能）
+// 限定コンテンツ（有料記事・まっすーフィードの有料回など）を閲覧できるか
+// → 有料会員・特別会員のみ。将来の記事機能で使う。
+export function canViewPremiumContent(status: SubscriptionStatus): boolean {
+  return FULL_ACCESS_STATUSES.includes(status)
+}
+
+// オファー/クエストを閲覧できるか（無料登録ユーザー含め全員可能：エンゲージメント目的）
 export function canViewOffers(status: SubscriptionStatus): boolean {
   return true
 }
@@ -47,9 +54,9 @@ export function canViewDashboardDetails(status: SubscriptionStatus): boolean {
   return true
 }
 
-// フル機能にアクセスできるか（登録済みユーザーは全員アクセス可能）
+// フル機能（有料相当）にアクセスできるか
 export function hasFullAccess(status: SubscriptionStatus): boolean {
-  return true
+  return FULL_ACCESS_STATUSES.includes(status)
 }
 
 // 管理者メールアドレスかどうか
