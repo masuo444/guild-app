@@ -11,14 +11,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // リクエストボディから国情報を取得
+    // リクエストボディから国情報・プランを取得
     const body = await request.json().catch(() => ({}))
     const isJapan = body.isJapan === true
+    const plan: 'monthly' | 'annual' | 'masu' =
+      body.plan === 'annual' || body.plan === 'masu' ? body.plan : 'monthly'
 
-    // 価格IDを選択（日本: JPY、その他: USD）
-    const priceId = isJapan
-      ? process.env.STRIPE_PRICE_ID_JPY!
-      : process.env.STRIPE_PRICE_ID_USD!
+    // プラン × 地域で価格IDを選択
+    const priceMap: Record<'monthly' | 'annual' | 'masu', { jp?: string; intl?: string }> = {
+      monthly: { jp: process.env.STRIPE_PRICE_ID_JPY, intl: process.env.STRIPE_PRICE_ID_USD },
+      annual: { jp: process.env.STRIPE_PRICE_ID_ANNUAL_JPY, intl: process.env.STRIPE_PRICE_ID_ANNUAL_USD },
+      masu: { jp: process.env.STRIPE_PRICE_ID_MASU_JPY }, // 枡プランは日本国内のみ
+    }
+
+    // 枡プランは日本国内限定（発送の都合）
+    if (plan === 'masu' && !isJapan) {
+      return NextResponse.json(
+        { error: 'The Masu set plan ships within Japan only.' },
+        { status: 400 }
+      )
+    }
+
+    const priceId = isJapan ? priceMap[plan].jp : priceMap[plan].intl
+    if (!priceId) {
+      return NextResponse.json({ error: 'Plan is not available' }, { status: 400 })
+    }
 
     // プロファイルを取得
     const { data: profile } = await supabase
@@ -58,9 +75,22 @@ export async function POST(request: NextRequest) {
       ],
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/pending?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/subscribe?canceled=true`,
+      // 枡プランは発送先の住所と電話番号を収集（日本国内のみ）
+      ...(plan === 'masu'
+        ? {
+            shipping_address_collection: { allowed_countries: ['JP' as const] },
+            phone_number_collection: { enabled: true },
+          }
+        : {}),
+      // Webフックが枡プランを判別して発送通知を出せるように metadata を付与
+      metadata: {
+        supabase_user_id: user.id,
+        plan,
+      },
       subscription_data: {
         metadata: {
           supabase_user_id: user.id,
+          plan,
         },
       },
     })

@@ -1,6 +1,7 @@
 import { stripe } from '@/lib/stripe/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateMembershipId } from '@/lib/utils'
+import { notifyAdminMasuOrder } from '@/lib/notifications'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -106,6 +107,23 @@ export async function POST(request: Request) {
               })
             }
           }
+        }
+
+        // 枡セットプランなら、まっすーに発送先を通知
+        if (session.metadata?.plan === 'masu') {
+          // shipping_address_collection で収集した住所を取得（API版差異に対応して防御的に読む）
+          const s = session as unknown as {
+            shipping_details?: { name?: string | null; address?: Record<string, string | null> | null } | null
+            collected_information?: { shipping_details?: { name?: string | null; address?: Record<string, string | null> | null } | null } | null
+            customer_details?: { email?: string | null; name?: string | null; phone?: string | null } | null
+          }
+          const shipping = s.collected_information?.shipping_details ?? s.shipping_details ?? null
+          await notifyAdminMasuOrder({
+            email: s.customer_details?.email ?? null,
+            name: shipping?.name ?? s.customer_details?.name ?? null,
+            phone: s.customer_details?.phone ?? null,
+            address: shipping?.address ?? null,
+          }).catch((e) => console.error('Masu order notification error:', e))
         }
 
         // User activated successfully

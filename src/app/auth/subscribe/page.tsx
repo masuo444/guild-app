@@ -62,12 +62,10 @@ function SubscribeForm() {
         return
       }
 
-      // 日本かどうか自動判定
+      // 日本かどうか自動判定し、プラン選択画面を表示（自動決済はしない）
       const detectedJapan = detectJapan()
       setIsJapan(detectedJapan)
-
-      // 自動的にStripe決済へ
-      await startCheckout(detectedJapan)
+      setLoading(false)
     }
 
     checkAndRedirect()
@@ -94,7 +92,7 @@ function SubscribeForm() {
     return false
   }
 
-  const startCheckout = async (japan: boolean) => {
+  const startCheckout = async (japan: boolean, plan: 'monthly' | 'annual' | 'masu' = 'monthly') => {
     setLoading(true)
     setError('')
 
@@ -102,7 +100,7 @@ function SubscribeForm() {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isJapan: japan }),
+        body: JSON.stringify({ isJapan: japan, plan }),
       })
 
       const data = await response.json()
@@ -197,14 +195,60 @@ function SubscribeForm() {
               </div>
             </div>
 
-            {/* 決済ボタン */}
-            <Button
-              onClick={() => startCheckout(isJapan ?? false)}
-              loading={loading}
-              className="w-full py-4 text-lg"
-            >
-              {isJapan ? t.subscribeJapan : t.subscribeIntl}
-            </Button>
+            {/* プラン選択 */}
+            {(() => {
+              const ja = language === 'ja'
+              const jp = isJapan ?? false
+              return (
+                <div className="space-y-3">
+                  {/* 月額 */}
+                  <button
+                    onClick={() => startCheckout(jp, 'monthly')}
+                    disabled={loading}
+                    className="w-full text-left rounded-xl border border-zinc-500/40 bg-white/5 p-4 hover:border-[#c0c0c0]/60 transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-white font-semibold">{ja ? '月額プラン' : 'Monthly'}</span>
+                      <span className="text-white font-bold">{jp ? '¥980' : '$10'}<span className="text-xs text-zinc-400 font-normal">{ja ? '/月' : '/mo'}</span></span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1">{ja ? 'いつでも解約できます' : 'Cancel anytime'}</p>
+                  </button>
+
+                  {/* 年額 */}
+                  <button
+                    onClick={() => startCheckout(jp, 'annual')}
+                    disabled={loading}
+                    className="w-full text-left rounded-xl border border-[#c0c0c0]/50 bg-gradient-to-br from-[#c0c0c0]/10 to-transparent p-4 hover:border-[#c0c0c0] transition-colors disabled:opacity-50 relative"
+                  >
+                    <span className="absolute -top-2 right-3 px-2 py-0.5 bg-[#c0c0c0] text-zinc-900 text-[10px] font-bold rounded-full">
+                      {ja ? '2ヶ月分お得' : '2 months free'}
+                    </span>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-white font-semibold">{ja ? '年額プラン' : 'Annual'}</span>
+                      <span className="text-white font-bold">{jp ? '¥9,800' : '$100'}<span className="text-xs text-zinc-400 font-normal">{ja ? '/年' : '/yr'}</span></span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1">{ja ? '月額より約17%お得' : 'Save ~17% vs monthly'}</p>
+                  </button>
+
+                  {/* 枡セットプラン（日本国内のみ） */}
+                  {jp && (
+                    <button
+                      onClick={() => startCheckout(jp, 'masu')}
+                      disabled={loading}
+                      className="w-full text-left rounded-xl border border-amber-500/50 bg-gradient-to-br from-amber-500/10 to-transparent p-4 hover:border-amber-400 transition-colors disabled:opacity-50"
+                    >
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-white font-semibold">🎁 {ja ? '枡セット付き（年額）' : 'Annual + Masu Set'}</span>
+                        <span className="text-amber-300 font-bold text-sm">{ja ? '詳細へ' : 'See price'}</span>
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-1">
+                        {ja ? '年額会員＋入会特典で枡セットを発送（日本国内）' : 'Annual membership + a Masu set shipped to you (Japan only)'}
+                      </p>
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
 
             <p className="text-xs text-zinc-500 text-center mt-6">
               {t.cancelAnytime}
