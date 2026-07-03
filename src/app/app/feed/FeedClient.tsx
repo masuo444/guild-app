@@ -15,8 +15,11 @@ export interface FeedPost {
   image_url: string | null
   is_premium: boolean
   published_at: string
+  category: string | null
   locked: boolean
 }
+
+const DEFAULT_CATEGORY = '笛吹市活動記録'
 
 function formatDate(iso: string, locale: string) {
   try {
@@ -28,31 +31,62 @@ function formatDate(iso: string, locale: string) {
   }
 }
 
-export function FeedClient({ posts, isAdmin, userId }: { posts: FeedPost[]; isAdmin: boolean; userId: string }) {
+export function FeedClient({ posts, categories, isAdmin, userId }: { posts: FeedPost[]; categories: string[]; isAdmin: boolean; userId: string }) {
   const { language } = useLanguage()
   const router = useRouter()
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const ja = language === 'ja'
+
+  const visiblePosts = activeCategory
+    ? posts.filter((p) => p.category === activeCategory)
+    : posts
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto pb-24">
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-2xl font-bold text-white">
-          {language === 'ja' ? 'まっすーフィード' : "MaSU's Feed"}
+          {ja ? 'まっすーフィード' : "MaSU's Feed"}
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          {language === 'ja' ? 'まっすーの日々の投稿。新着はプッシュで届きます。' : "MaSU's daily posts. Get new ones via push."}
+          {ja ? 'まっすーの日々の投稿。新着はプッシュで届きます。' : "MaSU's daily posts. Get new ones via push."}
         </p>
       </div>
 
-      {isAdmin && <Composer userId={userId} onPosted={() => router.refresh()} />}
+      {/* 枠組み（カテゴリー）フィルター */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            onClick={() => setActiveCategory(null)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              activeCategory === null ? 'bg-[#c0c0c0] text-zinc-900' : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+            }`}
+          >
+            {ja ? 'すべて' : 'All'}
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c}
+              onClick={() => setActiveCategory(c)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                activeCategory === c ? 'bg-[#c0c0c0] text-zinc-900' : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {posts.length === 0 ? (
+      {isAdmin && <Composer userId={userId} categories={categories} onPosted={() => router.refresh()} />}
+
+      {visiblePosts.length === 0 ? (
         <p className="text-center text-zinc-500 py-16 text-sm">
-          {language === 'ja' ? 'まだ投稿はありません。' : 'No posts yet.'}
+          {ja ? 'まだ投稿はありません。' : 'No posts yet.'}
         </p>
       ) : (
         <div className="space-y-5">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} language={language} isAdmin={isAdmin} onChanged={() => router.refresh()} />
+          {visiblePosts.map((post) => (
+            <PostCard key={post.id} post={post} language={language} isAdmin={isAdmin} categories={categories} onChanged={() => router.refresh()} />
           ))}
         </div>
       )}
@@ -60,12 +94,12 @@ export function FeedClient({ posts, isAdmin, userId }: { posts: FeedPost[]; isAd
   )
 }
 
-function PostCard({ post, language, isAdmin, onChanged }: { post: FeedPost; language: string; isAdmin: boolean; onChanged: () => void }) {
+function PostCard({ post, language, isAdmin, categories, onChanged }: { post: FeedPost; language: string; isAdmin: boolean; categories: string[]; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
   const ja = language === 'ja'
 
   if (editing) {
-    return <EditForm post={post} language={language} onDone={() => { setEditing(false); onChanged() }} onCancel={() => setEditing(false)} />
+    return <EditForm post={post} language={language} categories={categories} onDone={() => { setEditing(false); onChanged() }} onCancel={() => setEditing(false)} />
   }
 
   return (
@@ -76,7 +110,12 @@ function PostCard({ post, language, isAdmin, onChanged }: { post: FeedPost; lang
         </div>
       )}
       <div className="p-5">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          {post.category && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#c0c0c0]/20 text-[#e5e5e5] text-[11px] font-medium">
+              {post.category}
+            </span>
+          )}
           {post.is_premium && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-medium">
               {language === 'ja' ? '有料会員限定' : 'Members only'}
@@ -126,10 +165,11 @@ function PostCard({ post, language, isAdmin, onChanged }: { post: FeedPost; lang
   )
 }
 
-function EditForm({ post, language, onDone, onCancel }: { post: FeedPost; language: string; onDone: () => void; onCancel: () => void }) {
+function EditForm({ post, language, categories, onDone, onCancel }: { post: FeedPost; language: string; categories: string[]; onDone: () => void; onCancel: () => void }) {
   const ja = language === 'ja'
   const [title, setTitle] = useState(post.title)
   const [body, setBody] = useState(post.body)
+  const [category, setCategory] = useState(post.category ?? '')
   const [isPremium, setIsPremium] = useState(post.is_premium)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -145,7 +185,7 @@ function EditForm({ post, language, onDone, onCancel }: { post: FeedPost; langua
       const res = await fetch(`/api/feed/${post.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body, isPremium }),
+        body: JSON.stringify({ title, body, category: category.trim() || null, isPremium }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
@@ -162,6 +202,17 @@ function EditForm({ post, language, onDone, onCancel }: { post: FeedPost; langua
   return (
     <div className="rounded-2xl bg-zinc-800/80 border border-[#c0c0c0]/40 p-5 space-y-3">
       <p className="text-xs text-zinc-400">{ja ? '投稿を編集' : 'Edit post'}</p>
+      <input
+        type="text"
+        list="feed-categories"
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        placeholder={ja ? '枠組み（例: 笛吹市活動記録）' : 'Category'}
+        className="w-full px-3 py-2.5 bg-white/5 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+      />
+      <datalist id="feed-categories">
+        {categories.map((c) => <option key={c} value={c} />)}
+      </datalist>
       <input
         type="text"
         value={title}
@@ -195,11 +246,12 @@ function EditForm({ post, language, onDone, onCancel }: { post: FeedPost; langua
   )
 }
 
-function Composer({ userId, onPosted }: { userId: string; onPosted: () => void }) {
+function Composer({ userId, categories, onPosted }: { userId: string; categories: string[]; onPosted: () => void }) {
   const { language } = useLanguage()
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [category, setCategory] = useState(categories[0] ?? DEFAULT_CATEGORY)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [isPremium, setIsPremium] = useState(false)
   const [notify, setNotify] = useState(true)
@@ -245,7 +297,7 @@ function Composer({ userId, onPosted }: { userId: string; onPosted: () => void }
       const res = await fetch('/api/feed/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body, imageUrl, isPremium, notify }),
+        body: JSON.stringify({ title, body, category: category.trim() || null, imageUrl, isPremium, notify }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
@@ -273,6 +325,18 @@ function Composer({ userId, onPosted }: { userId: string; onPosted: () => void }
 
   return (
     <div className="mb-6 rounded-2xl bg-zinc-800/80 border border-zinc-700 p-5 space-y-3">
+      <input
+        type="text"
+        list="feed-categories-composer"
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        placeholder={ja ? '枠組み（例: 笛吹市活動記録）' : 'Category'}
+        className="w-full px-3 py-2.5 bg-white/5 border border-zinc-600 rounded-lg text-white placeholder-zinc-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+      />
+      <datalist id="feed-categories-composer">
+        {categories.map((c) => <option key={c} value={c} />)}
+        {!categories.includes(DEFAULT_CATEGORY) && <option value={DEFAULT_CATEGORY} />}
+      </datalist>
       <input
         type="text"
         value={title}

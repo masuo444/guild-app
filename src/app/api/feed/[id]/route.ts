@@ -29,9 +29,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { title, body: postBody, imageUrl, isPremium } = body as {
+  const { title, body: postBody, category, imageUrl, isPremium } = body as {
     title?: string
     body?: string
+    category?: string | null
     imageUrl?: string | null
     isPremium?: boolean
   }
@@ -45,6 +46,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!postBody.trim()) return NextResponse.json({ error: 'body cannot be empty' }, { status: 400 })
     update.body = postBody.trim()
   }
+  if (category !== undefined) update.category = category?.trim() || null
   if (imageUrl !== undefined) update.image_url = imageUrl?.trim() || null
   if (typeof isPremium === 'boolean') update.is_premium = isPremium
 

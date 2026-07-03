@@ -23,14 +23,31 @@ export default async function FeedPage() {
   // 有料会員・特別会員・管理者は有料本文を閲覧できる
   const canViewPremium = isAdmin || hasFullAccess(subscriptionStatus)
 
-  const { data: rawPosts } = await supabase
+  // category 列を含めて取得。マイグレーション未適用でも壊れないよう、
+  // エラー時は category 無しで再取得する（防御的フォールバック）。
+  type Row = {
+    id: string; title: string; body: string; image_url: string | null
+    is_premium: boolean; published_at: string; category?: string | null
+  }
+  let rawPosts: Row[] | null = null
+  const withCat = await supabase
     .from('feed_posts')
-    .select('id, title, body, image_url, is_premium, published_at')
+    .select('id, title, body, image_url, is_premium, published_at, category')
     .order('published_at', { ascending: false })
-    .limit(50)
+    .limit(100)
+  if (withCat.error) {
+    const withoutCat = await supabase
+      .from('feed_posts')
+      .select('id, title, body, image_url, is_premium, published_at')
+      .order('published_at', { ascending: false })
+      .limit(100)
+    rawPosts = (withoutCat.data as Row[]) ?? []
+  } else {
+    rawPosts = (withCat.data as Row[]) ?? []
+  }
 
   // 有料投稿は非対象ユーザーには本文・画像を伏せて返す（サーバー側ゲート）
-  const posts: FeedPost[] = (rawPosts ?? []).map((p) => {
+  const posts: FeedPost[] = rawPosts.map((p) => {
     const locked = p.is_premium && !canViewPremium
     return {
       id: p.id,
@@ -39,11 +56,17 @@ export default async function FeedPage() {
       image_url: locked ? null : p.image_url,
       is_premium: p.is_premium,
       published_at: p.published_at,
+      category: p.category ?? null,
       locked,
     }
   })
 
+  // 存在する枠組み（カテゴリー）の一覧（フィルター用）
+  const categories = Array.from(
+    new Set(posts.map((p) => p.category).filter((c): c is string => !!c))
+  ).sort()
+
   return (
-    <FeedClient posts={posts} isAdmin={isAdmin} userId={user.id} />
+    <FeedClient posts={posts} categories={categories} isAdmin={isAdmin} userId={user.id} />
   )
 }

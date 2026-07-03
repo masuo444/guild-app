@@ -43,9 +43,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { title, body: postBody, imageUrl, isPremium, notify } = body as {
+  const { title, body: postBody, category, imageUrl, isPremium, notify } = body as {
     title?: string
     body?: string
+    category?: string | null
     imageUrl?: string | null
     isPremium?: boolean
     notify?: boolean
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
       author_id: user.id,
       title: title.trim(),
       body: postBody.trim(),
+      category: category?.trim() || null,
       image_url: imageUrl?.trim() || null,
       is_premium: !!isPremium,
     })
