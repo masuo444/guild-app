@@ -50,6 +50,12 @@ export function FeedClient({ posts, categories, isAdmin, userId }: { posts: Feed
         <p className="text-sm text-zinc-400 mt-1">
           {ja ? 'まっすーの日々の投稿。新着はプッシュで届きます。' : "MaSU's daily posts. Get new ones via push."}
         </p>
+        <p className="text-xs text-amber-300/80 mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5">
+          <span>🔒</span>
+          {ja
+            ? '会員限定コンテンツです。記事の無断転載・SNS等への再掲を禁じます。'
+            : 'Members-only content. Reproduction or reposting (incl. social media) is prohibited.'}
+        </p>
       </div>
 
       {/* 枠組み（カテゴリー）フィルター */}
@@ -158,7 +164,14 @@ function PostCard({ post, language, isAdmin, categories, onChanged }: { post: Fe
             </Link>
           </div>
         ) : (
-          <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{post.body}</p>
+          <>
+            <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{post.body}</p>
+            <p className="mt-4 pt-3 border-t border-zinc-700/50 text-[11px] text-zinc-500">
+              {ja
+                ? '© FOMUS / MaSU｜本記事の無断転載・複製・二次利用を禁じます（FOMUS GUILD会員限定コンテンツ）'
+                : '© FOMUS / MaSU｜All rights reserved. Reproduction or redistribution is prohibited (FOMUS GUILD members-only content).'}
+            </p>
+          </>
         )}
       </div>
     </article>
