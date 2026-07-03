@@ -52,7 +52,7 @@ export function FeedClient({ posts, isAdmin, userId }: { posts: FeedPost[]; isAd
       ) : (
         <div className="space-y-5">
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} language={language} />
+            <PostCard key={post.id} post={post} language={language} isAdmin={isAdmin} onChanged={() => router.refresh()} />
           ))}
         </div>
       )}
@@ -60,7 +60,14 @@ export function FeedClient({ posts, isAdmin, userId }: { posts: FeedPost[]; isAd
   )
 }
 
-function PostCard({ post, language }: { post: FeedPost; language: string }) {
+function PostCard({ post, language, isAdmin, onChanged }: { post: FeedPost; language: string; isAdmin: boolean; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const ja = language === 'ja'
+
+  if (editing) {
+    return <EditForm post={post} language={language} onDone={() => { setEditing(false); onChanged() }} onCancel={() => setEditing(false)} />
+  }
+
   return (
     <article className="rounded-2xl bg-zinc-800/60 border border-zinc-700/50 overflow-hidden">
       {post.image_url && (
@@ -76,6 +83,23 @@ function PostCard({ post, language }: { post: FeedPost; language: string }) {
             </span>
           )}
           <span className="text-xs text-zinc-500">{formatDate(post.published_at, language)}</span>
+          {isAdmin && (
+            <span className="ml-auto flex items-center gap-2">
+              <button onClick={() => setEditing(true)} className="text-xs text-zinc-400 hover:text-white transition-colors">
+                {ja ? '編集' : 'Edit'}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(ja ? 'この投稿を削除しますか？' : 'Delete this post?')) return
+                  const res = await fetch(`/api/feed/${post.id}`, { method: 'DELETE' })
+                  if (res.ok) onChanged()
+                }}
+                className="text-xs text-red-400/80 hover:text-red-400 transition-colors"
+              >
+                {ja ? '削除' : 'Delete'}
+              </button>
+            </span>
+          )}
         </div>
         <h2 className="text-base font-semibold text-white mb-2">{post.title}</h2>
 
@@ -99,6 +123,75 @@ function PostCard({ post, language }: { post: FeedPost; language: string }) {
         )}
       </div>
     </article>
+  )
+}
+
+function EditForm({ post, language, onDone, onCancel }: { post: FeedPost; language: string; onDone: () => void; onCancel: () => void }) {
+  const ja = language === 'ja'
+  const [title, setTitle] = useState(post.title)
+  const [body, setBody] = useState(post.body)
+  const [isPremium, setIsPremium] = useState(post.is_premium)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSave = async () => {
+    if (!title.trim() || !body.trim()) {
+      setError(ja ? 'タイトルと本文を入力してください' : 'Title and body are required')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/feed/${post.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, body, isPremium }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || 'Failed')
+      }
+      onDone()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl bg-zinc-800/80 border border-[#c0c0c0]/40 p-5 space-y-3">
+      <p className="text-xs text-zinc-400">{ja ? '投稿を編集' : 'Edit post'}</p>
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="w-full px-3 py-2.5 bg-white/5 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
+      />
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        rows={10}
+        className="w-full px-3 py-2.5 bg-white/5 border border-zinc-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] resize-y"
+      />
+      <label className="inline-flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+        <input type="checkbox" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} />
+        {ja ? '有料会員限定' : 'Members only'}
+      </label>
+      {error && <p className="text-sm text-red-400">{error}</p>}
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex-1 px-4 py-2.5 bg-[#c0c0c0] text-zinc-900 rounded-lg text-sm font-medium hover:bg-white transition-colors disabled:opacity-50"
+        >
+          {saving ? (ja ? '保存中…' : 'Saving…') : (ja ? '保存' : 'Save')}
+        </button>
+        <button onClick={onCancel} className="px-4 py-2.5 text-zinc-400 text-sm hover:text-white transition-colors">
+          {ja ? 'キャンセル' : 'Cancel'}
+        </button>
+      </div>
+    </div>
   )
 }
 
