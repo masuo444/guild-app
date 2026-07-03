@@ -4,6 +4,7 @@ import { ADMIN_EMAILS } from '@/lib/access'
 import { isFreeMembershipType, MembershipType } from '@/types/database'
 import { getInviteMaxUses } from '@/lib/utils'
 import { notifyAdminNewMember } from '@/lib/notifications'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   const supabaseAdmin = createClient(
@@ -11,16 +12,29 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  let body: { userId: string; email: string; inviteCode: string }
+  // 認証必須: このエンドポイントはOTP検証でセッション確立済みの本人だけが呼べる。
+  // userId / email はクライアント入力ではなく、必ずセッションから取得する
+  // （他人のメールでプロフィールを作成・乗っ取ることを防ぐ）。
+  const supabaseSession = await createServerClient()
+  const { data: { user } } = await supabaseSession.auth.getUser()
+
+  if (!user || !user.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const userId = user.id
+  const email = user.email
+
+  let body: { inviteCode: string }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { userId, email, inviteCode } = body
+  const { inviteCode } = body
 
-  if (!userId || !email || !inviteCode) {
+  if (!inviteCode) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
@@ -167,19 +181,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Magic link を生成して hashed_token を取得
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'magiclink',
-    email,
-  })
-
-  if (linkError || !linkData) {
-    console.error('Failed to generate magic link:', linkError)
-    return NextResponse.json({ error: 'Failed to generate login link' }, { status: 500 })
-  }
-
-  // hashed_token を使って callback URL を構築
-  const callbackUrl = `/api/auth/callback?token_hash=${linkData.properties.hashed_token}&type=magiclink&next=/app`
-
-  return NextResponse.json({ callbackUrl })
+  // セッションはOTP検証時点で確立済みのため、ログイントークンは返さない。
+  // クライアントはそのまま /app へ遷移すればよい。
+  return NextResponse.json({ success: true })
 }
