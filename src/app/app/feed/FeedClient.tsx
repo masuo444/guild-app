@@ -35,81 +35,115 @@ export function FeedClient({ posts, categories, isAdmin, userId }: { posts: Feed
   const { language } = useLanguage()
   const router = useRouter()
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [light, setLight] = useState(false)
   const ja = language === 'ja'
 
   const visiblePosts = activeCategory
     ? posts.filter((p) => p.category === activeCategory)
     : posts
 
-  return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto pb-24">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-white">
-          {ja ? 'まっすーフィード' : "MaSU's Feed"}
-        </h1>
-        <p className="text-sm text-zinc-400 mt-1">
-          {ja ? 'まっすーの日々の投稿。新着はプッシュで届きます。' : "MaSU's daily posts. Get new ones via push."}
-        </p>
-        <p className="text-xs text-amber-300/80 mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5">
-          <span>🔒</span>
-          {ja
-            ? '会員限定コンテンツです。記事の無断転載・SNS等への再掲を禁じます。'
-            : 'Members-only content. Reproduction or reposting (incl. social media) is prohibited.'}
-        </p>
-      </div>
+  const chipInactive = light ? 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200' : 'bg-white/5 text-zinc-300 hover:bg-white/10'
 
-      {/* 枠組み（カテゴリー）フィルター */}
-      {categories.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6">
-          <button
-            onClick={() => setActiveCategory(null)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              activeCategory === null ? 'bg-[#c0c0c0] text-zinc-900' : 'bg-white/5 text-zinc-300 hover:bg-white/10'
-            }`}
-          >
-            {ja ? 'すべて' : 'All'}
-          </button>
-          {categories.map((c) => (
+  return (
+    <div className={light ? 'bg-white min-h-screen' : ''}>
+      <div className="p-4 md:p-8 max-w-2xl mx-auto pb-24">
+        <div className="mb-4">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className={`text-2xl font-bold ${light ? 'text-zinc-900' : 'text-white'}`}>
+              {ja ? 'まっすーフィード' : "MaSU's Feed"}
+            </h1>
+            {/* 表示テーマ切替（白背景/ダーク） */}
             <button
-              key={c}
-              onClick={() => setActiveCategory(c)}
+              onClick={() => setLight((v) => !v)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                light
+                  ? 'bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-700'
+                  : 'bg-white/10 text-zinc-200 border-zinc-500/40 hover:bg-white/20'
+              }`}
+              aria-label="Toggle reading theme"
+            >
+              {light ? (ja ? '🌙 ダーク' : '🌙 Dark') : (ja ? '☀️ 白背景' : '☀️ Light')}
+            </button>
+          </div>
+          <p className={`text-sm mt-1 ${light ? 'text-zinc-600' : 'text-zinc-400'}`}>
+            {ja ? 'まっすーの日々の投稿。新着はプッシュで届きます。' : "MaSU's daily posts. Get new ones via push."}
+          </p>
+          <p className={`text-xs mt-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border ${
+            light ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-amber-300/80 bg-amber-500/10 border-amber-500/20'
+          }`}>
+            <span>🔒</span>
+            {ja
+              ? '会員限定コンテンツです。記事の無断転載・SNS等への再掲を禁じます。'
+              : 'Members-only content. Reproduction or reposting (incl. social media) is prohibited.'}
+          </p>
+        </div>
+
+        {/* 枠組み（カテゴリー）フィルター */}
+        {categories.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => setActiveCategory(null)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                activeCategory === c ? 'bg-[#c0c0c0] text-zinc-900' : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                activeCategory === null ? 'bg-[#c0c0c0] text-zinc-900' : chipInactive
               }`}
             >
-              {c}
+              {ja ? 'すべて' : 'All'}
             </button>
-          ))}
-        </div>
-      )}
+            {categories.map((c) => (
+              <button
+                key={c}
+                onClick={() => setActiveCategory(c)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  activeCategory === c ? 'bg-[#c0c0c0] text-zinc-900' : chipInactive
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
 
-      {isAdmin && <Composer userId={userId} categories={categories} onPosted={() => router.refresh()} />}
+        {isAdmin && <Composer userId={userId} categories={categories} onPosted={() => router.refresh()} />}
 
-      {visiblePosts.length === 0 ? (
-        <p className="text-center text-zinc-500 py-16 text-sm">
-          {ja ? 'まだ投稿はありません。' : 'No posts yet.'}
-        </p>
-      ) : (
-        <div className="space-y-5">
-          {visiblePosts.map((post) => (
-            <PostCard key={post.id} post={post} language={language} isAdmin={isAdmin} categories={categories} onChanged={() => router.refresh()} />
-          ))}
-        </div>
-      )}
+        {visiblePosts.length === 0 ? (
+          <p className="text-center text-zinc-500 py-16 text-sm">
+            {ja ? 'まだ投稿はありません。' : 'No posts yet.'}
+          </p>
+        ) : (
+          <div className="space-y-5">
+            {visiblePosts.map((post) => (
+              <PostCard key={post.id} post={post} language={language} isAdmin={isAdmin} categories={categories} light={light} onChanged={() => router.refresh()} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function PostCard({ post, language, isAdmin, categories, onChanged }: { post: FeedPost; language: string; isAdmin: boolean; categories: string[]; onChanged: () => void }) {
+function PostCard({ post, language, isAdmin, categories, light, onChanged }: { post: FeedPost; language: string; isAdmin: boolean; categories: string[]; light: boolean; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
+  const [busy, setBusy] = useState(false)
   const ja = language === 'ja'
 
   if (editing) {
     return <EditForm post={post} language={language} categories={categories} onDone={() => { setEditing(false); onChanged() }} onCancel={() => setEditing(false)} />
   }
 
+  // 無料/有料をワンタップで切り替え（管理者のみ）
+  const togglePremium = async () => {
+    setBusy(true)
+    const res = await fetch(`/api/feed/${post.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isPremium: !post.is_premium }),
+    })
+    setBusy(false)
+    if (res.ok) onChanged()
+  }
+
   return (
-    <article className="rounded-2xl bg-zinc-800/60 border border-zinc-700/50 overflow-hidden">
+    <article className={`rounded-2xl overflow-hidden border ${light ? 'bg-white border-zinc-200 shadow-sm' : 'bg-zinc-800/60 border-zinc-700/50'}`}>
       {post.image_url && (
         <div className="relative w-full aspect-video bg-zinc-900">
           <Image src={post.image_url} alt={post.title} fill className="object-cover" />
@@ -118,19 +152,31 @@ function PostCard({ post, language, isAdmin, categories, onChanged }: { post: Fe
       <div className="p-5">
         <div className="flex items-center gap-2 mb-2 flex-wrap">
           {post.category && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#c0c0c0]/20 text-[#e5e5e5] text-[11px] font-medium">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${light ? 'bg-zinc-100 text-zinc-700' : 'bg-[#c0c0c0]/20 text-[#e5e5e5]'}`}>
               {post.category}
             </span>
           )}
           {post.is_premium && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-medium">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${light ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-300'}`}>
               {language === 'ja' ? '有料会員限定' : 'Members only'}
             </span>
           )}
           <span className="text-xs text-zinc-500">{formatDate(post.published_at, language)}</span>
           {isAdmin && (
             <span className="ml-auto flex items-center gap-2">
-              <button onClick={() => setEditing(true)} className="text-xs text-zinc-400 hover:text-white transition-colors">
+              <button
+                onClick={togglePremium}
+                disabled={busy}
+                className={`text-xs px-2 py-0.5 rounded-full border transition-colors disabled:opacity-50 ${
+                  post.is_premium
+                    ? 'border-amber-500/50 text-amber-500 hover:bg-amber-500/10'
+                    : 'border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10'
+                }`}
+                title={ja ? 'クリックで無料/有料を切替' : 'Toggle free/paid'}
+              >
+                {post.is_premium ? (ja ? '🔒 有料' : '🔒 Paid') : (ja ? '無料' : 'Free')}
+              </button>
+              <button onClick={() => setEditing(true)} className={`text-xs transition-colors ${light ? 'text-zinc-500 hover:text-zinc-900' : 'text-zinc-400 hover:text-white'}`}>
                 {ja ? '編集' : 'Edit'}
               </button>
               <button
@@ -146,12 +192,12 @@ function PostCard({ post, language, isAdmin, categories, onChanged }: { post: Fe
             </span>
           )}
         </div>
-        <h2 className="text-base font-semibold text-white mb-2">{post.title}</h2>
+        <h2 className={`text-base font-semibold mb-2 ${light ? 'text-zinc-900' : 'text-white'}`}>{post.title}</h2>
 
         {post.locked ? (
           <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
             <div className="text-2xl mb-2">🔒</div>
-            <p className="text-sm text-zinc-300 mb-3">
+            <p className={`text-sm mb-3 ${light ? 'text-zinc-600' : 'text-zinc-300'}`}>
               {language === 'ja'
                 ? 'この投稿は有料会員限定です。'
                 : 'This post is for paid members.'}
@@ -165,8 +211,8 @@ function PostCard({ post, language, isAdmin, categories, onChanged }: { post: Fe
           </div>
         ) : (
           <>
-            <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{post.body}</p>
-            <p className="mt-4 pt-3 border-t border-zinc-700/50 text-[11px] text-zinc-500">
+            <p className={`text-sm leading-relaxed whitespace-pre-wrap ${light ? 'text-zinc-800' : 'text-zinc-300'}`}>{post.body}</p>
+            <p className={`mt-4 pt-3 border-t text-[11px] ${light ? 'border-zinc-200 text-zinc-400' : 'border-zinc-700/50 text-zinc-500'}`}>
               {ja
                 ? '© FOMUS / MaSU｜本記事の無断転載・複製・二次利用を禁じます（FOMUS GUILD会員限定コンテンツ）'
                 : '© FOMUS / MaSU｜All rights reserved. Reproduction or redistribution is prohibited (FOMUS GUILD members-only content).'}
