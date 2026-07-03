@@ -102,6 +102,26 @@ export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs,
           {language === 'ja' ? 'ギルドサービス' : 'Guild Services'}
         </h2>
         <div className="grid grid-cols-2 gap-4">
+          <Link
+            href="/app/feed"
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 p-4 hover:border-amber-400/50 transition-all hover:scale-[1.02] col-span-2"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m0 0h2a1 1 0 011 1v11a2 2 0 01-2 2h0m-3-3V8m-9 4h4m-4 4h4m-4-8h4" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">
+                  {language === 'ja' ? 'まっすーフィード' : "MaSU's Feed"}
+                </p>
+                <p className="text-zinc-400 text-xs mt-0.5">
+                  {language === 'ja' ? 'まっすーの日々の投稿をチェック' : "Check MaSU's daily posts"}
+                </p>
+              </div>
+            </div>
+          </Link>
           <a
             href="https://kuku-post.fomusglobal.com/ja"
             target="_blank"
