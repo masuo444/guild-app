@@ -1170,6 +1170,19 @@ export function getTranslations(lang: Language): Translations {
   return translations[lang]
 }
 
+// 言語設定をプロフィールに保存（fire-and-forget、失敗は無視）
+function syncLanguageToProfile(lang: Language) {
+  try {
+    fetch('/api/profile/language', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: lang }),
+    }).catch(() => {})
+  } catch {
+    // ignore
+  }
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en')
   const [isLoaded, setIsLoaded] = useState(false)
@@ -1179,12 +1192,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const lang = getInitialLanguage()
     setLanguageState(lang)
     setIsLoaded(true)
+    // ログイン中なら言語をプロフィールに同期（メルマガのJA/EN出し分け用）。
+    // 未ログインなら200で無視される。
+    syncLanguageToProfile(lang)
   }, [])
 
   // Save language to localStorage when changed
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem(LANGUAGE_KEY, lang)
+    syncLanguageToProfile(lang)
   }
 
   const t = translations[language]

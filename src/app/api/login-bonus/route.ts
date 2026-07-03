@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { loginBonusLimiter } from '@/lib/rateLimit'
+import { getLoginBonusMultiplier } from '@/lib/settings'
 
 export async function POST() {
   const supabase = await createClient()
@@ -18,6 +19,10 @@ export async function POST() {
   const serviceClient = createServiceClient()
   const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
+  // ログインボーナス倍率（2倍キャンペーン等）。基本10pt × 倍率。
+  const multiplier = await getLoginBonusMultiplier()
+  const dailyPoints = 10 * multiplier
+
   // 日次ログインボーナス挿入 (ON CONFLICT DO NOTHING で重複防止)
   // unique index idx_activity_logs_login_bonus_unique が (user_id, type, note) WHERE type='Login Bonus' を保証
   const { data: inserted, error: insertError } = await serviceClient
@@ -26,7 +31,7 @@ export async function POST() {
       {
         user_id: user.id,
         type: 'Login Bonus',
-        points: 10,
+        points: dailyPoints,
         note: today,
       },
       { onConflict: 'user_id,type,note', ignoreDuplicates: true }
@@ -129,6 +134,8 @@ export async function POST() {
 
   return NextResponse.json({
     dailyBonus: true,
+    dailyPoints,
+    multiplier,
     streakBonus,
     streakDays,
   })

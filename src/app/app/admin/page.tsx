@@ -88,6 +88,15 @@ export default async function AdminPage() {
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
       <AdminPageHeader />
 
+      <div className="mb-6">
+        <a
+          href="/app/admin/newsletter"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-br from-[#c0c0c0]/20 to-transparent border border-[#c0c0c0]/40 text-white text-sm font-medium hover:border-[#c0c0c0]/70 transition-colors"
+        >
+          ✉️ 週刊メルマガを送る／ログインボーナス2倍設定
+        </a>
+      </div>
+
       <AdminDashboard
         invites={invites ?? []}
         members={members ?? []}
