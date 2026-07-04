@@ -421,11 +421,11 @@ const translations = {
     guideProfileLocation: 'マップに表示する位置を設定',
     guideProfileInvite: '友達を招待してコミュニティを広げる',
     guideFooterCta: 'FOMUS GUILDに参加しよう',
-    guideFooterCtaDesc: '招待コードを持っている方は、今すぐギルドに参加できます。',
+    guideFooterCtaDesc: '招待コードがなくても、無料で今すぐギルドに参加できます。',
     guidePrintNote: 'このページはブラウザの「印刷」機能でPDF保存できます',
 
     // Guide Page - Hero / Intro
-    guideHeroIntro: '日本の伝統工芸「枡」を起点に、世界中の仲間をつなぐ招待制コミュニティ。',
+    guideHeroIntro: '日本の伝統工芸「枡」を起点に、世界中の仲間をつなぐ文化共創コミュニティ。無料で参加できます。',
     guideScreenshotAlt: 'スクリーンショット',
 
     // Update Password Page
@@ -456,10 +456,10 @@ const translations = {
 
     guideGettingStartedTitle: 'はじめ方',
     guideGettingStartedDesc: 'FOMUS GUILDへの参加手順です。',
-    guideGettingStartedStep1: '既存メンバーから招待URL（招待コード）を受け取ります',
-    guideGettingStartedStep2: '招待URLを開き、メールアドレスを入力して「認証コードを送信」をタップします',
+    guideGettingStartedStep1: 'トップページの「無料で参加する」をタップします（招待コードをお持ちの方はそちらから入力もできます）',
+    guideGettingStartedStep2: 'メールアドレスを入力して「認証コードを送信」をタップします',
     guideGettingStartedStep3: 'メールに届いた6桁の認証コードを入力して認証を完了します',
-    guideGettingStartedStep4: 'Stripe決済画面へ進み、サブスクリプションを開始してギルドに参加します。',
+    guideGettingStartedStep4: '認証が完了すると、すぐにギルドに参加できます。有料プランへのアップグレードはアプリ内からいつでも可能です。',
 
     guideProfileSetupTitle: 'プロフィール設定',
     guideProfileSetupDesc: 'プロフィールを充実させて、ギルド体験をカスタマイズしましょう。',
@@ -528,8 +528,8 @@ const translations = {
     aboutFeature3Desc: 'フォトクエストやチェックインなど、さまざまなクエストに参加してポイントを獲得。ゲーミフィケーションでギルド体験をもっと楽しく。',
     aboutFeature4Title: 'ログインボーナス',
     aboutFeature4Desc: '毎日ログインで+10pt、7日連続で+50pt、30日連続で+150ptのボーナス。毎日アクセスするだけでポイントが貯まります。',
-    aboutFeature5Title: '招待制コミュニティ',
-    aboutFeature5Desc: '既存メンバーからの招待で参加できる限定コミュニティ。友達を招待して、ギルドを一緒に広げましょう。',
+    aboutFeature5Title: '友達紹介で特典',
+    aboutFeature5Desc: '友達を招待すると、招待した人・された人の両方にポイント特典。一緒にギルドを広げましょう。',
     aboutMembershipTitle: 'メンバーシップ',
     aboutMembershipFreeTitle: '無料プラン',
     aboutMembershipFreePrice: '¥0',
@@ -986,11 +986,11 @@ const translations = {
     guideProfileLocation: 'Set your location on the map',
     guideProfileInvite: 'Invite friends to grow the community',
     guideFooterCta: 'Join FOMUS GUILD',
-    guideFooterCtaDesc: 'If you have an invite code, you can join the guild right now.',
+    guideFooterCtaDesc: 'No invite code? You can join for free, right now.',
     guidePrintNote: 'You can save this page as PDF using your browser\'s Print function',
 
     // Guide Page - Hero / Intro
-    guideHeroIntro: 'An invitation-only community connecting people worldwide through the Japanese traditional craft of MASU.',
+    guideHeroIntro: 'A culture co-creation community connecting people worldwide through the Japanese traditional craft of MASU. Free to join.',
     guideScreenshotAlt: 'Screenshot',
 
     // Update Password Page
@@ -1021,10 +1021,10 @@ const translations = {
 
     guideGettingStartedTitle: 'Getting Started',
     guideGettingStartedDesc: 'How to join FOMUS GUILD.',
-    guideGettingStartedStep1: 'Receive an invite URL (invite code) from an existing member',
-    guideGettingStartedStep2: 'Open the invite URL, enter your email address, and tap "Send Verification Code"',
+    guideGettingStartedStep1: 'Tap "Join for free" on the homepage (or enter your invite code there if you have one)',
+    guideGettingStartedStep2: 'Enter your email address and tap "Send Verification Code"',
     guideGettingStartedStep3: 'Enter the 6-digit verification code sent to your email to complete verification',
-    guideGettingStartedStep4: 'Proceed to the Stripe payment page to start your subscription and join the guild.',
+    guideGettingStartedStep4: 'Once verified, you can join the guild right away. Upgrade to a paid plan anytime from within the app.',
 
     guideProfileSetupTitle: 'Profile Setup',
     guideProfileSetupDesc: 'Customize your profile for a personalized guild experience.',
@@ -1093,8 +1093,8 @@ const translations = {
     aboutFeature3Desc: 'Participate in photo quests, check-ins, and more to earn points. Gamification makes the guild experience even more fun.',
     aboutFeature4Title: 'Login Bonus',
     aboutFeature4Desc: 'Earn +10pt daily, +50pt for a 7-day streak, and +150pt for a 30-day streak. Just by accessing every day, your points grow.',
-    aboutFeature5Title: 'Invitation-Only Community',
-    aboutFeature5Desc: 'An exclusive community you can join through invitations from existing members. Invite friends and grow the guild together.',
+    aboutFeature5Title: 'Invite & Earn',
+    aboutFeature5Desc: 'Invite a friend and you both earn bonus points. Let\'s grow the guild together.',
     aboutMembershipTitle: 'Membership',
     aboutMembershipFreeTitle: 'Free Plan',
     aboutMembershipFreePrice: '¥0',
