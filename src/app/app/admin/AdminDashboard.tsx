@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, ReactNode } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, GuildQuest, QuestSubmission, CustomRole, MemberRole, RoleColor, ROLE_COLOR_OPTIONS, ExchangeItem, ExchangeOrder } from '@/types/database'
@@ -43,7 +43,7 @@ interface AdminDashboardProps {
   adminEmail: string
 }
 
-type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'quests' | 'exchange' | 'notifications'
+type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'quests' | 'exchange' | 'sales' | 'notifications'
 
 const TAB_LABELS: Record<Tab, string> = {
   invites: '招待コード',
@@ -52,6 +52,7 @@ const TAB_LABELS: Record<Tab, string> = {
   hubs: '拠点',
   quests: 'クエスト',
   exchange: '交換所',
+  sales: '紹介実績',
   notifications: '通知',
 }
 
@@ -91,6 +92,11 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
     </svg>
   ),
+  sales: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+    </svg>
+  ),
 }
 
 export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, memberPoints, customRoles, memberRoles, exchangeItems, exchangeOrders, adminId, adminEmail }: AdminDashboardProps) {
@@ -127,7 +133,7 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
 
       {/* タブナビゲーション */}
       <div className="flex gap-1 mb-6 p-1 bg-white/5 rounded-xl overflow-x-auto">
-        {(['invites', 'members', 'roles', 'hubs', 'quests', 'exchange', 'notifications'] as Tab[]).map((tab) => (
+        {(['invites', 'members', 'roles', 'hubs', 'quests', 'exchange', 'sales', 'notifications'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -157,6 +163,7 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
       {activeTab === 'hubs' && <HubsTab hubs={hubs} />}
       {activeTab === 'quests' && <QuestsTab submissions={questSubmissions} quests={quests} adminId={adminId} />}
       {activeTab === 'exchange' && <ExchangeAdminTab items={exchangeItems} orders={exchangeOrders} adminId={adminId} />}
+      {activeTab === 'sales' && <SalesAdminTab />}
       {activeTab === 'notifications' && <NotificationsTab />}
     </div>
   )
@@ -2851,6 +2858,77 @@ function ExchangeAdminTab({ items: initialItems, orders: initialOrders, adminId 
           </CardContent>
         </Card>
       )}
+    </div>
+  )
+}
+
+interface SalesCreditRow {
+  id: string
+  order_id: string
+  amount_jpy: number
+  points: number
+  created_at: string
+  member_id: string
+  profiles: { display_name: string | null } | null
+}
+
+function SalesAdminTab() {
+  const [credits, setCredits] = useState<SalesCreditRow[] | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/admin/sales-credits')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) setError(data.error)
+        else setCredits(data.credits || [])
+      })
+      .catch(() => setError('読み込みに失敗しました'))
+  }, [])
+
+  const totalPoints = (credits ?? []).reduce((sum, c) => sum + c.points, 0)
+  const totalAmount = (credits ?? []).reduce((sum, c) => sum + c.amount_jpy, 0)
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-gradient-to-br from-teal-500/20 to-teal-600/10 rounded-xl p-4 border border-teal-500/20">
+          <p className="text-teal-400 text-xs font-medium">紹介経由の売上合計</p>
+          <p className="text-2xl font-bold text-white">¥{totalAmount.toLocaleString()}</p>
+        </div>
+        <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-xl p-4 border border-amber-500/20">
+          <p className="text-amber-400 text-xs font-medium">還元ポイント合計</p>
+          <p className="text-2xl font-bold text-white">{totalPoints.toLocaleString()}pt</p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <h2 className="font-semibold text-white">紹介コード還元 履歴</h2>
+        </CardHeader>
+        <CardContent>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          {!error && credits === null && <p className="text-sm text-zinc-500">読み込み中...</p>}
+          {!error && credits !== null && credits.length === 0 && (
+            <p className="text-sm text-zinc-500">まだ実績はありません</p>
+          )}
+          {!error && credits !== null && credits.length > 0 && (
+            <div className="space-y-2">
+              {credits.map((c) => (
+                <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-zinc-700/50">
+                  <div>
+                    <p className="text-white text-sm">{c.profiles?.display_name || '—'}</p>
+                    <p className="text-zinc-500 text-xs">
+                      注文 {c.order_id} / ¥{c.amount_jpy.toLocaleString()} / {formatDate(c.created_at)}
+                    </p>
+                  </div>
+                  <p className="text-sm text-teal-400">+{c.points.toLocaleString()}pt</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

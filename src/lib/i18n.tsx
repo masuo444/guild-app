@@ -119,6 +119,7 @@ const translations = {
     map: 'マップ',
     offers: 'クエスト',
     shop: 'ショップ',
+    sales: '紹介',
     profile: 'プロフィール',
     admin: '管理',
 
@@ -683,6 +684,7 @@ const translations = {
     map: 'Map',
     offers: 'Quests',
     shop: 'Shop',
+    sales: 'Referral',
     profile: 'Profile',
     admin: 'Admin',
 
