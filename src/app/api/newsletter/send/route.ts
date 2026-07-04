@@ -17,23 +17,83 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-function buildEmailHtml(body: string, lang: 'ja' | 'en'): string {
+function buildEmailHtml(body: string, lang: 'ja' | 'en', subject: string): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild-app.fomusglobal.com'
-  const bodyHtml = escapeHtml(body).replace(/\n/g, '<br/>')
-  const cta = lang === 'en' ? 'Open FOMUS GUILD' : 'FOMUS GUILD を開く'
+  // 本文中のURLをタップしやすいリンクに変換してからHTMLエスケープ・改行を反映
+  // （プレーンテキストのメール本文にURLを書くだけで、モバイルメーラーの自動リンク化に頼らず確実にタップできるようにする）
+  const escaped = escapeHtml(body)
+  const linked = escaped.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    (url) => `<a href="${url}" style="color:#8a6d1f; text-decoration:underline;">${url}</a>`
+  )
+  const bodyHtml = linked.replace(/\n/g, '<br/>')
+  const cta = lang === 'en' ? 'Open FOMUS GUILD' : 'FOMUS GUILDを開く'
   const footer = lang === 'en'
     ? 'You are receiving this because you are a FOMUS GUILD member.'
     : 'このメールは FOMUS GUILD 会員の方にお送りしています。'
-  return `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color:#222;">
-      <div style="font-size:13px; letter-spacing:2px; color:#999; margin-bottom:16px;">FOMUS GUILD</div>
-      <div style="font-size:15px; line-height:1.9;">${bodyHtml}</div>
-      <div style="margin:28px 0;">
-        <a href="${appUrl}/app" style="display:inline-block; background:#1c1917; color:#fff; text-decoration:none; padding:12px 24px; border-radius:9999px; font-size:14px;">${cta}</a>
-      </div>
-      <hr style="border:none; border-top:1px solid #eee; margin:20px 0;" />
-      <p style="color:#999; font-size:12px;">${footer}</p>
-    </div>`
+  const preheader = escapeHtml(body).slice(0, 100)
+
+  // モバイルメーラー(Gmail/Apple Mail等)で単一カラム・大きめタップ領域になるよう
+  // フル文書構造+viewportメタ+インラインCSSで構成。デスクトップでもmax-widthで見やすい。
+  return `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f3; -webkit-text-size-adjust:100%; text-size-adjust:100%;">
+  <!-- プリヘッダー: 受信トレイのプレビューに出る要約テキスト（本文には表示されない） -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">${preheader}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f3; padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width:480px; background-color:#ffffff; border-radius:16px; overflow:hidden;" cellpadding="0" cellspacing="0">
+
+          <!-- ヘッダー -->
+          <tr>
+            <td style="background-color:#1c1917; padding:20px 24px;">
+              <p style="margin:0; font-size:12px; letter-spacing:3px; color:#c0c0c0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">FOMUS GUILD</p>
+            </td>
+          </tr>
+
+          <!-- 本文 -->
+          <tr>
+            <td style="padding:28px 24px 8px 24px;">
+              <div style="font-size:17px; line-height:1.85; color:#262220; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Hiragino Sans',sans-serif; word-break:break-word;">${bodyHtml}</div>
+            </td>
+          </tr>
+
+          <!-- CTAボタン（スマホでタップしやすいよう横幅いっぱい・高さ確保） -->
+          <tr>
+            <td style="padding:24px 24px 8px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="border-radius:9999px; background-color:#1c1917;">
+                    <a href="${appUrl}/app" style="display:block; width:100%; box-sizing:border-box; padding:16px 24px; color:#ffffff; text-decoration:none; font-size:16px; font-weight:600; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; text-align:center;">${cta}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- フッター -->
+          <tr>
+            <td style="padding:24px 24px 28px 24px;">
+              <hr style="border:none; border-top:1px solid #eee; margin:0 0 16px 0;" />
+              <p style="margin:0; color:#999; font-size:12px; line-height:1.6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${footer}</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
 }
 
 export async function POST(request: NextRequest) {
@@ -97,7 +157,7 @@ export async function POST(request: NextRequest) {
     const results = await Promise.allSettled(targets.filter(u => u.email).map(async (u) => {
       const lang = langMap[u.id] || 'ja'
       const subj = lang === 'en' ? subjectEn : subject
-      const html = buildEmailHtml(lang === 'en' ? messageEn : message, lang)
+      const html = buildEmailHtml(lang === 'en' ? messageEn : message, lang, subj)
       const { error } = await resend.emails.send({ from: fromEmail, to: u.email!, subject: `[FOMUS GUILD] ${subj}`, html })
       if (error) throw error
     }))
