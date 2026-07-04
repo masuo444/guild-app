@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getSetting } from '@/lib/settings'
+import { ensureAmbassadorRole } from '@/lib/roles'
 
 /**
  * ショップ側(shop.fomus.jp)から枡購入時に叩かれるサーバー間API。
@@ -85,6 +86,14 @@ export async function POST(request: NextRequest) {
 
   if (activityError) {
     console.error('activity_logs insert error (sales reward):', activityError)
+  }
+
+  // 初めて紹介経由の売上を出した会員には自動で「アンバサダー」称号を付与
+  // （国内・海外を問わない。失敗してもポイント付与自体は成功扱いのまま進める）
+  try {
+    await ensureAmbassadorRole(serviceClient, codeRow.member_id)
+  } catch (roleError) {
+    console.error('Ambassador role assignment error:', roleError)
   }
 
   return NextResponse.json({ success: true, points })
