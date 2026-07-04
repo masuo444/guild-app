@@ -154,6 +154,14 @@ export async function POST(request: NextRequest) {
           note: '新メンバーを招待しました',
           points: 100,
         })
+
+        // 招待された側にもボーナス（ダブルインセンティブ。Welcome Bonusに上乗せ）
+        await supabaseAdmin.from('activity_logs').insert({
+          user_id: userId,
+          type: 'Invited Bonus',
+          note: '招待経由での入会特典',
+          points: 50,
+        })
       }
 
       // 管理者にメール通知

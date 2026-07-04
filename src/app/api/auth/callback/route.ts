@@ -488,6 +488,16 @@ export async function GET(request: NextRequest) {
         console.error('Failed to insert welcome bonus:', welcomeBonusError)
       }
 
+      // 招待された側にもボーナス（ダブルインセンティブ。Welcome Bonusに上乗せ）
+      if (invitedBy) {
+        await supabaseAdmin.from('activity_logs').insert({
+          user_id: user.id,
+          type: 'Invited Bonus',
+          note: '招待経由での入会特典',
+          points: 50,
+        })
+      }
+
       // 管理者にメール通知
       await notifyAdminNewMember({
         email: user.email || '',
