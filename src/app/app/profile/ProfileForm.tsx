@@ -224,7 +224,9 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/')
+    // router.push だとNext.jsのソフト遷移でミドルウェアに古いCookie状態が
+    // 残る場合があるため、確実にセッションを断ち切るためフルリロードする
+    window.location.href = '/'
   }
 
   // 自分の招待コードを取得

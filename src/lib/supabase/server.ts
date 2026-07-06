@@ -14,13 +14,28 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, {
-                ...options,
-                // セッション延長: 30日間Cookieを保持
-                maxAge: 60 * 60 * 24 * 30, // 30日間
-              })
-            )
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // SupabaseがCookieを破棄しようとしている場合（サインアウト・
+              // セッション失効時など）は、30日延長で上書きせずそのまま
+              // 反映する。一律30日で上書きするとサインアウトしてもセッションが
+              // 復活してしまう。
+              const isClearing =
+                !value ||
+                (options?.maxAge !== undefined && options.maxAge <= 0) ||
+                (options?.expires !== undefined && new Date(options.expires).getTime() <= Date.now())
+
+              cookieStore.set(
+                name,
+                value,
+                isClearing
+                  ? options
+                  : {
+                      ...options,
+                      // セッション延長: 30日間Cookieを保持
+                      maxAge: 60 * 60 * 24 * 30, // 30日間
+                    }
+              )
+            })
           } catch {
             // Server Component からの呼び出し時は無視
           }

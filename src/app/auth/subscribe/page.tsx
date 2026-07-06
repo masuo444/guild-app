@@ -261,7 +261,9 @@ function SubscribeForm() {
               onClick={async () => {
                 const supabase = createClient()
                 await supabase.auth.signOut()
-                router.push('/')
+                // router.push だとソフト遷移でミドルウェアに古いCookie状態が
+                // 残る場合があるため、確実にセッションを断ち切るためフルリロードする
+                window.location.href = '/'
               }}
               className="text-zinc-400 hover:text-white text-sm transition-colors"
             >
