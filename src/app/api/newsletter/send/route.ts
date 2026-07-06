@@ -153,6 +153,7 @@ export async function POST(request: NextRequest) {
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
   let emailSent = 0, emailFailed = 0
+  let emailErrors: string[] = []
   if (resend) {
     const results = await Promise.allSettled(targets.filter(u => u.email).map(async (u) => {
       const lang = langMap[u.id] || 'ja'
@@ -163,6 +164,11 @@ export async function POST(request: NextRequest) {
     }))
     emailSent = results.filter(r => r.status === 'fulfilled').length
     emailFailed = results.length - emailSent
+    emailErrors = results
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map((r) => (r.reason instanceof Error ? r.reason.message : JSON.stringify(r.reason)))
+  } else if (!process.env.RESEND_API_KEY) {
+    emailErrors = ['RESEND_API_KEY is not configured']
   }
 
   // プッシュ（購読者のみ・言語別）
@@ -192,5 +198,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, test, emailSent, emailFailed, pushSent, pushFailed, subjectEn })
+  return NextResponse.json({ success: true, test, emailSent, emailFailed, emailErrors, pushSent, pushFailed, subjectEn })
 }
