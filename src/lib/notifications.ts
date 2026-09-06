@@ -117,3 +117,38 @@ export async function notifyAdminMasuOrder(info: {
     })
   }
 }
+
+/**
+ * Supabase keepalive が失敗した時に管理者へ知らせる（自動一時停止の前兆を見逃さないため）。
+ * Supabase 自体が落ちていてもメールは Resend 経由なので届く。
+ */
+export async function notifyAdminKeepaliveFailure(info: { source: string; error: string }) {
+  if (!process.env.RESEND_API_KEY) return
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+  const now = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #b91c1c;">⚠️ GUILD: Supabase に接続できません</h2>
+      <p>keepalive の定期チェックが失敗しました。Supabase プロジェクト（GUILD2）が一時停止・障害中の可能性があります。</p>
+      <table style="border-collapse: collapse; width: 100%;">
+        <tr><td style="padding:4px 8px;color:#999;">呼び出し元</td><td style="padding:4px 8px;">${escapeHtml(info.source)}</td></tr>
+        <tr><td style="padding:4px 8px;color:#999;">エラー</td><td style="padding:4px 8px;">${escapeHtml(info.error.slice(0, 300))}</td></tr>
+        <tr><td style="padding:4px 8px;color:#999;">日時</td><td style="padding:4px 8px;">${now}</td></tr>
+      </table>
+      <p style="margin-top:16px;">確認先: <a href="https://supabase.com/dashboard/project/lszppreokxzuadxixfax">Supabase ダッシュボード（GUILD2）</a><br/>
+      一時停止していれば「Resume project」を押してください。</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="color: #999; font-size: 12px;">FOMUS GUILD 管理者通知</p>
+    </div>
+  `
+
+  await resend.emails.send({
+    from: fromEmail,
+    to: [...ADMIN_EMAILS],
+    subject: '⚠️ GUILD: Supabase keepalive 失敗（要確認）',
+    html,
+  }).catch((e) => console.error('notifyAdminKeepaliveFailure error:', e))
+}
