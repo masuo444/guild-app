@@ -31,7 +31,18 @@ export async function POST(request: NextRequest) {
 
     // auth.usersでユーザー存在確認
     const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers()
-    const userExists = !userError && users.some(u => u.email?.toLowerCase() === email.toLowerCase())
+
+    // バックエンド(Supabase)に到達できない場合は「送信しました」と偽らず、明示的に伝える
+    // （プロジェクト一時停止・DNS障害などで listUsers が失敗するケース）
+    if (userError) {
+      console.error('send-otp: listUsers failed', userError)
+      return NextResponse.json(
+        { error: 'サーバーに接続できません。しばらくしてからもう一度お試しください。 / Cannot reach the server. Please try again later.', unavailable: true },
+        { status: 503 }
+      )
+    }
+
+    const userExists = users.some(u => u.email?.toLowerCase() === email.toLowerCase())
 
     if (!userExists) {
       return NextResponse.json({ success: true })
@@ -68,6 +79,12 @@ export async function POST(request: NextRequest) {
         )
       }
       console.error('OTP error:', otpError)
+      if (otpError.message.includes('fetch failed') || otpError.status === 0) {
+        return NextResponse.json(
+          { error: 'サーバーに接続できません。しばらくしてからもう一度お試しください。 / Cannot reach the server. Please try again later.', unavailable: true },
+          { status: 503 }
+        )
+      }
       // Return generic success to prevent information leakage
       return NextResponse.json({ success: true })
     }

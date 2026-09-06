@@ -153,6 +153,13 @@ export default function LoginPage() {
       })
       const result = await res.json()
 
+      if (res.status === 503 || result.status === 'unavailable') {
+        setInviteError(language === 'ja'
+          ? 'サーバーに接続できません。しばらくしてからもう一度お試しください。'
+          : 'Cannot reach the server. Please try again later.')
+        setInviteLoading(false)
+        return
+      }
       if (!res.ok || result.status === 'invalid') {
         setInviteError(t.invalidCode)
         setInviteLoading(false)
@@ -198,7 +205,12 @@ export default function LoginPage() {
     })
 
     if (error) {
-      setRegisterError(error.message)
+      const unreachable = /fetch|network/i.test(error.message)
+      setRegisterError(unreachable
+        ? (language === 'ja'
+            ? 'サーバーに接続できません。しばらくしてからもう一度お試しください。'
+            : 'Cannot reach the server. Please try again later.')
+        : error.message)
       setRegisterLoading(false)
       return
     }

@@ -37,6 +37,12 @@ export async function POST(request: NextRequest) {
     .eq('code', code)
     .single()
 
+  // 接続障害（Supabase停止・DNS失敗）は「無効なコード」と混同させない
+  if (error && (error.message?.includes('fetch failed') || error.code === '')) {
+    console.error('validate-invite: backend unreachable', error)
+    return NextResponse.json({ status: 'unavailable', error: 'Cannot reach the server' }, { status: 503 })
+  }
+
   if (error || !data) {
     return NextResponse.json({ status: 'invalid' })
   }
