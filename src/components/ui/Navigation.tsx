@@ -18,9 +18,9 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
 
   const localizedNavItems: NavItem[] = [
     {
-      label: t.card,
+      label: t.navHome,
       href: '/app',
-      ariaLabel: 'Go to Dashboard',
+      ariaLabel: 'Go to Home',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -58,29 +58,10 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
       ),
     },
     {
-      label: t.shop,
-      href: '/app/shop',
-      ariaLabel: 'Go to FOMUS Shop',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      ),
-    },
-    {
-      label: t.sales,
-      href: '/app/sales',
-      ariaLabel: 'Go to Referral Code',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-        </svg>
-      ),
-    },
-    {
-      label: t.profile,
+      // ショップ・紹介コード・設定はマイページ内に集約（スマホの下部ナビを5つに）
+      label: t.navMyPage,
       href: '/app/profile',
-      ariaLabel: 'Go to your Profile',
+      ariaLabel: 'Go to My Page',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -89,7 +70,7 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
     },
   ]
 
-  let allItems = [...localizedNavItems]
+  const allItems = [...localizedNavItems]
 
   if (isAdmin) {
     allItems.push({
@@ -131,7 +112,9 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
           const isActive =
             item.href === '/app'
               ? pathname === '/app'
-              : pathname.startsWith(item.href)
+              : item.href === '/app/profile'
+                ? ['/app/profile', '/app/shop', '/app/sales'].some((p) => pathname.startsWith(p))
+                : pathname.startsWith(item.href)
 
           const isExternal = item.href.startsWith('/api/')
           const LinkComponent = isExternal ? 'a' : Link

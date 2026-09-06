@@ -41,8 +41,8 @@ export default async function AppLayout({
       redirect('/auth/subscribe')
     }
 
-    // プロフィール完成チェック: display_name AND (home_country OR home_city) が必要
-    const isProfileComplete = !!(profile?.display_name && (profile?.home_country || profile?.home_city))
+    // プロフィール完成チェック: 表示名だけあればOK（国・市は任意。あとからマイページで設定できる）
+    const isProfileComplete = !!profile?.display_name
     const headersList = await headers()
     const pathname = headersList.get('x-pathname') || ''
 

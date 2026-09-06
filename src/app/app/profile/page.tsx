@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ProfileForm } from './ProfileForm'
 import { ProfilePageHeader } from './ProfilePageClient'
+import { ProfileMenu } from './ProfileMenu'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -30,6 +31,7 @@ export default async function ProfilePage() {
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       <ProfilePageHeader />
+      <ProfileMenu isAdmin={profile.role === 'admin'} />
       <ProfileForm profile={profile} email={user.email || ''} renewalCount={renewalCount ?? 0} />
     </div>
   )

@@ -18,6 +18,12 @@ const nextConfig: NextConfig = {
     // skipLibCheck: true でも Next.js ビルドで検出されるため無視
     ignoreBuildErrors: true,
   },
+  // 「参加」「ログイン」の短いURL（ランディング・SNS・口頭案内用）
+  redirects: async () => [
+    { source: '/join', destination: '/auth/login', permanent: false },
+    { source: '/login', destination: '/auth/login', permanent: false },
+    { source: '/signup', destination: '/auth/login', permanent: false },
+  ],
   headers: async () => [
     {
       source: '/(.*)',

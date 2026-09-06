@@ -44,11 +44,19 @@ export default function HomePage() {
               {language === 'ja' ? '文化共創コミュニティ' : 'Culture Co-creation'}
             </p>
           </div>
-          <StandaloneLanguageSwitcher
-            language={language}
-            onLanguageChange={handleLanguageChange}
-            theme="light"
-          />
+          <div className="flex items-center gap-4">
+            <Link
+              href="/auth/login"
+              className="text-sm text-stone-600 hover:text-stone-900 transition-colors"
+            >
+              {language === 'ja' ? 'ログイン' : 'Log in'}
+            </Link>
+            <StandaloneLanguageSwitcher
+              language={language}
+              onLanguageChange={handleLanguageChange}
+              theme="light"
+            />
+          </div>
         </div>
       </header>
 
@@ -101,7 +109,7 @@ export default function HomePage() {
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row items-center gap-3 md:justify-start justify-center">
                 <Link
-                  href="/auth/login?join=free"
+                  href="/auth/login"
                   className="inline-flex items-center justify-center px-8 py-3.5 bg-stone-800 text-white rounded-full font-medium text-sm md:text-base hover:bg-stone-700 transition-colors min-w-[180px] shadow-lg"
                 >
                   {language === 'ja' ? '無料で参加する' : 'Join for free'}
@@ -110,7 +118,7 @@ export default function HomePage() {
                   href="/auth/login"
                   className="inline-flex items-center justify-center px-6 py-3.5 text-stone-600 rounded-full font-medium text-sm md:text-base hover:text-stone-900 transition-colors"
                 >
-                  {language === 'ja' ? '招待コードをお持ちの方' : 'Have an invite code'}
+                  {language === 'ja' ? 'ログインはこちら' : 'Log in'}
                 </Link>
               </div>
 
@@ -143,7 +151,7 @@ export default function HomePage() {
                     {language === 'ja' ? '無料で参加' : 'Free'}
                   </h3>
                   <span className="text-xs text-stone-400">
-                    {language === 'ja' ? '招待コード不要' : 'No invite needed'}
+                    {language === 'ja' ? 'メールだけ・30秒' : 'Email only · 30 sec'}
                   </span>
                 </div>
                 <ul className="space-y-2.5 text-sm text-stone-600">
@@ -158,7 +166,7 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <Link
-                  href="/auth/login?join=free"
+                  href="/auth/login"
                   className="mt-6 inline-flex w-full items-center justify-center px-6 py-3 bg-stone-800 text-white rounded-full font-medium text-sm hover:bg-stone-700 transition-colors"
                 >
                   {language === 'ja' ? '無料で参加する' : 'Join for free'}

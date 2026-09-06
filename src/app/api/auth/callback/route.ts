@@ -509,8 +509,9 @@ export async function GET(request: NextRequest) {
       }).catch(e => console.error('Admin notification error:', e))
     }
 
-    // スタンダード会員（有料）で未決済の場合は決済ページへリダイレクト
-    if (!isAdmin && !isFreeMembershipType(membershipType) && !stripeSessionId) {
+    // 招待コード経由（有料種別）で未決済の場合は決済ページへリダイレクト。
+    // 招待なし・無料招待の新規はそのまま（next で /app/onboarding 等へ）。
+    if (!isAdmin && inviteCode && !isFreeMembershipType(membershipType) && !stripeSessionId) {
       redirectTo = `${origin}/auth/subscribe`
     }
   } else if (isAdmin && profile.subscription_status !== 'active') {
@@ -526,8 +527,8 @@ export async function GET(request: NextRequest) {
     if (adminUpdateError) {
       console.error('Failed to update admin profile:', adminUpdateError)
     }
-  } else if (profile.subscription_status === 'free_tier' || profile.subscription_status === 'inactive') {
-    // 既存ユーザーで未課金の場合は決済ページへ
+  } else if (profile.subscription_status === 'inactive') {
+    // 解約・失効済みの既存ユーザーは決済ページへ（free_tier は半オープン化で /app にそのまま入れる）
     redirectTo = `${origin}/auth/subscribe`
   }
 

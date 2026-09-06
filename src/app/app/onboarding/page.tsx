@@ -20,16 +20,13 @@ export default async function OnboardingPage() {
     redirect('/auth/login')
   }
 
-  // プロフィール完成済みならダッシュボードへ
-  const isProfileComplete = !!(profile.display_name && (profile.home_country || profile.home_city))
-  if (isProfileComplete) {
-    redirect('/app')
-  }
+  // 参加直後の「はじめの一歩」画面。名前だけ決めればすぐ始められる（スキップ可）。
+  // 完成済みでも直接アクセスは許可する（名前を変えたい場合など）。
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
-        <OnboardingForm profile={profile} />
+        <OnboardingForm profile={profile} email={user.email || ''} />
       </div>
     </div>
   )

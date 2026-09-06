@@ -1,59 +1,123 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { MembershipType, isFreeMembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
-import { Language, getInitialLanguage, getTranslations } from '@/lib/i18n'
+import { useSearchParams } from 'next/navigation'
+import { Language, getInitialLanguage } from '@/lib/i18n'
 import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
+import { MembershipType, MEMBERSHIP_TYPE_LABELS } from '@/types/database'
 
 const LANGUAGE_KEY = 'fomus-guild-language'
 
-type Mode = 'login' | 'register'
-type RegisterStep = 'invite' | 'email' | 'code'
+type Step = 'email' | 'code'
 
-export default function LoginPage() {
-  const [mode, setMode] = useState<Mode>('register')
-  const [registerStep, setRegisterStep] = useState<RegisterStep>('invite')
-  const [language, setLanguageState] = useState<Language>('en')
+interface StartResult {
+  exists: boolean
+  invite: { membershipType: MembershipType; isFree: boolean } | null
+}
 
-  // Login state
-  const [loginEmail, setLoginEmail] = useState('')
-  const [loginLoading, setLoginLoading] = useState(false)
-  const [loginMessage, setLoginMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [loginStep, setLoginStep] = useState<'email' | 'code'>('email')
-  const [loginCode, setLoginCode] = useState('')
+const COPY = {
+  ja: {
+    title: 'FOMUS GUILD',
+    subtitle: 'メールアドレスだけで、ログインも無料参加もできます',
+    email: 'メールアドレス',
+    send: '認証コードを送る',
+    sending: '送信中…',
+    hint: 'はじめての方は自動で無料会員になります。すでに会員の方はそのままログインできます。',
+    haveInvite: '招待コードをお持ちの方',
+    inviteCode: '招待コード',
+    invitePlaceholder: '例: ABC123',
+    codeTitle: '認証コードを入力',
+    codeSentTo: 'に届いたコードを入力してください',
+    codeLabel: '認証コード',
+    verify: '確認する',
+    verifying: '確認中…',
+    changeEmail: 'メールアドレスを変更する',
+    resend: 'コードを再送する',
+    resent: '再送しました',
+    loginHint: 'おかえりなさい。確認するとログインします。',
+    registerHint: 'ようこそ。確認すると無料会員として参加します。',
+    inviteHint: '招待コードが確認できました。',
+    freeInvite: '無料招待',
+    backHome: 'トップに戻る',
+    errors: {
+      invalid_email: 'メールアドレスの形式が正しくありません。',
+      rate_limited: 'リクエストが多すぎます。少し時間をおいてからもう一度お試しください。',
+      invalid_invite: '招待コードが無効です。コードなしでも無料で参加できます。',
+      used_invite: 'この招待コードは使用済みです。コードなしでも無料で参加できます。',
+      send_failed: 'コードを送信できませんでした。もう一度お試しください。',
+      unavailable: 'サーバーに接続できません。しばらくしてからもう一度お試しください。',
+      invalid_code: 'コードが正しくありません。もう一度お試しください。',
+      network: 'ネットワークエラーが発生しました。',
+      auth: 'ログインに失敗しました。もう一度お試しください。',
+    } as Record<string, string>,
+  },
+  en: {
+    title: 'FOMUS GUILD',
+    subtitle: 'Log in or join for free with just your email',
+    email: 'Email address',
+    send: 'Send verification code',
+    sending: 'Sending…',
+    hint: "New here? You'll join as a free member automatically. Already a member? You'll simply log in.",
+    haveInvite: 'Have an invite code?',
+    inviteCode: 'Invite code',
+    invitePlaceholder: 'e.g. ABC123',
+    codeTitle: 'Enter verification code',
+    codeSentTo: 'Enter the code we sent to',
+    codeLabel: 'Verification code',
+    verify: 'Continue',
+    verifying: 'Checking…',
+    changeEmail: 'Change email address',
+    resend: 'Resend code',
+    resent: 'Code resent',
+    loginHint: "Welcome back. You'll be logged in after verification.",
+    registerHint: "Welcome! You'll join as a free member after verification.",
+    inviteHint: 'Invite code confirmed.',
+    freeInvite: 'Free invite',
+    backHome: 'Back to home',
+    errors: {
+      invalid_email: 'Please enter a valid email address.',
+      rate_limited: 'Too many requests. Please wait a moment and try again.',
+      invalid_invite: 'Invalid invite code. You can still join for free without one.',
+      used_invite: 'This invite code has already been used. You can still join for free without one.',
+      send_failed: 'Could not send the code. Please try again.',
+      unavailable: 'Cannot reach the server. Please try again later.',
+      invalid_code: 'Invalid code. Please try again.',
+      network: 'Network error.',
+      auth: 'Login failed. Please try again.',
+    } as Record<string, string>,
+  },
+}
 
-  // Register state
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const [language, setLanguageState] = useState<Language>('ja')
+  const [step, setStep] = useState<Step>('email')
+  const [email, setEmail] = useState('')
   const [inviteCode, setInviteCode] = useState('')
-  const [inviteLoading, setInviteLoading] = useState(false)
-  const [inviteError, setInviteError] = useState('')
-  const [validatedInvite, setValidatedInvite] = useState<{
-    code: string
-    membershipType: MembershipType
-    isFree: boolean
-  } | null>(null)
-  const [registerEmail, setRegisterEmail] = useState('')
-  const [registerLoading, setRegisterLoading] = useState(false)
-  const [registerError, setRegisterError] = useState('')
-  const [registerCode, setRegisterCode] = useState('')
-  // 招待コードなしの無料参加（半オープン化）
-  const [freeJoin, setFreeJoin] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
+  const [code, setCode] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [result, setResult] = useState<StartResult | null>(null)
 
-  const supabase = createClient()
+  const c = COPY[language]
 
   useEffect(() => {
-    const lang = getInitialLanguage()
-    setLanguageState(lang)
+    setLanguageState(getInitialLanguage())
 
-    // ランディングの「無料で参加する」から来た場合は無料参加ステップを開く
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('join') === 'free') {
-      setMode('register')
-      setFreeJoin(true)
-      setValidatedInvite(null)
-      setRegisterStep('email')
+    // 招待リンク等からのプリフィル・エラー表示
+    const invite = searchParams.get('invite')
+    if (invite) {
+      setInviteCode(invite.toUpperCase())
+      setShowInvite(true)
     }
+    const err = searchParams.get('error')
+    if (err) {
+      setError(COPY[getInitialLanguage()].errors[err] || COPY[getInitialLanguage()].errors.auth)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const setLanguage = (lang: Language) => {
@@ -61,622 +125,262 @@ export default function LoginPage() {
     localStorage.setItem(LANGUAGE_KEY, lang)
   }
 
-  const t = getTranslations(language)
+  // リダイレクト先（/app 以下のみ許可）
+  const redirectPath = (() => {
+    const r = searchParams.get('redirect') || ''
+    return r.startsWith('/app') ? r : '/app'
+  })()
 
-  // 既存ユーザーログイン - OTPコード送信
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoginLoading(true)
-    setLoginMessage(null)
-
+  const start = async (): Promise<boolean> => {
+    setLoading(true)
+    setError('')
+    setNotice('')
     try {
-      const response = await fetch('/api/auth/send-otp', {
+      const res = await fetch('/api/auth/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail }),
+        body: JSON.stringify({ email, inviteCode: showInvite ? inviteCode : '' }),
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setLoginMessage({ type: 'error', text: data.error || 'Failed to send code' })
-        setLoginLoading(false)
-        return
+      const data = await res.json()
+      if (!res.ok) {
+        const key = data.unavailable ? 'unavailable' : data.error
+        setError(c.errors[key] || c.errors.send_failed)
+        return false
       }
-
-      // レート制限時はOTPを送れないため、時間を置いて再試行してもらう
-      if (data.rateLimited) {
-        setLoginMessage({
-          type: 'error',
-          text: language === 'ja'
-            ? 'リクエストが多すぎます。少し時間をおいてからもう一度お試しください。'
-            : 'Too many requests. Please wait a moment and try again.',
-        })
-        setLoginLoading(false)
-        return
-      }
-
-      setLoginStep('code')
-      setLoginMessage({
-        type: 'success',
-        text: t.codeSentSuccess,
-      })
+      setResult({ exists: data.exists, invite: data.invite })
+      return true
     } catch {
-      setLoginMessage({ type: 'error', text: 'Network error' })
+      setError(c.errors.network)
+      return false
     } finally {
-      setLoginLoading(false)
+      setLoading(false)
     }
   }
 
-  // OTPコード検証
-  const handleVerifyLogin = async (e: React.FormEvent) => {
+  const handleStart = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoginLoading(true)
-    setLoginMessage(null)
+    if (await start()) {
+      setCode('')
+      setStep('code')
+    }
+  }
 
+  const handleResend = async () => {
+    if (await start()) setNotice(c.resent)
+  }
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
     try {
-      const response = await fetch('/api/auth/verify-otp', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, otp: loginCode }),
+        body: JSON.stringify({ email, otp: code }),
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setLoginMessage({ type: 'error', text: data.error || t.invalidCodeError })
-        setLoginLoading(false)
+      if (!res.ok) {
+        setError(c.errors.invalid_code)
+        setLoading(false)
         return
       }
 
-      // ログイン成功 - callbackを経由してプロフィール確認後/appにリダイレクト
-      window.location.href = '/api/auth/callback?next=/app'
-    } catch {
-      setLoginMessage({ type: 'error', text: 'Network error' })
-      setLoginLoading(false)
-    }
-  }
-
-  // 招待コード確認
-  const handleCheckInvite = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setInviteLoading(true)
-    setInviteError('')
-
-    const code = inviteCode.toUpperCase().trim()
-
-    try {
-      const res = await fetch('/api/auth/validate-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      })
-      const result = await res.json()
-
-      if (res.status === 503 || result.status === 'unavailable') {
-        setInviteError(language === 'ja'
-          ? 'サーバーに接続できません。しばらくしてからもう一度お試しください。'
-          : 'Cannot reach the server. Please try again later.')
-        setInviteLoading(false)
-        return
-      }
-      if (!res.ok || result.status === 'invalid') {
-        setInviteError(t.invalidCode)
-        setInviteLoading(false)
-        return
-      }
-      if (result.status === 'used') {
-        setInviteError(t.codeAlreadyUsed)
-        setInviteLoading(false)
+      // 既存会員 → そのままアプリへ
+      if (result?.exists) {
+        window.location.href = `/api/auth/callback?next=${encodeURIComponent(redirectPath)}`
         return
       }
 
-      const membershipType = (result.membershipType || 'standard') as MembershipType
-      setValidatedInvite({
-        code,
-        membershipType,
-        isFree: result.isFree ?? isFreeMembershipType(membershipType),
-      })
-      setRegisterStep('email')
-      setInviteLoading(false)
-    } catch {
-      setInviteError(t.invalidCode)
-      setInviteLoading(false)
-    }
-  }
+      // 招待コード経由の新規 → callback が招待特典・会員種別を処理
+      if (result?.invite && showInvite && inviteCode) {
+        window.location.href = `/api/auth/callback?invite_code=${encodeURIComponent(inviteCode.toUpperCase())}&next=/app/onboarding`
+        return
+      }
 
-  // 新規登録 - OTPコード送信
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validatedInvite && !freeJoin) return
-
-    setRegisterLoading(true)
-    setRegisterError('')
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: registerEmail,
-      options: {
-        // 無料参加は新規ユーザー作成を許可。招待経由は招待コードをメタデータに付与。
-        shouldCreateUser: true,
-        ...(validatedInvite
-          ? { data: { invite_code: validatedInvite.code } }
-          : {}),
-      },
-    })
-
-    if (error) {
-      const unreachable = /fetch|network/i.test(error.message)
-      setRegisterError(unreachable
-        ? (language === 'ja'
-            ? 'サーバーに接続できません。しばらくしてからもう一度お試しください。'
-            : 'Cannot reach the server. Please try again later.')
-        : error.message)
-      setRegisterLoading(false)
-      return
-    }
-
-    setRegisterStep('code')
-    setRegisterLoading(false)
-  }
-
-  // 新規登録 - OTPコード検証
-  const handleVerifyRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validatedInvite && !freeJoin) return
-
-    setRegisterLoading(true)
-    setRegisterError('')
-
-    const { error } = await supabase.auth.verifyOtp({
-      email: registerEmail,
-      token: registerCode,
-      type: 'email',
-    })
-
-    if (error) {
-      setRegisterError(t.invalidCodeRetry)
-      setRegisterLoading(false)
-      return
-    }
-
-    // 招待なしの無料参加: セッション確立済み → free_tier プロフィールを作成
-    if (freeJoin) {
+      // 招待なしの新規 → 無料会員プロフィール作成 → はじめの一歩へ
       try {
-        const res = await fetch('/api/auth/register-free', { method: 'POST' })
-        if (!res.ok) {
-          window.location.href = '/api/auth/callback?next=/app'
-          return
-        }
-        window.location.href = '/app'
+        const reg = await fetch('/api/auth/register-free', { method: 'POST' })
+        window.location.href = reg.ok ? '/app/onboarding' : '/api/auth/callback?next=/app/onboarding'
       } catch {
-        window.location.href = '/api/auth/callback?next=/app'
+        window.location.href = '/api/auth/callback?next=/app/onboarding'
       }
-      return
+    } catch {
+      setError(c.errors.network)
+      setLoading(false)
     }
-
-    // 招待経由: callback が invite_code を処理して membership_type 等を設定
-    const callbackUrl = `/api/auth/callback?invite_code=${encodeURIComponent(validatedInvite!.code)}&next=${validatedInvite!.isFree ? '/app' : '/auth/subscribe'}`
-    window.location.href = callbackUrl
   }
+
+  const inputClass =
+    'w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent'
+  const buttonClass =
+    'w-full px-4 py-3.5 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center p-4">
-      {/* Language Switcher */}
       <div className="absolute top-4 right-4">
-        <StandaloneLanguageSwitcher
-          language={language}
-          onLanguageChange={setLanguage}
-        />
+        <StandaloneLanguageSwitcher language={language} onLanguageChange={setLanguage} />
       </div>
 
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">{t.loginTitle}</h1>
-          <p className="text-zinc-300">{t.loginSubtitle}</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{c.title}</h1>
+          <p className="text-zinc-300 text-sm">{c.subtitle}</p>
         </div>
 
-        {/* Mode Tabs */}
-        <div className="flex gap-1 p-1 bg-white/5 rounded-xl mb-6">
-          <button
-            onClick={() => { setMode('register'); setRegisterStep('invite'); setFreeJoin(false); setValidatedInvite(null); }}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              mode === 'register'
-                ? 'bg-[#c0c0c0] text-zinc-900'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            {t.newRegistration}
-          </button>
-          <button
-            onClick={() => setMode('login')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              mode === 'login'
-                ? 'bg-[#c0c0c0] text-zinc-900'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            {t.login}
-          </button>
-        </div>
-
-        {/* Card */}
         <div className="bg-white/10 backdrop-blur rounded-xl border border-zinc-500/30 p-6">
-
-          {/* 既存ユーザーログイン - メールアドレス入力 */}
-          {mode === 'login' && loginStep === 'email' && (
-            <>
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-medium text-white mb-2">{t.existingMemberLogin}</h2>
-                <p className="text-sm text-zinc-400">
-                  {t.enterRegisteredEmail}
-                </p>
+          {step === 'email' && (
+            <form onSubmit={handleStart} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-zinc-300 mb-1">
+                  {c.email}
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className={inputClass}
+                  autoFocus
+                />
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-4">
+              {/* 招待コード（任意・折りたたみ） */}
+              {showInvite ? (
                 <div>
-                  <label htmlFor="login-email" className="block text-sm font-medium text-zinc-300 mb-1">
-                    {t.emailAddress}
+                  <label htmlFor="invite" className="block text-sm font-medium text-zinc-300 mb-1">
+                    {c.inviteCode}
                   </label>
                   <input
-                    id="login-email"
-                    type="email"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent"
-                  />
-                </div>
-
-                {loginMessage && (
-                  <div
-                    className={`p-3 rounded-lg text-sm ${
-                      loginMessage.type === 'success'
-                        ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                        : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                    }`}
-                  >
-                    {loginMessage.text}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loginLoading}
-                  className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {loginLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      {t.sending}
-                    </>
-                  ) : (
-                    t.login
-                  )}
-                </button>
-              </form>
-            </>
-          )}
-
-          {/* 既存ユーザーログイン - 認証コード入力 */}
-          {mode === 'login' && loginStep === 'code' && (
-            <>
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h2 className="text-xl font-medium text-white mb-2">{t.enterVerificationCode}</h2>
-                <p className="text-sm text-zinc-400">
-                  <strong className="text-white">{loginEmail}</strong> {t.codeSentTo}
-                </p>
-              </div>
-
-              <form onSubmit={handleVerifyLogin} className="space-y-4">
-                <div>
-                  <label htmlFor="login-code" className="block text-sm font-medium text-zinc-300 mb-1">
-                    {t.verificationCode}
-                  </label>
-                  <input
-                    id="login-code"
+                    id="invite"
                     type="text"
-                    required
-                    value={loginCode}
-                    onChange={(e) => setLoginCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="00000000"
-                    className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent font-mono text-center text-2xl tracking-[0.5em]"
-                    maxLength={8}
-                    autoFocus
-                  />
-                </div>
-
-                {loginMessage && (
-                  <div
-                    className={`p-3 rounded-lg text-sm ${
-                      loginMessage.type === 'success'
-                        ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                        : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                    }`}
-                  >
-                    {loginMessage.text}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loginLoading || loginCode.length !== 8}
-                  className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {loginLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      {t.checking}
-                    </>
-                  ) : (
-                    t.verifyAndLogin
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setLoginStep('email'); setLoginCode(''); setLoginMessage(null); }}
-                  className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
-                >
-                  {t.changeEmail}
-                </button>
-              </form>
-            </>
-          )}
-
-          {/* 新規登録 - ステップ1: 招待コード */}
-          {mode === 'register' && registerStep === 'invite' && (
-            <>
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-medium text-white mb-2">{t.enterInviteCode}</h2>
-                <p className="text-sm text-zinc-400">
-                  {t.noInviteCode}
-                </p>
-              </div>
-
-              <form onSubmit={handleCheckInvite} className="space-y-4">
-                <div>
-                  <label htmlFor="invite-code" className="block text-sm font-medium text-zinc-300 mb-1">
-                    {t.inviteCode}
-                  </label>
-                  <input
-                    id="invite-code"
-                    type="text"
-                    required
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    placeholder={t.inviteCodePlaceholder}
-                    className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent font-mono text-center text-lg tracking-wider"
+                    placeholder={c.invitePlaceholder}
                     maxLength={8}
+                    className={`${inputClass} font-mono tracking-wider`}
                   />
                 </div>
-
-                {inviteError && (
-                  <div className="p-3 rounded-lg text-sm bg-red-500/20 text-red-300 border border-red-500/30">
-                    {inviteError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={inviteLoading || inviteCode.length < 6}
-                  className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {inviteLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      {t.checking}
-                    </>
-                  ) : (
-                    t.next
-                  )}
-                </button>
-              </form>
-
-              {/* 招待コードなしでも無料で参加できる（半オープン化） */}
-              <div className="mt-6 pt-6 border-t border-zinc-700/50 text-center">
-                <p className="text-xs text-zinc-500 mb-3">
-                  {language === 'ja'
-                    ? '招待コードをお持ちでない方も、無料で参加できます。'
-                    : 'No invite code? You can still join for free.'}
-                </p>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    setFreeJoin(true)
-                    setValidatedInvite(null)
-                    setInviteError('')
-                    setRegisterError('')
-                    setRegisterStep('email')
-                  }}
-                  className="w-full px-4 py-3 border border-[#c0c0c0]/40 text-[#e5e5e5] rounded-lg font-medium hover:bg-white/5 transition-colors"
+                  onClick={() => setShowInvite(true)}
+                  className="text-xs text-zinc-400 hover:text-white underline underline-offset-2 transition-colors"
                 >
-                  {language === 'ja' ? '無料で参加する' : 'Join for free'}
+                  {c.haveInvite}
                 </button>
-              </div>
-            </>
+              )}
+
+              {error && (
+                <div className="p-3 rounded-lg text-sm bg-red-500/20 text-red-300 border border-red-500/30">{error}</div>
+              )}
+
+              <button type="submit" disabled={loading} className={buttonClass}>
+                {loading ? c.sending : c.send}
+              </button>
+
+              <p className="text-xs text-zinc-500 text-center leading-relaxed">{c.hint}</p>
+            </form>
           )}
 
-          {/* 新規登録 - ステップ2: メールアドレス */}
-          {mode === 'register' && registerStep === 'email' && (validatedInvite || freeJoin) && (
-            <>
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="text-xl font-medium text-white mb-2">
-                  {freeJoin
-                    ? (language === 'ja' ? '無料で参加' : 'Join for free')
-                    : t.inviteConfirmed}
-                </h2>
-                {freeJoin && (
-                  <p className="text-sm text-zinc-400 mt-1">
-                    {language === 'ja'
-                      ? 'メールに届く認証コードで登録します。'
-                      : 'Register with the code sent to your email.'}
-                  </p>
-                )}
-                {validatedInvite?.isFree && (
-                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium mt-2">
-                    {MEMBERSHIP_TYPE_LABELS[validatedInvite.membershipType]} {t.freeInvite}
-                  </div>
-                )}
-              </div>
-
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div>
-                  <label htmlFor="register-email" className="block text-sm font-medium text-zinc-300 mb-1">
-                    {t.emailAddress}
-                  </label>
-                  <input
-                    id="register-email"
-                    type="email"
-                    required
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent"
-                  />
-                </div>
-
-                {registerError && (
-                  <div className="p-3 rounded-lg text-sm bg-red-500/20 text-red-300 border border-red-500/30">
-                    {registerError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={registerLoading}
-                  className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {registerLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      {t.sending}
-                    </>
-                  ) : (
-                    t.sendVerificationCode
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setRegisterStep('invite'); setValidatedInvite(null); setFreeJoin(false); }}
-                  className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
-                >
-                  {freeJoin
-                    ? (language === 'ja' ? '戻る' : 'Back')
-                    : t.changeInviteCode}
-                </button>
-              </form>
-
-              <p className="text-xs text-zinc-500 text-center mt-4">
-                {freeJoin
-                  ? (language === 'ja'
-                      ? '無料プランで参加します。マップなど一部機能は有料会員限定です。'
-                      : 'Joining on the free plan. Some features (like the member map) are for paid members.')
-                  : validatedInvite?.isFree ? t.freeJoinGuild : t.paidJoinGuild}
-              </p>
-            </>
-          )}
-
-          {/* 新規登録 - ステップ3: 認証コード入力 */}
-          {mode === 'register' && registerStep === 'code' && (
-            <>
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h2 className="text-xl font-medium text-white mb-2">{t.enterVerificationCode}</h2>
+          {step === 'code' && (
+            <form onSubmit={handleVerify} className="space-y-4">
+              <div className="text-center mb-2">
+                <h2 className="text-xl font-medium text-white mb-2">{c.codeTitle}</h2>
                 <p className="text-sm text-zinc-400">
-                  <strong className="text-white">{registerEmail}</strong> {t.codeSentTo}
+                  {language === 'ja' ? (
+                    <><strong className="text-white">{email}</strong> {c.codeSentTo}</>
+                  ) : (
+                    <>{c.codeSentTo} <strong className="text-white">{email}</strong></>
+                  )}
                 </p>
-              </div>
-
-              <form onSubmit={handleVerifyRegister} className="space-y-4">
-                <div>
-                  <label htmlFor="register-code" className="block text-sm font-medium text-zinc-300 mb-1">
-                    {t.verificationCode}
-                  </label>
-                  <input
-                    id="register-code"
-                    type="text"
-                    required
-                    value={registerCode}
-                    onChange={(e) => setRegisterCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="00000000"
-                    className="w-full px-4 py-3 bg-white/10 border border-zinc-500/30 rounded-lg text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] focus:border-transparent font-mono text-center text-2xl tracking-[0.5em]"
-                    maxLength={8}
-                    autoFocus
-                  />
-                </div>
-
-                {registerError && (
-                  <div className="p-3 rounded-lg text-sm bg-red-500/20 text-red-300 border border-red-500/30">
-                    {registerError}
+                <p className="text-xs text-zinc-500 mt-2">
+                  {result?.exists ? c.loginHint : c.registerHint}
+                </p>
+                {result?.invite && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-medium mt-2">
+                    {c.inviteHint}
+                    {result.invite.isFree && (
+                      <span>· {MEMBERSHIP_TYPE_LABELS[result.invite.membershipType]} {c.freeInvite}</span>
+                    )}
                   </div>
                 )}
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={registerLoading || registerCode.length !== 8}
-                  className="w-full px-4 py-3 bg-[#c0c0c0] text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {registerLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      {t.checking}
-                    </>
-                  ) : (
-                    t.register
-                  )}
-                </button>
+              <div>
+                <label htmlFor="code" className="block text-sm font-medium text-zinc-300 mb-1">
+                  {c.codeLabel}
+                </label>
+                <input
+                  id="code"
+                  type="text"
+                  required
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="••••••••"
+                  maxLength={8}
+                  className={`${inputClass} font-mono text-center text-2xl tracking-[0.4em]`}
+                  autoFocus
+                />
+              </div>
 
+              {error && (
+                <div className="p-3 rounded-lg text-sm bg-red-500/20 text-red-300 border border-red-500/30">{error}</div>
+              )}
+              {notice && (
+                <div className="p-3 rounded-lg text-sm bg-green-500/20 text-green-300 border border-green-500/30">{notice}</div>
+              )}
+
+              <button type="submit" disabled={loading || code.length < 6} className={buttonClass}>
+                {loading ? c.verifying : c.verify}
+              </button>
+
+              <div className="flex items-center justify-between text-sm">
                 <button
                   type="button"
-                  onClick={() => { setRegisterStep('email'); setRegisterCode(''); setRegisterError(''); }}
-                  className="w-full text-sm text-zinc-400 hover:text-white transition-colors"
+                  onClick={() => { setStep('email'); setCode(''); setError(''); setNotice('') }}
+                  className="text-zinc-400 hover:text-white transition-colors"
                 >
-                  {t.changeEmail}
+                  {c.changeEmail}
                 </button>
-              </form>
-            </>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={loading}
+                  className="text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  {c.resend}
+                </button>
+              </div>
+            </form>
           )}
         </div>
 
-        {/* Back to home */}
         <div className="mt-6 text-center">
           <Link href="/" className="text-zinc-400 hover:text-white text-sm transition-colors">
-            {t.backToHome}
+            {c.backHome}
           </Link>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
+          <div className="animate-spin w-6 h-6 border border-zinc-600 border-t-white rounded-full" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }
