@@ -11,6 +11,7 @@ import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
 import { generateInviteCode, getInviteMaxUses } from '@/lib/utils'
 import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps'
 import { useLanguage } from '@/lib/i18n'
+import { InviteShare } from '@/components/InviteShare'
 
 interface ProfileFormProps {
   profile: Profile
@@ -672,6 +673,9 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
           <h2 className="font-semibold text-white">{t.inviteFriends}</h2>
         </CardHeader>
         <CardContent>
+          <div className="mb-5">
+            <InviteShare userId={profile.id} />
+          </div>
           <p className="text-sm text-zinc-400 mb-4">{t.inviteFriendsDesc}</p>
 
           <Button onClick={handleCreateInvite} loading={creatingInvite} className="w-full mb-4">

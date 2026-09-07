@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { hasFullAccess, ADMIN_EMAILS } from '@/lib/access'
 import { SubscriptionStatus } from '@/types/database'
-import { FeedClient, FeedPost } from './FeedClient'
+import { makeExcerpt, readingMinutes } from '@/lib/feed'
+import { FeedClient, FeedListItem } from './FeedClient'
 
 export default async function FeedPage() {
   const supabase = await createClient()
@@ -23,8 +24,6 @@ export default async function FeedPage() {
   // 有料会員・特別会員・管理者は有料本文を閲覧できる
   const canViewPremium = isAdmin || hasFullAccess(subscriptionStatus)
 
-  // category 列を含めて取得。マイグレーション未適用でも壊れないよう、
-  // エラー時は category 無しで再取得する（防御的フォールバック）。
   type Row = {
     id: string; title: string; body: string; image_url: string | null
     is_premium: boolean; published_at: string; category?: string | null
@@ -34,25 +33,26 @@ export default async function FeedPage() {
     .from('feed_posts')
     .select('id, title, body, image_url, is_premium, published_at, category')
     .order('published_at', { ascending: false })
-    .limit(100)
+    .limit(300)
   if (withCat.error) {
     const withoutCat = await supabase
       .from('feed_posts')
       .select('id, title, body, image_url, is_premium, published_at')
       .order('published_at', { ascending: false })
-      .limit(100)
+      .limit(300)
     rawPosts = (withoutCat.data as Row[]) ?? []
   } else {
     rawPosts = (withCat.data as Row[]) ?? []
   }
 
-  // 有料投稿は非対象ユーザーには本文・画像を伏せて返す（サーバー側ゲート）
-  const posts: FeedPost[] = rawPosts.map((p) => {
+  // 一覧には本文を送らず、抜粋と読了目安だけ渡す（有料記事は非対象ユーザーに抜粋も出さない）
+  const posts: FeedListItem[] = rawPosts.map((p) => {
     const locked = p.is_premium && !canViewPremium
     return {
       id: p.id,
       title: p.title,
-      body: locked ? '' : p.body,
+      excerpt: locked ? '' : makeExcerpt(p.body),
+      minutes: readingMinutes(p.body),
       image_url: locked ? null : p.image_url,
       is_premium: p.is_premium,
       published_at: p.published_at,
@@ -61,7 +61,6 @@ export default async function FeedPage() {
     }
   })
 
-  // 存在する枠組み（カテゴリー）の一覧（フィルター用）
   const categories = Array.from(
     new Set(posts.map((p) => p.category).filter((c): c is string => !!c))
   ).sort()

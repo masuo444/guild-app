@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { calculateRank } from '@/config/rank'
 import { formatDate } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n'
+import { InviteShare } from '@/components/InviteShare'
+import { formatPostDate, stripDatePrefix } from '@/lib/feed'
 import type { LoginBonusResult } from './page'
 
 interface DashboardClientProps {
@@ -17,9 +19,17 @@ interface DashboardClientProps {
   recentLogs: ActivityLog[]
   inviteCount: number
   loginBonusResult?: LoginBonusResult
+  latestPost?: {
+    id: string
+    title: string
+    excerpt: string
+    minutes: number
+    published_at: string
+    is_premium: boolean
+  } | null
 }
 
-export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs, inviteCount, loginBonusResult }: DashboardClientProps) {
+export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs, inviteCount, loginBonusResult, latestPost }: DashboardClientProps) {
   const rank = calculateRank(statusPoints)
   const { language, setLanguage, t } = useLanguage()
   const [showBonusBanner, setShowBonusBanner] = useState(false)
@@ -92,8 +102,13 @@ export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs,
       )}
 
       {/* 会員証 */}
-      <div className="mb-8">
+      <div className="mb-6">
         <MembershipCard profile={profile} points={statusPoints} inviteCount={inviteCount} masuPoints={masuPoints} translations={cardTranslations} />
+      </div>
+
+      {/* 友達招待（ワンタップ共有） */}
+      <div className="mb-8">
+        <InviteShare userId={profile.id} compact />
       </div>
 
       {/* GUILD SERVICES */}
@@ -103,24 +118,32 @@ export function DashboardClient({ profile, statusPoints, masuPoints, recentLogs,
         </h2>
         <div className="grid grid-cols-2 gap-4">
           <Link
-            href="/app/feed"
-            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 p-4 hover:border-amber-400/50 transition-all hover:scale-[1.02] col-span-2"
+            href={latestPost ? `/app/feed/${latestPost.id}` : '/app/feed'}
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 p-4 hover:border-amber-400/50 transition-all col-span-2"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m0 0h2a1 1 0 011 1v11a2 2 0 01-2 2h0m-3-3V8m-9 4h4m-4 4h4m-4-8h4" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-white font-bold text-sm">
-                  {language === 'ja' ? 'まっすーフィード' : "MaSU's Feed"}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-semibold tracking-widest text-amber-300 uppercase">
+                {language === 'ja' ? '最新の活動記録' : 'Latest journal'}
+              </p>
+              {latestPost && (
+                <p className="text-[11px] text-zinc-400">
+                  {formatPostDate(latestPost.published_at, language)} · {language === 'ja' ? `約${latestPost.minutes}分` : `${latestPost.minutes} min`}
                 </p>
-                <p className="text-zinc-400 text-xs mt-0.5">
-                  {language === 'ja' ? 'まっすーの日々の投稿をチェック' : "Check MaSU's daily posts"}
-                </p>
-              </div>
+              )}
             </div>
+            {latestPost ? (
+              <>
+                <p className="text-white font-bold text-[15px] leading-snug">{stripDatePrefix(latestPost.title)}</p>
+                {latestPost.excerpt && (
+                  <p className="text-zinc-300 text-xs mt-1.5 leading-relaxed line-clamp-2">{latestPost.excerpt}</p>
+                )}
+                <p className="text-amber-300 text-xs mt-2 group-hover:underline">
+                  {language === 'ja' ? '続きを読む →' : 'Read more →'}
+                </p>
+              </>
+            ) : (
+              <p className="text-white font-bold text-sm">{language === 'ja' ? 'まっすー活動記録' : "MaSU's Journal"}</p>
+            )}
           </Link>
           <a
             href="https://kuku-post.fomusglobal.com/ja"

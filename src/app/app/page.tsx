@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { DashboardClient } from './DashboardClient'
 import { Profile } from '@/types/database'
+import { makeExcerpt, readingMinutes } from '@/lib/feed'
 
 export interface LoginBonusResult {
   dailyBonus: boolean
@@ -136,6 +137,7 @@ export default async function DashboardPage() {
     { data: logs },
     { data: allLogs },
     { count: inviteCount },
+    { data: latestRows },
   ] = await Promise.all([
     // 表示用: 直近10件
     supabase
@@ -154,7 +156,25 @@ export default async function DashboardPage() {
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('invited_by', user.id),
+    // ホームに出す最新の活動記録（1本）
+    supabase
+      .from('feed_posts')
+      .select('id, title, body, is_premium, published_at')
+      .order('published_at', { ascending: false })
+      .limit(1),
   ])
+
+  const latestRow = latestRows?.[0]
+  const latestPost = latestRow
+    ? {
+        id: latestRow.id,
+        title: latestRow.title,
+        excerpt: latestRow.is_premium ? '' : makeExcerpt(latestRow.body, 80),
+        minutes: readingMinutes(latestRow.body),
+        published_at: latestRow.published_at,
+        is_premium: latestRow.is_premium,
+      }
+    : null
 
   // デュアルポイント計算
   let statusPoints = 0
@@ -196,6 +216,7 @@ export default async function DashboardPage() {
       recentLogs={logs || []}
       inviteCount={inviteCount || 0}
       loginBonusResult={loginBonusResult}
+      latestPost={latestPost}
     />
   )
 }
