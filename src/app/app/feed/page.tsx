@@ -15,7 +15,7 @@ export default async function FeedPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('subscription_status, role')
+    .select('subscription_status, role, lat')
     .eq('id', user.id)
     .single()
 
@@ -65,7 +65,10 @@ export default async function FeedPage() {
     new Set(posts.map((p) => p.category).filter((c): c is string => !!c))
   ).sort()
 
+  // 有料・特別会員でまだマップに位置が無い人にだけ「マップに載る」導線を出す
+  const needsLocation = canViewPremium && !isAdmin && profile?.lat == null
+
   return (
-    <FeedClient posts={posts} categories={categories} isAdmin={isAdmin} userId={user.id} />
+    <FeedClient posts={posts} categories={categories} isAdmin={isAdmin} userId={user.id} needsLocation={needsLocation} />
   )
 }

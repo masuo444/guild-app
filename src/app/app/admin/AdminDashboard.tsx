@@ -22,6 +22,11 @@ interface ExchangeOrderWithRelations extends ExchangeOrder {
   profiles: { display_name: string | null; membership_id: string | null } | null
 }
 
+export interface AdminQuestion {
+  id: string; user_id: string; body: string; status: 'open' | 'answered'; answer_post_id: string | null; created_at: string
+  display_name: string | null; membership_id: string | null
+}
+
 interface AdminDashboardProps {
   invites: InviteWithRelations[]
   members: Profile[]
@@ -31,11 +36,12 @@ interface AdminDashboardProps {
   memberRoles: MemberRole[]
   exchangeItems: ExchangeItem[]
   exchangeOrders: ExchangeOrderWithRelations[]
+  questions: AdminQuestion[]
   adminId: string
   adminEmail: string
 }
 
-type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'exchange' | 'notifications'
+type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'exchange' | 'questions' | 'notifications'
 
 const TAB_LABELS: Record<Tab, string> = {
   invites: '招待コード',
@@ -43,6 +49,7 @@ const TAB_LABELS: Record<Tab, string> = {
   roles: 'ロール',
   hubs: '拠点',
   exchange: '交換所',
+  questions: '質問箱',
   notifications: '通知',
 }
 
@@ -72,6 +79,11 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
+  questions: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
   notifications: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -79,7 +91,7 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
   ),
 }
 
-export function AdminDashboard({ invites, members, hubs, memberPoints, customRoles, memberRoles, exchangeItems, exchangeOrders, adminId, adminEmail }: AdminDashboardProps) {
+export function AdminDashboard({ invites, members, hubs, memberPoints, customRoles, memberRoles, exchangeItems, exchangeOrders, questions, adminId, adminEmail }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('invites')
 
   // 交換申請の未処理数
@@ -113,7 +125,7 @@ export function AdminDashboard({ invites, members, hubs, memberPoints, customRol
 
       {/* タブナビゲーション */}
       <div className="flex gap-1 mb-6 p-1 bg-white/5 rounded-xl overflow-x-auto">
-        {(['invites', 'members', 'roles', 'hubs', 'exchange', 'notifications'] as Tab[]).map((tab) => (
+        {(['invites', 'members', 'roles', 'hubs', 'exchange', 'questions', 'notifications'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -125,6 +137,13 @@ export function AdminDashboard({ invites, members, hubs, memberPoints, customRol
           >
             {TAB_ICONS[tab]}
             <span className="hidden sm:inline">{TAB_LABELS[tab]}</span>
+            {tab === 'questions' && questions.filter(q => q.status === 'open').length > 0 && (
+              <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                activeTab === tab ? 'bg-zinc-900/30 text-zinc-900' : 'bg-amber-500 text-amber-900'
+              }`}>
+                {questions.filter(q => q.status === 'open').length}
+              </span>
+            )}
             {tab === 'exchange' && pendingCount > 0 && (
               <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                 activeTab === tab ? 'bg-zinc-900/30 text-zinc-900' : 'bg-amber-500 text-amber-900'
@@ -142,6 +161,7 @@ export function AdminDashboard({ invites, members, hubs, memberPoints, customRol
       {activeTab === 'roles' && <RolesTab customRoles={customRoles} memberRoles={memberRoles} members={members} />}
       {activeTab === 'hubs' && <HubsTab hubs={hubs} />}
       {activeTab === 'exchange' && <ExchangeAdminTab items={exchangeItems} orders={exchangeOrders} adminId={adminId} />}
+      {activeTab === 'questions' && <QuestionsTab questions={questions} />}
       {activeTab === 'notifications' && <NotificationsTab />}
     </div>
   )
@@ -2240,6 +2260,57 @@ function ExchangeAdminTab({ items: initialItems, orders: initialOrders, adminId 
             </div>
           </CardContent>
         </Card>
+      )}
+    </div>
+  )
+}
+
+function QuestionsTab({ questions: initial }: { questions: AdminQuestion[] }) {
+  const [questions, setQuestions] = useState(initial)
+  const [busy, setBusy] = useState<string | null>(null)
+  const update = async (id: string, patch: { status?: 'open' | 'answered'; answerPostId?: string | null }) => {
+    setBusy(id)
+    const res = await fetch('/api/admin/questions', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...patch }) })
+    setBusy(null)
+    if (res.ok) setQuestions(prev => prev.map(q => q.id === id ? { ...q, status: patch.status ?? q.status, answer_post_id: patch.answerPostId === undefined ? q.answer_post_id : patch.answerPostId } : q))
+  }
+  const open = questions.filter(q => q.status === 'open')
+  const answered = questions.filter(q => q.status === 'answered')
+  const Row = ({ q }: { q: AdminQuestion }) => (
+    <div className="p-4 rounded-xl bg-white/5 border border-zinc-500/30">
+      <div className="flex items-center justify-between gap-3 text-xs text-zinc-400 mb-2">
+        <span>{q.display_name || '(名前なし)'}{q.membership_id ? ` · ${q.membership_id}` : ''} · {formatDate(q.created_at)}</span>
+        <span className={`px-2 py-0.5 rounded-full ${q.status === 'answered' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>{q.status === 'answered' ? '回答済み' : '未回答'}</span>
+      </div>
+      <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{q.body}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {q.status === 'open' ? (
+          <button onClick={() => update(q.id, { status: 'answered' })} disabled={busy === q.id} className="px-3 py-1.5 rounded-lg bg-[#c0c0c0] text-zinc-900 text-xs font-medium hover:bg-white disabled:opacity-50">回答済みにする</button>
+        ) : (
+          <button onClick={() => update(q.id, { status: 'open' })} disabled={busy === q.id} className="px-3 py-1.5 rounded-lg border border-zinc-500/40 text-zinc-300 text-xs hover:bg-white/5 disabled:opacity-50">未回答に戻す</button>
+        )}
+        <form
+          onSubmit={(e) => { e.preventDefault(); const v = (new FormData(e.currentTarget).get('post') as string || '').trim(); update(q.id, { answerPostId: v ? v.replace(/^.*\/app\/feed\//, '') : null, status: v ? 'answered' : undefined }) }}
+          className="flex items-center gap-2"
+        >
+          <input name="post" defaultValue={q.answer_post_id ?? ''} placeholder="回答記事のURL or ID" className="px-2.5 py-1.5 rounded-lg bg-white/5 border border-zinc-600 text-white text-xs w-56 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]" />
+          <button type="submit" disabled={busy === q.id} className="px-3 py-1.5 rounded-lg border border-zinc-500/40 text-zinc-300 text-xs hover:bg-white/5 disabled:opacity-50">紐づけ</button>
+        </form>
+      </div>
+    </div>
+  )
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-zinc-400">会員から届いた質問です。記事で答えたら「回答済み」にし、記事URLを紐づけると本人のマイページに「記事を読む →」が出ます。</p>
+      <div>
+        <h3 className="text-sm font-semibold text-white mb-2">未回答（{open.length}）</h3>
+        {open.length === 0 ? <p className="text-sm text-zinc-500">未回答の質問はありません</p> : <div className="space-y-3">{open.map(q => <Row key={q.id} q={q} />)}</div>}
+      </div>
+      {answered.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-white mb-2">回答済み（{answered.length}）</h3>
+          <div className="space-y-3">{answered.map(q => <Row key={q.id} q={q} />)}</div>
+        </div>
       )}
     </div>
   )

@@ -6,6 +6,7 @@ import { ProfileForm } from './ProfileForm'
 import { ProfilePageHeader } from './ProfilePageClient'
 import { ProfileMenu } from './ProfileMenu'
 import { ProfileHero } from './ProfileHero'
+import { QuestionBox } from '@/components/QuestionBox'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -44,6 +45,7 @@ export default async function ProfilePage() {
       <ProfilePageHeader />
       <ProfileHero profile={profile} statusPoints={statusPoints} masuPoints={masuPoints} inviteCount={inviteCount ?? 0} />
       <ProfileMenu isAdmin={profile.role === 'admin'} />
+      <div className="mb-6"><QuestionBox /></div>
       <ProfileForm profile={profile} email={user.email || ''} renewalCount={renewalCount ?? 0} />
     </div>
   )

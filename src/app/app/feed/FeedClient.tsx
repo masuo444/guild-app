@@ -52,13 +52,31 @@ export function ThemeToggle({ light, setLight, ja }: { light: boolean; setLight:
   )
 }
 
-export function FeedClient({ posts, categories, isAdmin, userId }: { posts: FeedListItem[]; categories: string[]; isAdmin: boolean; userId: string }) {
+export function FeedClient({ posts, categories, isAdmin, userId, needsLocation = false }: { posts: FeedListItem[]; categories: string[]; isAdmin: boolean; userId: string; needsLocation?: boolean }) {
   const { language } = useLanguage()
   const router = useRouter()
   const ja = language === 'ja'
   const { light, setLight } = useReadingTheme()
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [activeMonth, setActiveMonth] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [matchIds, setMatchIds] = useState<Set<string> | null>(null)
+  const [mapPromptHidden, setMapPromptHidden] = useState(false)
+  useEffect(() => { try { setMapPromptHidden(localStorage.getItem('fomus-map-prompt-hidden') === '1') } catch {} }, [])
+
+  // キーワード検索（タイトル・本文）。入力が止まって300ms後にサーバーへ
+  useEffect(() => {
+    const q = query.trim()
+    if (!q) { setMatchIds(null); return }
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/feed/search?q=${encodeURIComponent(q)}`)
+        const d = await r.json()
+        setMatchIds(new Set<string>(d.ids ?? []))
+      } catch { setMatchIds(new Set()) }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [query])
 
   // 月別アーカイブ（新しい月が先）
   const months = useMemo(
@@ -67,7 +85,7 @@ export function FeedClient({ posts, categories, isAdmin, userId }: { posts: Feed
   )
 
   const visible = posts.filter(
-    (p) => (!activeCategory || p.category === activeCategory) && (!activeMonth || monthKey(p.published_at) === activeMonth)
+    (p) => (!activeCategory || p.category === activeCategory) && (!activeMonth || monthKey(p.published_at) === activeMonth) && (!matchIds || matchIds.has(p.id))
   )
 
   const chipActive = 'bg-[#c0c0c0] text-zinc-900'
@@ -89,6 +107,43 @@ export function FeedClient({ posts, categories, isAdmin, userId }: { posts: Feed
               ? `笛吹市での日々をほぼ毎日。全${posts.length}本。`
               : `Almost daily notes from Fuefuki. ${posts.length} posts.`}
           </p>
+        </div>
+
+        {/* マップに載る導線（位置未設定の会員だけ・閉じられる） */}
+        {needsLocation && !mapPromptHidden && (
+          <div className={`mb-4 flex items-start gap-3 rounded-xl border p-3.5 ${light ? 'bg-emerald-50 border-emerald-200' : 'bg-emerald-500/10 border-emerald-500/25'}`}>
+            <span className="text-xl leading-none">🗺️</span>
+            <div className="min-w-0 flex-1">
+              <p className={`text-sm font-medium ${light ? 'text-emerald-900' : 'text-emerald-200'}`}>
+                {ja ? 'マップに自分を置きましょう' : 'Put yourself on the map'}
+              </p>
+              <p className={`text-xs mt-0.5 ${light ? 'text-emerald-800/80' : 'text-emerald-100/70'}`}>
+                {ja ? '国と都市を登録すると、世界のメンバーからあなたが見つかります。' : 'Add your country and city so members around the world can find you.'}
+              </p>
+              <Link href="/app/profile#location" className={`inline-block mt-2 text-xs font-medium underline underline-offset-2 ${light ? 'text-emerald-800' : 'text-emerald-200'}`}>
+                {ja ? '位置を設定する →' : 'Set my location →'}
+              </Link>
+            </div>
+            <button onClick={() => { setMapPromptHidden(true); try { localStorage.setItem('fomus-map-prompt-hidden', '1') } catch {} }} className={`text-xs ${light ? 'text-emerald-700' : 'text-emerald-200/70'}`} aria-label="close">✕</button>
+          </div>
+        )}
+
+        {/* 検索 */}
+        <div className="mb-3">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={ja ? '記事を検索（例：ワイナリー、補助金）' : 'Search posts'}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-[#c0c0c0] ${
+              light ? 'bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400' : 'bg-white/5 border-zinc-700 text-white placeholder-zinc-500'
+            }`}
+          />
+          {matchIds && (
+            <p className={`text-xs mt-1.5 ${light ? 'text-zinc-500' : 'text-zinc-400'}`}>
+              {ja ? `${visible.length}件が一致` : `${visible.length} match${visible.length === 1 ? '' : 'es'}`}
+            </p>
+          )}
         </div>
 
         {/* 月別アーカイブ */}

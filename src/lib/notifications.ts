@@ -152,3 +152,17 @@ export async function notifyAdminKeepaliveFailure(info: { source: string; error:
     html,
   }).catch((e) => console.error('notifyAdminKeepaliveFailure error:', e))
 }
+
+/** 管理者への簡易通知（コメント・質問など）。本文はプレーンテキスト行の配列 */
+export async function notifyAdminMessage(subject: string, lines: string[]) {
+  if (!process.env.RESEND_API_KEY) return
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+  const html = `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height:1.7;">
+    ${lines.map((l) => `<p style="margin:0 0 10px 0; white-space:pre-wrap;">${escapeHtml(l)}</p>`).join('')}
+    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+    <p style="color: #999; font-size: 12px;">FOMUS GUILD 管理者通知</p>
+  </div>`
+  await resend.emails.send({ from: fromEmail, to: [...ADMIN_EMAILS], subject: `[GUILD] ${subject}`, html })
+    .catch((e) => console.error('notifyAdminMessage error:', e))
+}

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AdminDashboard } from './AdminDashboard'
 import { AdminPageHeader } from './AdminPageClient'
@@ -66,6 +66,18 @@ export default async function AdminPage() {
       .order('created_at', { ascending: false }),
   ])
 
+  // 質問箱（RLSは本人のみなので service role で読む。テーブル未作成なら空）
+  const { data: questionRows } = await createServiceClient()
+    .from('member_questions')
+    .select('id, user_id, body, status, answer_post_id, created_at, profiles:user_id(display_name, membership_id)')
+    .order('status', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(200)
+  const questions = (questionRows ?? []).map((q) => {
+    const p = (Array.isArray(q.profiles) ? q.profiles[0] : q.profiles) as { display_name: string | null; membership_id: string | null } | null
+    return { id: q.id as string, user_id: q.user_id as string, body: q.body as string, status: q.status as 'open' | 'answered', answer_post_id: (q.answer_post_id as string | null), created_at: q.created_at as string, display_name: p?.display_name ?? null, membership_id: p?.membership_id ?? null }
+  })
+
   // メンバーごとのポイントを集計
   const memberPoints: Record<string, number> = {}
   activityLogs?.forEach((log) => {
@@ -94,6 +106,7 @@ export default async function AdminPage() {
         memberRoles={memberRoles ?? []}
         exchangeItems={exchangeItems ?? []}
         exchangeOrders={exchangeOrders ?? []}
+        questions={questions}
         adminId={user.id}
         adminEmail={user.email || ''}
       />

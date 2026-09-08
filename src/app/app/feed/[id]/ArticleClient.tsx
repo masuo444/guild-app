@@ -10,6 +10,7 @@ import { FeedEditForm } from '@/components/feed/FeedEditForm'
 import { formatPostDate, stripDatePrefix } from '@/lib/feed'
 import { ThemeToggle, useReadingTheme } from '../FeedClient'
 import { createClient } from '@/lib/supabase/client'
+import { PostSocial } from '@/components/feed/PostSocial'
 
 export interface ArticlePost {
   id: string
@@ -136,7 +137,10 @@ export function ArticleClient({ post, newer, older, isAdmin, categories }: {
                 <Paywall light={light} ja={ja} postId={post.id} />
               </>
             ) : (
-              <ArticleBody body={post.body} light={light} />
+              <>
+                <ArticleBody body={post.body} light={light} />
+                <PostSocial postId={post.id} light={light} />
+              </>
             )}
 
             <p className={`mt-12 pt-4 border-t text-[11px] ${light ? 'border-zinc-200 text-zinc-400' : 'border-zinc-700/50 text-zinc-500'}`}>

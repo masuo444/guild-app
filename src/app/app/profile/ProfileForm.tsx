@@ -419,7 +419,7 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div id="location" className="space-y-3 scroll-mt-24">
               <p className="text-xs text-zinc-400">{t.locationInputNote}</p>
               <div className="grid grid-cols-3 gap-3">
                 <Input
