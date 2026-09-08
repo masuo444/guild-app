@@ -3,19 +3,13 @@
 import { useState, useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, GuildQuest, QuestSubmission, CustomRole, MemberRole, RoleColor, ROLE_COLOR_OPTIONS, ExchangeItem, ExchangeOrder } from '@/types/database'
+import { Invite, Profile, MasuHub, Rank, MembershipType, MEMBERSHIP_TYPE_LABELS, isFreeMembershipType, FREE_MEMBERSHIP_TYPES, CustomRole, MemberRole, RoleColor, ROLE_COLOR_OPTIONS, ExchangeItem, ExchangeOrder } from '@/types/database'
 import { calculateRank, RANK_THRESHOLDS } from '@/config/rank'
 import { canIssueFreeInvite } from '@/config/admin'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { generateInviteCode, formatDate } from '@/lib/utils'
-
-// 拡張されたQuestSubmission型（リレーションデータ含む）
-interface QuestSubmissionWithRelations extends QuestSubmission {
-  guild_quests: { title: string; points_reward: number } | null
-  profiles: { display_name: string | null; membership_id: string | null } | null
-}
 
 // 招待者・被招待者情報付きのInvite
 interface InviteWithRelations extends Invite {
@@ -32,8 +26,6 @@ interface AdminDashboardProps {
   invites: InviteWithRelations[]
   members: Profile[]
   hubs: MasuHub[]
-  questSubmissions: QuestSubmissionWithRelations[]
-  quests: GuildQuest[]
   memberPoints: Record<string, number>
   customRoles: CustomRole[]
   memberRoles: MemberRole[]
@@ -43,16 +35,14 @@ interface AdminDashboardProps {
   adminEmail: string
 }
 
-type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'quests' | 'exchange' | 'sales' | 'notifications'
+type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'exchange' | 'notifications'
 
 const TAB_LABELS: Record<Tab, string> = {
   invites: '招待コード',
   members: 'メンバー',
   roles: 'ロール',
   hubs: '拠点',
-  quests: 'クエスト',
   exchange: '交換所',
-  sales: '紹介実績',
   notifications: '通知',
 }
 
@@ -77,11 +67,6 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
     </svg>
   ),
-  quests: (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-    </svg>
-  ),
   exchange: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -92,18 +77,13 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
     </svg>
   ),
-  sales: (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-    </svg>
-  ),
 }
 
-export function AdminDashboard({ invites, members, hubs, questSubmissions, quests, memberPoints, customRoles, memberRoles, exchangeItems, exchangeOrders, adminId, adminEmail }: AdminDashboardProps) {
+export function AdminDashboard({ invites, members, hubs, memberPoints, customRoles, memberRoles, exchangeItems, exchangeOrders, adminId, adminEmail }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('invites')
 
-  // 承認待ちの投稿数
-  const pendingCount = questSubmissions.filter(s => s.status === 'pending').length
+  // 交換申請の未処理数
+  const pendingCount = exchangeOrders.filter(o => o.status === 'pending').length
   // 未使用招待 = 再利用可能 + 通常の未使用
   const reusableInviteCount = invites.filter(i => i.reusable).length
   const unusedRegularInviteCount = invites.filter(i => !i.reusable && !i.used).length
@@ -126,14 +106,14 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
           <p className="text-2xl font-bold text-white">{unusedInviteCount}</p>
         </div>
         <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-xl p-4 border border-amber-500/20">
-          <p className="text-amber-400 text-xs font-medium">承認待ち</p>
+          <p className="text-amber-400 text-xs font-medium">交換申請（未処理）</p>
           <p className="text-2xl font-bold text-white">{pendingCount}</p>
         </div>
       </div>
 
       {/* タブナビゲーション */}
       <div className="flex gap-1 mb-6 p-1 bg-white/5 rounded-xl overflow-x-auto">
-        {(['invites', 'members', 'roles', 'hubs', 'quests', 'exchange', 'sales', 'notifications'] as Tab[]).map((tab) => (
+        {(['invites', 'members', 'roles', 'hubs', 'exchange', 'notifications'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -145,7 +125,7 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
           >
             {TAB_ICONS[tab]}
             <span className="hidden sm:inline">{TAB_LABELS[tab]}</span>
-            {tab === 'quests' && pendingCount > 0 && (
+            {tab === 'exchange' && pendingCount > 0 && (
               <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                 activeTab === tab ? 'bg-zinc-900/30 text-zinc-900' : 'bg-amber-500 text-amber-900'
               }`}>
@@ -161,9 +141,7 @@ export function AdminDashboard({ invites, members, hubs, questSubmissions, quest
       {activeTab === 'members' && <MembersTab members={members} memberPoints={memberPoints} customRoles={customRoles} memberRoles={memberRoles} />}
       {activeTab === 'roles' && <RolesTab customRoles={customRoles} memberRoles={memberRoles} members={members} />}
       {activeTab === 'hubs' && <HubsTab hubs={hubs} />}
-      {activeTab === 'quests' && <QuestsTab submissions={questSubmissions} quests={quests} adminId={adminId} />}
       {activeTab === 'exchange' && <ExchangeAdminTab items={exchangeItems} orders={exchangeOrders} adminId={adminId} />}
-      {activeTab === 'sales' && <SalesAdminTab />}
       {activeTab === 'notifications' && <NotificationsTab />}
     </div>
   )
@@ -2010,601 +1988,6 @@ function HubsTab({ hubs }: { hubs: MasuHub[] }) {
   )
 }
 
-function OffersTab() {
-  const router = useRouter()
-  const [creating, setCreating] = useState(false)
-  const [formData, setFormData] = useState<{
-    title: string
-    description: string
-    offer_type: string
-    min_rank: Rank
-  }>({
-    title: '',
-    description: '',
-    offer_type: 'Discount',
-    min_rank: 'D',
-  })
-
-  const handleCreate = async () => {
-    if (!formData.title || !formData.description) return
-    setCreating(true)
-
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) return
-
-    await supabase.from('guild_offers').insert({
-      title: formData.title,
-      description: formData.description,
-      offer_type: formData.offer_type,
-      min_rank: formData.min_rank,
-      provider_id: user.id,
-      is_active: true,
-    })
-
-    setFormData({ title: '', description: '', offer_type: 'Discount', min_rank: 'D' })
-    router.refresh()
-    setCreating(false)
-  }
-
-  const offerTypes = [
-    { value: 'Discount', label: '割引' },
-    { value: 'Access', label: 'アクセス権' },
-    { value: 'Service', label: 'サービス' },
-    { value: 'Product', label: '商品' },
-  ]
-
-  const ranks = [
-    { value: 'E', label: 'E (全メンバー)' },
-    { value: 'D', label: 'D (30pt以上)' },
-    { value: 'C', label: 'C (100pt以上)' },
-    { value: 'B', label: 'B (300pt以上)' },
-    { value: 'A', label: 'A (800pt以上)' },
-    { value: 'S', label: 'S (2000pt以上)' },
-    { value: 'SS', label: 'SS (5000pt以上)' },
-  ]
-
-  return (
-    <Card>
-      <CardHeader>
-        <h2 className="font-semibold text-white text-lg">新規オファーを作成</h2>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">タイトル *</label>
-            <input
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="オファーのタイトル"
-              className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">タイプ</label>
-            <select
-              className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-              value={formData.offer_type}
-              onChange={(e) => setFormData({ ...formData, offer_type: e.target.value })}
-            >
-              {offerTypes.map((type) => (
-                <option key={type.value} value={type.value} className="bg-zinc-900">{type.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">説明 *</label>
-            <textarea
-              className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="オファーの詳細を入力..."
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">必要ランク</label>
-            <select
-              className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-              value={formData.min_rank}
-              onChange={(e) => setFormData({ ...formData, min_rank: e.target.value as Rank })}
-            >
-              {ranks.map((rank) => (
-                <option key={rank.value} value={rank.value} className="bg-zinc-900">{rank.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-end">
-            <Button onClick={handleCreate} loading={creating} disabled={!formData.title || !formData.description}>
-              オファーを作成
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-type QuestType = 'photo' | 'checkin' | 'action'
-
-function QuestsTab({ submissions, quests, adminId }: { submissions: QuestSubmissionWithRelations[]; quests: GuildQuest[]; adminId: string }) {
-  const router = useRouter()
-  const [processing, setProcessing] = useState<string | null>(null)
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [showQuestForm, setShowQuestForm] = useState(false)
-  const [creatingQuest, setCreatingQuest] = useState(false)
-  const [togglingQuest, setTogglingQuest] = useState<string | null>(null)
-  const [questFormData, setQuestFormData] = useState({
-    title: '',
-    description: '',
-    points_reward: 10,
-    quest_type: 'photo' as QuestType,
-    is_repeatable: false,
-  })
-
-  // 承認待ち/それ以外で分ける
-  const pendingSubmissions = submissions.filter(s => s.status === 'pending')
-  const reviewedSubmissions = submissions.filter(s => s.status !== 'pending')
-
-  // テキストを自動翻訳（日本語→英語）
-  const autoTranslate = async (text: string): Promise<string | null> => {
-    try {
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, from: 'ja', to: 'en' }),
-      })
-      if (!res.ok) return null
-      const data = await res.json()
-      return data.translated || null
-    } catch {
-      return null
-    }
-  }
-
-  // クエスト作成
-  const handleCreateQuest = async () => {
-    if (!questFormData.title || !questFormData.description) return
-    setCreatingQuest(true)
-
-    // 自動翻訳
-    const [titleEn, descEn] = await Promise.all([
-      autoTranslate(questFormData.title),
-      autoTranslate(questFormData.description),
-    ])
-
-    const supabase = createClient()
-    await supabase.from('guild_quests').insert({
-      title: questFormData.title,
-      description: questFormData.description,
-      title_en: titleEn,
-      description_en: descEn,
-      points_reward: questFormData.points_reward,
-      quest_type: questFormData.quest_type,
-      is_repeatable: questFormData.is_repeatable,
-      is_active: true,
-      image_url: null,
-    })
-
-    setQuestFormData({
-      title: '',
-      description: '',
-      points_reward: 10,
-      quest_type: 'photo',
-      is_repeatable: false,
-    })
-    setShowQuestForm(false)
-    setCreatingQuest(false)
-    router.refresh()
-  }
-
-  // クエストの有効/無効切り替え
-  const handleToggleQuest = async (questId: string, currentStatus: boolean) => {
-    setTogglingQuest(questId)
-    const supabase = createClient()
-    await supabase
-      .from('guild_quests')
-      .update({ is_active: !currentStatus })
-      .eq('id', questId)
-    setTogglingQuest(null)
-    router.refresh()
-  }
-
-  const handleApprove = async (submission: QuestSubmissionWithRelations) => {
-    if (!submission.guild_quests) return
-    setProcessing(submission.id)
-
-    const supabase = createClient()
-
-    // 1. 投稿を承認
-    await supabase
-      .from('quest_submissions')
-      .update({
-        status: 'approved',
-        reviewed_by: adminId,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq('id', submission.id)
-
-    // 2. ユーザーにポイントを付与
-    await supabase.from('activity_logs').insert({
-      user_id: submission.user_id,
-      type: 'Quest Reward',
-      points: submission.guild_quests.points_reward,
-      note: `Quest: ${submission.guild_quests.title}`,
-    })
-
-    setProcessing(null)
-    router.refresh()
-  }
-
-  const handleReject = async (submission: QuestSubmissionWithRelations) => {
-    setProcessing(submission.id)
-
-    const supabase = createClient()
-    await supabase
-      .from('quest_submissions')
-      .update({
-        status: 'rejected',
-        reviewed_by: adminId,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq('id', submission.id)
-
-    setProcessing(null)
-    router.refresh()
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <span className="px-2 py-0.5 bg-green-500/20 rounded-full text-xs font-medium text-green-300">承認済み</span>
-      case 'rejected':
-        return <span className="px-2 py-0.5 bg-red-500/20 rounded-full text-xs font-medium text-red-300">却下</span>
-      default:
-        return <span className="px-2 py-0.5 bg-amber-500/20 rounded-full text-xs font-medium text-amber-300">審査待ち</span>
-    }
-  }
-
-  const questTypes = [
-    { value: 'photo', label: '写真投稿', description: '写真をアップロードして完了' },
-    { value: 'checkin', label: 'チェックイン', description: '場所にチェックインして完了' },
-    { value: 'action', label: 'アクション', description: '特定のアクションを実行して完了' },
-  ]
-
-  const activeQuests = quests.filter(q => q.is_active)
-  const inactiveQuests = quests.filter(q => !q.is_active)
-
-  return (
-    <div className="space-y-4">
-      {/* 画像プレビューモーダル */}
-      {selectedImage && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh]">
-            <img
-              src={selectedImage}
-              alt="プレビュー"
-              className="max-w-full max-h-[90vh] object-contain rounded-xl"
-            />
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 w-10 h-10 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* クエスト管理 */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-white text-lg">クエスト管理</h2>
-            <p className="text-xs text-zinc-400 mt-1">有効: {activeQuests.length}件 / 無効: {inactiveQuests.length}件</p>
-          </div>
-          <Button size="sm" onClick={() => setShowQuestForm(!showQuestForm)}>
-            {showQuestForm ? 'キャンセル' : '新規作成'}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {/* クエスト作成フォーム */}
-          {showQuestForm && (
-            <div className="mb-6 p-4 bg-white/5 rounded-xl border border-zinc-500/20">
-              <h3 className="font-medium text-white mb-4">新しいクエストを作成</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">タイトル *</label>
-                  <input
-                    value={questFormData.title}
-                    onChange={(e) => setQuestFormData({ ...questFormData, title: e.target.value })}
-                    placeholder="例: MASUの商品を投稿しよう"
-                    className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">説明 *</label>
-                  <textarea
-                    value={questFormData.description}
-                    onChange={(e) => setQuestFormData({ ...questFormData, description: e.target.value })}
-                    placeholder="クエストの詳細な説明..."
-                    rows={2}
-                    className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">クエストタイプ</label>
-                  <select
-                    value={questFormData.quest_type}
-                    onChange={(e) => setQuestFormData({ ...questFormData, quest_type: e.target.value as QuestType })}
-                    className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  >
-                    {questTypes.map((type) => (
-                      <option key={type.value} value={type.value} className="bg-zinc-900">
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">報酬ポイント</label>
-                  <input
-                    type="number"
-                    value={questFormData.points_reward}
-                    onChange={(e) => setQuestFormData({ ...questFormData, points_reward: parseInt(e.target.value) || 0 })}
-                    min="1"
-                    className="w-full px-3 py-3 border border-zinc-500/30 rounded-xl text-sm bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={questFormData.is_repeatable}
-                      onChange={(e) => setQuestFormData({ ...questFormData, is_repeatable: e.target.checked })}
-                      className="w-5 h-5 rounded border-zinc-500/30 bg-white/10 text-[#c0c0c0] focus:ring-[#c0c0c0]"
-                    />
-                    <div>
-                      <span className="text-sm text-white">繰り返し可能</span>
-                      <p className="text-xs text-zinc-500">ユーザーが複数回達成できるようにする</p>
-                    </div>
-                  </label>
-                </div>
-                <div className="sm:col-span-2">
-                  <Button
-                    onClick={handleCreateQuest}
-                    loading={creatingQuest}
-                    disabled={!questFormData.title || !questFormData.description}
-                  >
-                    クエストを作成
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 有効なクエスト一覧 */}
-          {activeQuests.length > 0 && (
-            <div className="space-y-2 mb-4">
-              <p className="text-xs text-zinc-400 font-medium mb-2">有効なクエスト</p>
-              {activeQuests.map((quest) => (
-                <div key={quest.id} className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-                  <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-white">{quest.title}</span>
-                      <span className="px-2 py-0.5 bg-[#c0c0c0]/20 text-[#c0c0c0] rounded-full text-xs font-bold">
-                        +{quest.points_reward}pt
-                      </span>
-                      {quest.is_repeatable && (
-                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full text-xs">
-                          繰り返し可
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-zinc-400 truncate">{quest.description}</p>
-                  </div>
-                  <button
-                    onClick={() => handleToggleQuest(quest.id, quest.is_active)}
-                    disabled={togglingQuest === quest.id}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      togglingQuest === quest.id
-                        ? 'bg-zinc-700 text-zinc-400'
-                        : 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                    }`}
-                  >
-                    {togglingQuest === quest.id ? '...' : '無効化'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 無効なクエスト一覧 */}
-          {inactiveQuests.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-zinc-500 font-medium mb-2">無効なクエスト</p>
-              {inactiveQuests.map((quest) => (
-                <div key={quest.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 opacity-60">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-400">{quest.title}</span>
-                      <span className="px-2 py-0.5 bg-zinc-700 text-zinc-400 rounded-full text-xs">
-                        +{quest.points_reward}pt
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-500 truncate">{quest.description}</p>
-                  </div>
-                  <button
-                    onClick={() => handleToggleQuest(quest.id, quest.is_active)}
-                    disabled={togglingQuest === quest.id}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      togglingQuest === quest.id
-                        ? 'bg-zinc-700 text-zinc-400'
-                        : 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
-                    }`}
-                  >
-                    {togglingQuest === quest.id ? '...' : '有効化'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {quests.length === 0 && !showQuestForm && (
-            <div className="text-center py-8">
-              <p className="text-zinc-500">クエストがまだありません</p>
-              <button
-                onClick={() => setShowQuestForm(true)}
-                className="mt-2 text-[#c0c0c0] hover:text-white text-sm"
-              >
-                最初のクエストを作成する →
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 承認待ち */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-white text-lg">承認待ちの投稿</h2>
-            {pendingSubmissions.length > 0 && (
-              <span className="px-2.5 py-1 bg-amber-500 rounded-full text-xs font-bold text-amber-900">
-                {pendingSubmissions.length}件
-              </span>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {pendingSubmissions.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p className="text-zinc-500">承認待ちの投稿はありません</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingSubmissions.map((submission) => (
-                <div key={submission.id} className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                  <div className="flex gap-4">
-                    {/* 画像サムネイル */}
-                    {submission.image_url && (
-                      <div
-                        className="w-28 h-28 rounded-xl overflow-hidden cursor-pointer flex-shrink-0 ring-2 ring-amber-500/30"
-                        onClick={() => setSelectedImage(submission.image_url)}
-                      >
-                        <img
-                          src={submission.image_url}
-                          alt="投稿画像"
-                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                        />
-                      </div>
-                    )}
-
-                    {/* 詳細 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-bold text-white text-lg">
-                          {submission.profiles?.display_name || '不明'}
-                        </span>
-                        <span className="text-zinc-500 text-xs font-mono">
-                          {submission.profiles?.membership_id}
-                        </span>
-                      </div>
-                      <p className="text-[#c0c0c0] font-medium mb-1">
-                        {submission.guild_quests?.title}
-                      </p>
-                      {submission.comment && (
-                        <p className="text-sm text-zinc-400 mb-2 bg-white/5 p-2 rounded-lg">{submission.comment}</p>
-                      )}
-                      <p className="text-xs text-zinc-500">{formatDate(submission.created_at)}</p>
-                    </div>
-                  </div>
-
-                  {/* アクションボタン */}
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-amber-500/20">
-                    <Button
-                      onClick={() => handleApprove(submission)}
-                      loading={processing === submission.id}
-                      disabled={processing !== null}
-                      className="flex-1"
-                    >
-                      承認 (+{submission.guild_quests?.points_reward}pt)
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleReject(submission)}
-                      loading={processing === submission.id}
-                      disabled={processing !== null}
-                      className="flex-1"
-                    >
-                      却下
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 審査済み */}
-      {reviewedSubmissions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <h2 className="font-semibold text-white">審査済み ({reviewedSubmissions.length}件)</h2>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {reviewedSubmissions.map((submission) => (
-                <div key={submission.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
-                  {submission.image_url && (
-                    <div
-                      className="w-10 h-10 rounded-lg overflow-hidden cursor-pointer flex-shrink-0"
-                      onClick={() => setSelectedImage(submission.image_url)}
-                    >
-                      <img src={submission.image_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-white truncate">
-                        {submission.profiles?.display_name || '不明'}
-                      </span>
-                      {getStatusBadge(submission.status)}
-                    </div>
-                    <p className="text-xs text-zinc-500 truncate">
-                      {submission.guild_quests?.title}
-                    </p>
-                  </div>
-                  <span className="text-xs text-zinc-600 flex-shrink-0">
-                    {formatDate(submission.created_at)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  )
-}
-
 function ExchangeAdminTab({ items: initialItems, orders: initialOrders, adminId }: { items: ExchangeItem[]; orders: ExchangeOrderWithRelations[]; adminId: string }) {
   const router = useRouter()
   const [items, setItems] = useState(initialItems)
@@ -2858,77 +2241,6 @@ function ExchangeAdminTab({ items: initialItems, orders: initialOrders, adminId 
           </CardContent>
         </Card>
       )}
-    </div>
-  )
-}
-
-interface SalesCreditRow {
-  id: string
-  order_id: string
-  amount_jpy: number
-  points: number
-  created_at: string
-  member_id: string
-  profiles: { display_name: string | null } | null
-}
-
-function SalesAdminTab() {
-  const [credits, setCredits] = useState<SalesCreditRow[] | null>(null)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    fetch('/api/admin/sales-credits')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) setError(data.error)
-        else setCredits(data.credits || [])
-      })
-      .catch(() => setError('読み込みに失敗しました'))
-  }, [])
-
-  const totalPoints = (credits ?? []).reduce((sum, c) => sum + c.points, 0)
-  const totalAmount = (credits ?? []).reduce((sum, c) => sum + c.amount_jpy, 0)
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gradient-to-br from-teal-500/20 to-teal-600/10 rounded-xl p-4 border border-teal-500/20">
-          <p className="text-teal-400 text-xs font-medium">紹介経由の売上合計</p>
-          <p className="text-2xl font-bold text-white">¥{totalAmount.toLocaleString()}</p>
-        </div>
-        <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-xl p-4 border border-amber-500/20">
-          <p className="text-amber-400 text-xs font-medium">還元ポイント合計</p>
-          <p className="text-2xl font-bold text-white">{totalPoints.toLocaleString()}pt</p>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <h2 className="font-semibold text-white">紹介コード還元 履歴</h2>
-        </CardHeader>
-        <CardContent>
-          {error && <p className="text-sm text-red-400">{error}</p>}
-          {!error && credits === null && <p className="text-sm text-zinc-500">読み込み中...</p>}
-          {!error && credits !== null && credits.length === 0 && (
-            <p className="text-sm text-zinc-500">まだ実績はありません</p>
-          )}
-          {!error && credits !== null && credits.length > 0 && (
-            <div className="space-y-2">
-              {credits.map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-zinc-700/50">
-                  <div>
-                    <p className="text-white text-sm">{c.profiles?.display_name || '—'}</p>
-                    <p className="text-zinc-500 text-xs">
-                      注文 {c.order_id} / ¥{c.amount_jpy.toLocaleString()} / {formatDate(c.created_at)}
-                    </p>
-                  </div>
-                  <p className="text-sm text-teal-400">+{c.points.toLocaleString()}pt</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

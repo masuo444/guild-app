@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { ADMIN_EMAILS } from '@/lib/access'
@@ -7,105 +7,6 @@ import { isFreeMembershipType, MembershipType } from '@/types/database'
 import { getInviteMaxUses } from '@/lib/utils'
 import { stripe } from '@/lib/stripe/server'
 import { notifyAdminNewMember } from '@/lib/notifications'
-
-async function checkAutoQuests(
-  supabase: SupabaseClient,
-  userId: string,
-  profileData: {
-    display_name?: string | null
-    home_country?: string | null
-    home_city?: string | null
-    avatar_url?: string | null
-    show_location_on_map?: boolean | null
-    lat?: number | null
-    lng?: number | null
-  }
-) {
-  // Check "プロフィールを完成させよう" quest
-  const profileComplete =
-    profileData.display_name &&
-    profileData.home_country &&
-    profileData.home_city &&
-    profileData.avatar_url
-
-  if (profileComplete) {
-    const { data: profileQuest } = await supabase
-      .from('guild_quests')
-      .select('id, points_reward')
-      .eq('is_auto', true)
-      .eq('title', 'プロフィールを完成させよう')
-      .eq('is_active', true)
-      .single()
-
-    if (profileQuest) {
-      const { data: existing } = await supabase
-        .from('quest_submissions')
-        .select('id')
-        .eq('quest_id', profileQuest.id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!existing) {
-        await supabase.from('quest_submissions').insert({
-          quest_id: profileQuest.id,
-          user_id: userId,
-          status: 'approved',
-          reviewed_at: new Date().toISOString(),
-          comment: 'auto',
-        })
-
-        await supabase.from('activity_logs').insert({
-          user_id: userId,
-          type: 'Quest Reward',
-          note: `Quest: ${profileQuest.id}`,
-          points: profileQuest.points_reward,
-        })
-      }
-    }
-  }
-
-  // Check "マップに自分を表示しよう" quest
-  const mapVisible =
-    profileData.show_location_on_map &&
-    profileData.lat != null &&
-    profileData.lng != null
-
-  if (mapVisible) {
-    const { data: mapQuest } = await supabase
-      .from('guild_quests')
-      .select('id, points_reward')
-      .eq('is_auto', true)
-      .eq('title', 'マップに自分を表示しよう')
-      .eq('is_active', true)
-      .single()
-
-    if (mapQuest) {
-      const { data: existing } = await supabase
-        .from('quest_submissions')
-        .select('id')
-        .eq('quest_id', mapQuest.id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!existing) {
-        await supabase.from('quest_submissions').insert({
-          quest_id: mapQuest.id,
-          user_id: userId,
-          status: 'approved',
-          reviewed_at: new Date().toISOString(),
-          comment: 'auto',
-        })
-
-        await supabase.from('activity_logs').insert({
-          user_id: userId,
-          type: 'Quest Reward',
-          note: `Quest: ${mapQuest.id}`,
-          points: mapQuest.points_reward,
-        })
-      }
-    }
-  }
-}
 
 export async function GET(request: NextRequest) {
   // Service Role クライアント（RLS回避用）- ランタイムで作成
@@ -379,42 +280,6 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          // 招待クエスト自動達成（無料メンバーのみ。有料はStripe webhookで処理）
-          if (isFreeMembershipType(membershipType)) {
-            const { data: inviteQuest } = await supabaseAdmin
-              .from('guild_quests')
-              .select('id, points_reward')
-              .eq('is_auto', true)
-              .eq('title', '友達をGuildに招待しよう')
-              .eq('is_active', true)
-              .single()
-
-            if (inviteQuest) {
-              const { data: existingSub } = await supabaseAdmin
-                .from('quest_submissions')
-                .select('id')
-                .eq('quest_id', inviteQuest.id)
-                .eq('user_id', invitedBy)
-                .eq('comment', user.id)
-                .single()
-
-              if (!existingSub) {
-                await supabaseAdmin.from('quest_submissions').insert({
-                  quest_id: inviteQuest.id,
-                  user_id: invitedBy,
-                  status: 'approved',
-                  reviewed_at: new Date().toISOString(),
-                  comment: user.id,
-                })
-                await supabaseAdmin.from('activity_logs').insert({
-                  user_id: invitedBy,
-                  type: 'Quest Reward',
-                  note: `Quest: ${inviteQuest.id}:${user.id}`,
-                  points: inviteQuest.points_reward,
-                })
-              }
-            }
-          }
         }
       }
     }
@@ -530,23 +395,6 @@ export async function GET(request: NextRequest) {
   } else if (profile.subscription_status === 'inactive') {
     // 解約・失効済みの既存ユーザーは決済ページへ（free_tier は半オープン化で /app にそのまま入れる）
     redirectTo = `${origin}/auth/subscribe`
-  }
-
-  // 既存ユーザーのログイン時に自動クエスト達成チェック
-  if (profile) {
-    try {
-      await checkAutoQuests(supabaseAdmin, user.id, {
-        display_name: profile.display_name,
-        home_country: profile.home_country,
-        home_city: profile.home_city,
-        avatar_url: profile.avatar_url,
-        show_location_on_map: profile.show_location_on_map,
-        lat: profile.lat,
-        lng: profile.lng,
-      })
-    } catch (e) {
-      console.error('Auto-quest check error:', e)
-    }
   }
 
   // 最終的なリダイレクト先でレスポンスを再作成（Cookieを保持）

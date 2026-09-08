@@ -1,113 +1,6 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-async function checkAutoQuests(
-  supabase: ReturnType<typeof createServiceClient>,
-  userId: string,
-  profileData: {
-    display_name?: string
-    home_country?: string
-    home_city?: string
-    avatar_url?: string
-    show_location_on_map?: boolean
-    lat?: number
-    lng?: number
-  }
-): Promise<{ type: 'profile' | 'map'; points: number }[]> {
-  const completed: { type: 'profile' | 'map'; points: number }[] = []
-
-  // Check "プロフィールを完成させよう" quest
-  const profileComplete =
-    profileData.display_name &&
-    profileData.home_country &&
-    profileData.home_city &&
-    profileData.avatar_url
-
-  if (profileComplete) {
-    const { data: profileQuest } = await supabase
-      .from('guild_quests')
-      .select('id, points_reward')
-      .eq('is_auto', true)
-      .eq('title', 'プロフィールを完成させよう')
-      .eq('is_active', true)
-      .single()
-
-    if (profileQuest) {
-      const { data: existing } = await supabase
-        .from('quest_submissions')
-        .select('id')
-        .eq('quest_id', profileQuest.id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!existing) {
-        await supabase.from('quest_submissions').insert({
-          quest_id: profileQuest.id,
-          user_id: userId,
-          status: 'approved',
-          reviewed_at: new Date().toISOString(),
-          comment: 'auto',
-        })
-
-        await supabase.from('activity_logs').insert({
-          user_id: userId,
-          type: 'Quest Reward',
-          note: `Quest: ${profileQuest.id}`,
-          points: profileQuest.points_reward,
-        })
-
-        completed.push({ type: 'profile', points: profileQuest.points_reward })
-      }
-    }
-  }
-
-  // Check "マップに自分を表示しよう" quest
-  const mapVisible =
-    profileData.show_location_on_map &&
-    profileData.lat != null &&
-    profileData.lng != null
-
-  if (mapVisible) {
-    const { data: mapQuest } = await supabase
-      .from('guild_quests')
-      .select('id, points_reward')
-      .eq('is_auto', true)
-      .eq('title', 'マップに自分を表示しよう')
-      .eq('is_active', true)
-      .single()
-
-    if (mapQuest) {
-      const { data: existing } = await supabase
-        .from('quest_submissions')
-        .select('id')
-        .eq('quest_id', mapQuest.id)
-        .eq('user_id', userId)
-        .single()
-
-      if (!existing) {
-        await supabase.from('quest_submissions').insert({
-          quest_id: mapQuest.id,
-          user_id: userId,
-          status: 'approved',
-          reviewed_at: new Date().toISOString(),
-          comment: 'auto',
-        })
-
-        await supabase.from('activity_logs').insert({
-          user_id: userId,
-          type: 'Quest Reward',
-          note: `Quest: ${mapQuest.id}`,
-          points: mapQuest.points_reward,
-        })
-
-        completed.push({ type: 'map', points: mapQuest.points_reward })
-      }
-    }
-  }
-
-  return completed
-}
-
 function stripHtmlTags(str: string): string {
   return str.replace(/<[^>]*>/g, '')
 }
@@ -212,17 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check auto-quest completion after successful profile update
-    const completedQuests = await checkAutoQuests(supabase, data.userId, {
-      display_name: data.display_name,
-      home_country: data.home_country,
-      home_city: data.home_city,
-      avatar_url: data.avatar_url,
-      show_location_on_map: data.show_location_on_map,
-      lat: data.lat,
-      lng: data.lng,
-    })
-
-    return NextResponse.json({ success: true, completedQuests })
+    return NextResponse.json({ success: true })
   } catch (e) {
     console.error('Profile update error:', e)
     return NextResponse.json(

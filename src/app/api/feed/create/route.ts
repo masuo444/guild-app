@@ -1,23 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import webpush from 'web-push'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ADMIN_EMAILS } from '@/lib/access'
-
-let vapidInitialized = false
-function initVapid() {
-  if (!vapidInitialized && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-    webpush.setVapidDetails(
-      'mailto:keisukendo414@gmail.com',
-      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-      process.env.VAPID_PRIVATE_KEY
-    )
-    vapidInitialized = true
-  }
-}
+import { sendNewPostEmail } from '@/lib/post-email'
 
 export async function POST(request: NextRequest) {
-  initVapid()
-
   // 管理者認証
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,41 +62,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })
   }
 
-  // プッシュ通知送信（notify=false でスキップ可能）
+  // 会員へメール配信（notify=false でスキップ）。失敗しても投稿自体は成功扱い。
   let sent = 0
   let failed = 0
-
   if (notify !== false) {
-    const { data: subscriptions } = await serviceClient
-      .from('push_subscriptions')
-      .select('id, endpoint, p256dh, auth')
-
-    if (subscriptions && subscriptions.length > 0) {
-      const payload = JSON.stringify({
-        title: 'まっすーが投稿しました',
-        body: title.trim(),
-        url: '/app/feed',
-      })
-
-      const results = await Promise.allSettled(
-        subscriptions.map(async (sub) => {
-          try {
-            await webpush.sendNotification(
-              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-              payload
-            )
-            return { success: true }
-          } catch (err) {
-            const statusCode = (err as { statusCode?: number }).statusCode
-            if (statusCode === 410 || statusCode === 404) {
-              await serviceClient.from('push_subscriptions').delete().eq('id', sub.id)
-            }
-            return { success: false }
-          }
-        })
-      )
-      sent = results.filter((r) => r.status === 'fulfilled' && r.value.success).length
-      failed = results.length - sent
+    try {
+      const r = await sendNewPostEmail({ id: post.id, title: title.trim(), body: postBody.trim() })
+      sent = r.sent
+      failed = r.failed
+    } catch (e) {
+      console.error('New post email error:', e)
     }
   }
 

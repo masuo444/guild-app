@@ -27,8 +27,6 @@ export default async function AdminPage() {
     { data: invites },
     { data: members },
     { data: hubs },
-    { data: questSubmissions },
-    { data: quests },
     { data: activityLogs },
     { data: customRoles },
     { data: memberRoles },
@@ -46,16 +44,6 @@ export default async function AdminPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('masu_hubs')
-      .select('*')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('quest_submissions')
-      .select('*, guild_quests(title, points_reward), profiles:user_id(display_name, membership_id)')
-      .order('status', { ascending: true })
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('guild_quests')
       .select('*')
       .order('created_at', { ascending: false }),
     supabase
@@ -101,8 +89,6 @@ export default async function AdminPage() {
         invites={invites ?? []}
         members={members ?? []}
         hubs={hubs ?? []}
-        questSubmissions={questSubmissions ?? []}
-        quests={quests ?? []}
         memberPoints={memberPoints}
         customRoles={customRoles ?? []}
         memberRoles={memberRoles ?? []}

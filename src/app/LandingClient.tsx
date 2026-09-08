@@ -19,13 +19,13 @@ const COPY = {
     pillars: [
       { title: '読む。挑戦の舞台裏を知る。', desc: '枡ブランドを育てること。山梨・笛吹で地域をつなぐこと。まっすーの活動記録から、日々の出来事と学びに触れる。まずは無料記事から楽しめます。' },
       { title: '見つける。次に行きたい場所。', desc: '有料版のギルドマップで、MASU Hubと仲間を探す。旅先の拠点や、身近な街にいるメンバーのプロフィールを見つけられます。' },
-      { title: 'やってみる。遊ぶように参加。', desc: 'クエストに挑戦して、ポイントを貯める。貯めたポイントで特典交換を申請。クエストや会員証のランクアップは、有料版の楽しみです。' },
+      { title: '話す。まっすーと、仲間と。', desc: '記事にリアクションやコメントを残す。まっすーに直接質問して、記事で答えてもらう。招待やログインで貯まるポイントは、特典と交換できます。' },
     ],
     postsTitle: 'ギルドの日々を、少しだけ。', postsLead: '公開中の無料記事から。続きは無料参加後に読めます。',
     readMore: '無料で参加して続きを読む →', minutes: (m: number) => `約${m}分`,
     freeItems: ['無料公開の活動記事を読む', '過去の無料記事を月別・カテゴリ別に探す'],
     paidLead: '無料プランのすべてに加えて',
-    paidItems: ['ギルドマップでメンバー・MASU Hubを探す', '公開中のメンバーの場所とプロフィールを見る', 'クエスト・ポイント交換・会員証のランクアップ', 'まっすーの有料限定記事も読む'],
+    paidItems: ['ギルドマップでメンバー・MASU Hubを探す', '公開中のメンバーの場所とプロフィールを見る', '記事へのコメント・まっすーへの質問・ポイント交換', 'まっすーの有料限定記事も読む'],
     guide: '使い方ガイド', footer: '運営：FOMUS / MaSU',
   },
   en: {
@@ -33,13 +33,13 @@ const COPY = {
     pillars: [
       { title: 'Read. Go behind the scenes.', desc: 'Building a Masu brand. Connecting people in Fuefuki, Yamanashi. Discover the daily experiences and lessons in MaSU’s journal, starting with free posts.' },
       { title: 'Explore. Find your next stop.', desc: 'Unlock the guild map with paid membership. Explore MASU Hubs and discover members who share their location and profile.' },
-      { title: 'Try. Make participation playful.', desc: 'Take on quests, earn points, and request rewards. Watch your membership card rank grow. Quests and membership ranks are part of paid membership.' },
+      { title: 'Talk. With MaSU and with members.', desc: 'React and comment on posts. Ask MaSU a question and get an answer in a post. Points from invites and daily logins can be exchanged for rewards.' },
     ],
     postsTitle: 'A little glimpse of guild life.', postsLead: 'Opening excerpts from free posts. Join for free to keep reading.',
     readMore: 'Join for free to read more →', minutes: (m: number) => `${m} min`,
     freeItems: ['Read free journal posts', 'Browse free posts by month and category'],
     paidLead: 'Everything in Free, plus',
-    paidItems: ['Explore members and MASU Hubs on the guild map', 'View shared member locations and profiles', 'Quests, reward exchanges, and membership ranks', 'Read MaSU’s premium posts, too'],
+    paidItems: ['Explore members and MASU Hubs on the guild map', 'View shared member locations and profiles', 'Comments, questions to MaSU, and reward exchanges', 'Read MaSU’s premium posts, too'],
     guide: 'View guide', footer: 'Operated by FOMUS / MaSU',
   },
 }
@@ -100,7 +100,7 @@ export function LandingClient({ posts }: { posts: LandingPost[] }) {
           <div className="experience-grid">{c.pillars.map((p, i) => { const Icon = icons[i]; return <article className={`experience-card experience-${i}`} key={p.title}><div className="card-top"><Icon size={30} strokeWidth={1.5} /><span>0{i + 1}</span></div><h3>{p.title}</h3><p>{p.desc}</p><a href="#membership">{ja ? '参加プランを見る' : 'Explore membership'}<ArrowUpRight size={17} /></a></article> })}</div>
         </section>
 
-        <section className="welcome wrap"><span className="welcome-symbol" aria-hidden="true">✳</span><div><p className="eyebrow">SMALL COMMUNITY, OPEN POSSIBILITIES.</p><h2>{ja ? 'まだ小さなギルド。だから、一緒につくれる。' : 'A small guild. Room for your ideas.'}</h2><p>{ja ? '完成された場所に入るより、これからの場所を一緒に育てる。記事を読む、クエストに挑戦する、気になる企画に参加する。あなたらしい関わり方を見つけてください。' : 'Help shape a community that is still growing. Read a story, try a quest, or join a project. Find your own way to be part of it.'}</p></div></section>
+        <section className="welcome wrap"><span className="welcome-symbol" aria-hidden="true">✳</span><div><p className="eyebrow">SMALL COMMUNITY, OPEN POSSIBILITIES.</p><h2>{ja ? 'まだ小さなギルド。だから、一緒につくれる。' : 'A small guild. Room for your ideas.'}</h2><p>{ja ? '完成された場所に入るより、これからの場所を一緒に育てる。記事を読む、コメントを残す、気になる企画に参加する。あなたらしい関わり方を見つけてください。' : 'Help shape a community that is still growing. Read a story, leave a comment, or join a project. Find your own way to be part of it.'}</p></div></section>
 
         {posts.length > 0 && <section className="section wrap"><div className="section-heading"><div><p className="eyebrow">FIELD NOTES</p><h2>{c.postsTitle}</h2></div><p>{c.postsLead}</p></div><div className="posts-grid">{posts.map(p => <Link href={`/auth/login?redirect=${encodeURIComponent(`/app/feed/${p.id}`)}`} className="post-card" key={p.id}><p className="post-date">{formatPostDate(p.published_at, language)} · {c.minutes(p.minutes)}</p><h3>{stripDatePrefix(p.title)}</h3><p>{p.excerpt}</p><span>{c.readMore}</span></Link>)}</div></section>}
 

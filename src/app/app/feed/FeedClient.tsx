@@ -288,7 +288,7 @@ function Composer({ userId, categories, onPosted }: { userId: string; categories
         </label>
         <label className="inline-flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
           <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-          {ja ? 'プッシュ通知を送る' : 'Send push'}
+          {ja ? '会員にメールで配信する' : 'Email members'}
         </label>
       </div>
 

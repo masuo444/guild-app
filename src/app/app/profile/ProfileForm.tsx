@@ -25,7 +25,6 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [questNotifications, setQuestNotifications] = useState<{ type: 'profile' | 'map'; points: number }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // サブスク管理
@@ -203,11 +202,6 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
       }
 
       // クエスト達成通知
-      if (result.completedQuests && result.completedQuests.length > 0) {
-        setQuestNotifications(result.completedQuests)
-        // 8秒後に自動で消す
-        setTimeout(() => setQuestNotifications([]), 8000)
-      }
 
       const locationMissing = !formData.home_country && !formData.home_city
       setMessage({
@@ -533,24 +527,6 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
             </div>
 
             {/* クエスト達成通知 */}
-            {questNotifications.length > 0 && (
-              <div className="space-y-2">
-                {questNotifications.map((quest) => (
-                  <div
-                    key={quest.type}
-                    className="p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-center animate-pulse"
-                  >
-                    <div className="text-2xl mb-1">🎉</div>
-                    <p className="text-amber-300 font-bold text-sm whitespace-pre-line">
-                      {quest.type === 'profile' ? t.questProfileComplete : t.questMapVisible}
-                    </p>
-                    <p className="text-amber-400 text-xs mt-1">
-                      +{quest.points} {t.questPointsEarned}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {message && (
               <div

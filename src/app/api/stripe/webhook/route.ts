@@ -67,48 +67,6 @@ export async function POST(request: Request) {
           })
           .eq('id', userId)
 
-        // 招待者がいる場合、招待クエストを自動達成
-        if (profile?.invited_by) {
-          // 招待クエストを取得
-          const { data: inviteQuest } = await supabase
-            .from('guild_quests')
-            .select('id, points_reward')
-            .eq('is_auto', true)
-            .eq('title', '友達をGuildに招待しよう')
-            .eq('is_active', true)
-            .single()
-
-          if (inviteQuest) {
-            // 重複チェック（同じ被招待者で既に達成済みか）
-            const { data: existingSubmission } = await supabase
-              .from('quest_submissions')
-              .select('id')
-              .eq('quest_id', inviteQuest.id)
-              .eq('user_id', profile.invited_by)
-              .eq('comment', userId)
-              .single()
-
-            if (!existingSubmission) {
-              // クエスト自動達成（承認済みで作成）
-              await supabase.from('quest_submissions').insert({
-                quest_id: inviteQuest.id,
-                user_id: profile.invited_by,
-                status: 'approved',
-                reviewed_at: new Date().toISOString(),
-                comment: userId, // 重複チェック用に被招待者のIDを記録
-              })
-
-              // クエスト報酬ポイントを付与
-              await supabase.from('activity_logs').insert({
-                user_id: profile.invited_by,
-                type: 'Quest Reward',
-                note: `Quest: ${inviteQuest.id}:${userId}`,
-                points: inviteQuest.points_reward,
-              })
-            }
-          }
-        }
-
         // 枡セットプランなら、まっすーに発送先を通知
         if (session.metadata?.plan === 'masu') {
           // shipping_address_collection で収集した住所を取得（API版差異に対応して防御的に読む）
