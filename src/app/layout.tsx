@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     default: 'FOMUS GUILD',
     template: '%s | FOMUS GUILD',
   },
-  description: 'An invite-only global community connecting MASU enthusiasts, creators, and cultural collaborators worldwide.',
+  description: 'FOMUS GUILD is the online community of the Masu brand FOMUS, where Masu communities around the world come together. Members-only salon posts from founder MaSU, now based in Fuefuki, Yamanashi, updated almost daily.',
   keywords: ['FOMUS', 'GUILD', 'MASU', '枡', 'community', 'creators', 'Japanese culture', 'global'],
   authors: [{ name: 'FOMUS Global' }],
   creator: 'FOMUS Global',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     url: APP_URL,
     siteName: 'FOMUS GUILD',
     title: 'FOMUS GUILD — Global MASU Community',
-    description: 'An invite-only global community connecting MASU enthusiasts, creators, and cultural collaborators worldwide.',
+    description: 'FOMUS GUILD is the online community of the Masu brand FOMUS, where Masu communities around the world come together. Members-only salon posts from founder MaSU, now based in Fuefuki, Yamanashi, updated almost daily.',
     images: [
       {
         url: '/og-image.png',
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'FOMUS GUILD — Global MASU Community',
-    description: 'An invite-only global community connecting MASU enthusiasts, creators, and cultural collaborators worldwide.',
+    description: 'FOMUS GUILD is the online community of the Masu brand FOMUS, where Masu communities around the world come together. Members-only salon posts from founder MaSU, now based in Fuefuki, Yamanashi, updated almost daily.',
     images: ['/og-image.png'],
   },
   icons: {
