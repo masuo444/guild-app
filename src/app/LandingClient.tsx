@@ -9,7 +9,6 @@ import { formatPostDate, stripDatePrefix } from '@/lib/feed'
 
 const LANGUAGE_KEY = 'fomus-guild-language'
 
-export interface LandingStats { members: number; countries: number; hubs: number; posts: number }
 export interface LandingPost { id: string; title: string; excerpt: string; minutes: number; published_at: string }
 
 const COPY = {
@@ -24,7 +23,6 @@ const COPY = {
     join: '無料で参加する',
     joinNote: 'メールアドレスだけ・30秒',
     haveAccount: 'ログインはこちら',
-    statMembers: '会員', statCountries: 'カ国', statHubs: '枡拠点', statPosts: 'サロン記事',
     whatTitle: 'FOMUS GUILDとは',
     pillars: [
       { icon: '🌍', title: '世界中の枡コミュニティが集まる場', desc: '日本各地と海外に散らばる枡の仲間が、ひとつのマップとフィードでつながります。誰がどこにいて、何をしているかが見える場所。' },
@@ -65,7 +63,6 @@ const COPY = {
     join: 'Join for free',
     joinNote: 'Email only · 30 seconds',
     haveAccount: 'Already a member? Log in',
-    statMembers: 'members', statCountries: 'countries', statHubs: 'Masu hubs', statPosts: 'salon posts',
     whatTitle: 'What is FOMUS GUILD?',
     pillars: [
       { icon: '🌍', title: 'Where Masu communities meet', desc: 'Friends of Masu across Japan and overseas, connected on one map and one feed. See who is where and what they are up to.' },
@@ -97,7 +94,7 @@ const COPY = {
   },
 }
 
-export function LandingClient({ stats, posts }: { stats: LandingStats; posts: LandingPost[] }) {
+export function LandingClient({ posts }: { posts: LandingPost[] }) {
   const [language, setLanguage] = useState<Language>('ja')
   useEffect(() => { setLanguage(getInitialLanguage()) }, [])
   const c = COPY[language]
@@ -105,13 +102,6 @@ export function LandingClient({ stats, posts }: { stats: LandingStats; posts: La
     setLanguage(lang)
     localStorage.setItem(LANGUAGE_KEY, lang)
   }
-
-  const statItems = [
-    stats.members > 0 && { n: stats.members, label: c.statMembers },
-    stats.countries > 1 && { n: stats.countries, label: c.statCountries },
-    stats.hubs > 0 && { n: stats.hubs, label: c.statHubs },
-    stats.posts > 0 && { n: stats.posts, label: c.statPosts },
-  ].filter(Boolean) as { n: number; label: string }[]
 
   const primary = 'inline-flex items-center justify-center px-8 py-3.5 bg-stone-800 text-white rounded-full font-medium text-sm md:text-base hover:bg-stone-700 transition-colors shadow-lg'
 
@@ -154,17 +144,6 @@ export function LandingClient({ stats, posts }: { stats: LandingStats; posts: La
             </div>
           </div>
         </div>
-
-        {statItems.length > 0 && (
-          <div className="max-w-5xl mx-auto mt-10 md:mt-14 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {statItems.map((s) => (
-              <div key={s.label} className="rounded-2xl bg-white/70 border border-stone-200 px-4 py-4 text-center">
-                <p className="text-2xl md:text-3xl font-semibold text-stone-800 tabular-nums">{s.n.toLocaleString()}</p>
-                <p className="text-xs text-stone-500 mt-1">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
       {/* What is */}
