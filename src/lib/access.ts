@@ -39,19 +39,19 @@ export function canViewPremiumContent(status: SubscriptionStatus): boolean {
   return FULL_ACCESS_STATUSES.includes(status)
 }
 
-// オファー/クエストを閲覧できるか（無料登録ユーザー含め全員可能：エンゲージメント目的）
+// 記事以外のコミュニティ機能は有料・特別会員のみ。
 export function canViewOffers(status: SubscriptionStatus): boolean {
-  return true
+  return FULL_ACCESS_STATUSES.includes(status)
 }
 
-// 拠点を登録できるか（登録済みユーザーは全員登録可能）
+// 拠点を登録できるか
 export function canRegisterHub(status: SubscriptionStatus): boolean {
-  return true
+  return FULL_ACCESS_STATUSES.includes(status)
 }
 
-// ダッシュボードの詳細を閲覧できるか（登録済みユーザーは全員閲覧可能）
+// ダッシュボードの詳細を閲覧できるか
 export function canViewDashboardDetails(status: SubscriptionStatus): boolean {
-  return true
+  return FULL_ACCESS_STATUSES.includes(status)
 }
 
 // フル機能（有料相当）にアクセスできるか

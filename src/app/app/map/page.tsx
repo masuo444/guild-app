@@ -1,3 +1,4 @@
+import { hasMemberAccess } from '@/lib/member-access'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { GuildMap } from '@/components/map/GuildMap'
@@ -6,6 +7,7 @@ import { SubscriptionStatus, CustomRole } from '@/types/database'
 import { MapPageHeader, MapUpgradeBanner, HubGridWithFilter } from '@/components/ui/LocalizedText'
 
 export default async function MapPage() {
+  if (!await hasMemberAccess()) redirect('/auth/subscribe')
   const supabase = await createClient()
 
   // 現在のユーザーを取得

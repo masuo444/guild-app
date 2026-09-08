@@ -3,6 +3,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { SUPER_ADMIN_EMAIL } from '@/config/admin'
 import { AppLayoutClient } from './AppLayoutClient'
 import { redirect } from 'next/navigation'
+import { hasFullAccess } from '@/lib/access'
 import { headers } from 'next/headers'
 
 export default async function AppLayout({
@@ -16,6 +17,7 @@ export default async function AppLayout({
   // 管理者権限をチェック
   let isAdmin = false
   let isSuperAdmin = false
+  let readerOnly = true
 
   if (user) {
     const { data: profile } = await supabase
@@ -32,6 +34,7 @@ export default async function AppLayout({
     // active/free/free_tier いずれでもない（inactive/past_due/canceled）場合のみ
     // アップグレード導線へ誘導する。
     const subscriptionStatus = profile?.subscription_status
+    readerOnly = !isAdmin && !isSuperAdmin && !hasFullAccess(subscriptionStatus || 'free_tier')
     const hasAccess = isAdmin || isSuperAdmin
       || subscriptionStatus === 'active'
       || subscriptionStatus === 'free'
@@ -46,13 +49,13 @@ export default async function AppLayout({
     const headersList = await headers()
     const pathname = headersList.get('x-pathname') || ''
 
-    if (!isProfileComplete && pathname !== '/app/onboarding') {
+    if (!readerOnly && !isProfileComplete && pathname !== '/app/onboarding') {
       redirect('/app/onboarding')
     }
   }
 
   return (
-    <AppLayoutClient isAdmin={isAdmin} isSuperAdmin={isSuperAdmin}>
+    <AppLayoutClient isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} readerOnly={readerOnly}>
       <ErrorBoundary>
         {children}
       </ErrorBoundary>

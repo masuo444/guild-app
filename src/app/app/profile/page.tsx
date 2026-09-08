@@ -1,3 +1,5 @@
+import { hasMemberAccess } from '@/lib/member-access'
+import { ReaderAccount } from './ReaderAccount'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ProfileForm } from './ProfileForm'
@@ -11,6 +13,8 @@ export default async function ProfilePage() {
   if (!user) {
     redirect('/auth/login')
   }
+
+  if (!await hasMemberAccess()) return <ReaderAccount email={user.email || ''} />
 
   const { data: profile } = await supabase
     .from('profiles')

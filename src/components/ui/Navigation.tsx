@@ -12,7 +12,7 @@ interface NavItem {
   ariaLabel: string
 }
 
-export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?: boolean; isSuperAdmin?: boolean }) {
+export function Navigation({ isAdmin = false, isSuperAdmin = false, readerOnly = false }: { isAdmin?: boolean; isSuperAdmin?: boolean; readerOnly?: boolean }) {
   const pathname = usePathname()
   const { t, language } = useLanguage()
 
@@ -70,7 +70,9 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false }: { isAdmin?
     },
   ]
 
-  const allItems = [...localizedNavItems]
+  const allItems = readerOnly
+    ? localizedNavItems.filter(item => ['/app/feed', '/app/map', '/app/profile'].includes(item.href)).map(item => item.href === '/app/map' ? { ...item, href: '/auth/subscribe', label: language === 'ja' ? 'マップを解放' : 'Unlock map' } : item)
+    : [...localizedNavItems]
 
   if (isAdmin) {
     allItems.push({

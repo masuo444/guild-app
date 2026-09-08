@@ -1,8 +1,10 @@
+import { hasMemberAccess } from '@/lib/member-access'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ShopClient from './ShopClient'
 
 export default async function ShopPage() {
+  if (!await hasMemberAccess()) redirect('/auth/subscribe')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

@@ -1,9 +1,11 @@
+import { hasMemberAccess } from '@/lib/member-access'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { exchangeLimiter } from '@/lib/rateLimit'
 
 export async function POST(request: NextRequest) {
+  if (!await hasMemberAccess()) return NextResponse.json({ error: 'Paid membership required' }, { status: 403 })
   try {
     const supabase = await createServerClient()
     const { data: { user } } = await supabase.auth.getUser()

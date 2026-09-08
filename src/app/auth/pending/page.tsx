@@ -121,10 +121,10 @@ function PendingContent() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-zinc-900 mb-4">
-            {t('pendingWelcome')}
+            {t.pendingWelcome}
           </h1>
           <p className="text-zinc-600">
-            {t('pendingActiveRedirecting')}
+            {t.pendingActiveRedirecting}
           </p>
         </div>
       </div>
@@ -138,21 +138,21 @@ function PendingContent() {
           <div className="animate-spin w-10 h-10 border-3 border-zinc-300 border-t-zinc-900 rounded-full" />
         </div>
         <h1 className="text-2xl font-bold text-zinc-900 mb-4">
-          {t('pendingActivating')}
+          {t.pendingActivating}
         </h1>
         <p className="text-zinc-600 mb-6">
-          {t('pendingProcessing')}
+          {t.pendingProcessing}
         </p>
 
         {attempts > 10 && (
           <div className="bg-amber-50 text-amber-800 p-4 rounded-lg mb-4 text-sm">
-            <p className="mb-2">{t('pendingTakingLong')}</p>
-            <p>{t('pendingTryRefresh')}</p>
+            <p className="mb-2">{t.pendingTakingLong}</p>
+            <p>{t.pendingTryRefresh}</p>
           </div>
         )}
 
         <Button variant="secondary" onClick={() => window.location.reload()}>
-          {t('pendingRefresh')}
+          {t.pendingRefresh}
         </Button>
       </div>
     </div>

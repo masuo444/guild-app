@@ -125,11 +125,13 @@ function LoginForm() {
     localStorage.setItem(LANGUAGE_KEY, lang)
   }
 
-  // リダイレクト先（/app 以下のみ許可）
+  // アプリ内ページとプラン確認画面だけ許可。外部URLは受け付けない。
   const redirectPath = (() => {
     const r = searchParams.get('redirect') || ''
-    return r.startsWith('/app') ? r : '/app'
+    return r === '/app' || r.startsWith('/app/') || r === '/auth/subscribe' || r.startsWith('/auth/subscribe?') ? r : '/app'
   })()
+
+  const joiningPaid = redirectPath.startsWith('/auth/subscribe')
 
   const start = async (): Promise<boolean> => {
     setLoading(true)
@@ -200,9 +202,10 @@ function LoginForm() {
       // 招待なしの新規 → 無料会員プロフィール作成 → はじめの一歩へ
       try {
         const reg = await fetch('/api/auth/register-free', { method: 'POST' })
-        window.location.href = reg.ok ? '/app/onboarding' : '/api/auth/callback?next=/app/onboarding'
+        const next = redirectPath === '/app' ? '/app/feed' : redirectPath
+        window.location.href = reg.ok ? next : `/api/auth/callback?next=${encodeURIComponent(next)}`
       } catch {
-        window.location.href = '/api/auth/callback?next=/app/onboarding'
+        window.location.href = `/api/auth/callback?next=${encodeURIComponent(redirectPath === '/app' ? '/app/feed' : redirectPath)}`
       }
     } catch {
       setError(c.errors.network)
@@ -224,7 +227,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">{c.title}</h1>
-          <p className="text-zinc-300 text-sm">{c.subtitle}</p>
+          <p className="text-zinc-300 text-sm">{joiningPaid ? language === 'ja' ? 'メール認証後に、選んだ有料プランを確認できます' : 'Verify your email to review your selected paid plan' : c.subtitle}</p>
         </div>
 
         <div className="bg-white/10 backdrop-blur rounded-xl border border-zinc-500/30 p-6">
@@ -282,7 +285,7 @@ function LoginForm() {
                 {loading ? c.sending : c.send}
               </button>
 
-              <p className="text-xs text-zinc-500 text-center leading-relaxed">{c.hint}</p>
+              <p className="text-xs text-zinc-500 text-center leading-relaxed">{joiningPaid ? language === 'ja' ? '認証だけでは課金されません。次の画面でプランを確認してから決済へ進みます。' : 'Verification does not charge you. Review your plan before proceeding to checkout.' : c.hint}</p>
             </form>
           )}
 

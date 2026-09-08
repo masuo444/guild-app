@@ -1,3 +1,4 @@
+import { hasMemberAccess } from '@/lib/member-access'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { DashboardClient } from './DashboardClient'
@@ -11,6 +12,7 @@ export interface LoginBonusResult {
 }
 
 export default async function DashboardPage() {
+  if (!await hasMemberAccess()) redirect('/app/feed')
   // Supabaseから実データを取得
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

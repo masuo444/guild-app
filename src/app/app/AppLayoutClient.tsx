@@ -9,13 +9,14 @@ interface AppLayoutClientProps {
   children: React.ReactNode
   isAdmin: boolean
   isSuperAdmin: boolean
+  readerOnly: boolean
 }
 
-export function AppLayoutClient({ children, isAdmin, isSuperAdmin }: AppLayoutClientProps) {
+export function AppLayoutClient({ children, isAdmin, isSuperAdmin, readerOnly }: AppLayoutClientProps) {
   return (
     <LanguageProvider>
       <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
-        <Navigation isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} />
+        <Navigation isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} readerOnly={readerOnly} />
         <PushNotificationSubscriber />
         <PwaInstallBanner />
         <main className="flex-1 pb-20 md:pb-0">

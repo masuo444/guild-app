@@ -1,9 +1,11 @@
+import { hasMemberAccess } from '@/lib/member-access'
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { loginBonusLimiter } from '@/lib/rateLimit'
 import { getLoginBonusMultiplier } from '@/lib/settings'
 
 export async function POST() {
+  if (!await hasMemberAccess()) return NextResponse.json({ error: 'Paid membership required' }, { status: 403 })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

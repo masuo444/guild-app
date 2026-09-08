@@ -1,3 +1,4 @@
+import { hasMemberAccess } from '@/lib/member-access'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SubscriptionStatus } from '@/types/database'
@@ -6,6 +7,7 @@ import { OffersContent } from './OffersContent'
 import { OffersPageHeader, OffersUpgradeView } from './OffersPageClient'
 
 export default async function OffersPage() {
+  if (!await hasMemberAccess()) redirect('/auth/subscribe')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

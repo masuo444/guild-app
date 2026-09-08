@@ -1,293 +1,111 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { ArrowLeft, ArrowRight, Check, LockKeyhole } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/Button'
-import { Language, getInitialLanguage, getTranslations } from '@/lib/i18n'
+import { Language, getInitialLanguage } from '@/lib/i18n'
 import { StandaloneLanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
-const LANGUAGE_KEY = 'fomus-guild-language'
+type Plan = 'monthly' | 'annual' | 'masu'
 
 function SubscribeForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const [loading, setLoading] = useState(true)
+  const params = useSearchParams()
+  const [checking, setChecking] = useState(true)
+  const [paying, setPaying] = useState(false)
+  const [verified, setVerified] = useState(false)
   const [error, setError] = useState('')
-  const [isJapan, setIsJapan] = useState<boolean | null>(null)
-  const [language, setLanguageState] = useState<Language>('en')
-  const canceled = searchParams.get('canceled') === 'true'
+  const [language, setLanguage] = useState<Language>('ja')
+  const [japan, setJapan] = useState(true)
+  const [plan, setPlan] = useState<Plan>('monthly')
+  const ja = language === 'ja'
+  const canceled = params.get('canceled') === 'true'
 
   useEffect(() => {
-    const lang = getInitialLanguage()
-    setLanguageState(lang)
-  }, [])
-
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang)
-    localStorage.setItem(LANGUAGE_KEY, lang)
-  }
-
-  const t = getTranslations(language)
-
-  useEffect(() => {
-    const checkAndRedirect = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        router.push('/auth/login')
-        return
+    setVerified(false)
+    setLanguage(getInitialLanguage())
+    const requested = params.get('plan')
+    setPlan(requested === 'annual' || requested === 'masu' ? requested : 'monthly')
+    const region = params.get('region')
+    setJapan(region ? region === 'jp' : navigator.language.startsWith('ja') || Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Tokyo')
+    let disposed = false
+    async function checkUser() {
+      try {
+        const sb = createClient()
+        const { data: { user }, error: authError } = await sb.auth.getUser()
+        if (!user) {
+          if (authError && authError.name !== 'AuthSessionMissingError') throw authError
+          router.replace(`/auth/login?redirect=${encodeURIComponent(`/auth/subscribe?${params.toString()}`)}`)
+          return
+        }
+        const { data: profile, error: profileError } = await sb.from('profiles').select('subscription_status').eq('id', user.id).single()
+        if (profileError) throw profileError
+        // 特別招待会員は既に有料相当。通常の無料会員 (free_tier) は購入可能。
+        if (profile?.subscription_status === 'active' || profile?.subscription_status === 'free') {
+          router.replace('/app')
+          return
+        }
+        if (!disposed) { setVerified(true); setChecking(false) }
+      } catch {
+        if (!disposed) {
+          setError(getInitialLanguage() === 'ja' ? '会員情報を確認できませんでした。ページを再読み込みしてください。' : 'Could not verify membership. Please reload the page.')
+          setChecking(false)
+        }
       }
-
-      // プロフィールを確認
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('subscription_status')
-        .eq('id', user.id)
-        .single()
-
-      // すでにアクティブまたは無料会員なら/appへ
-      if (profile?.subscription_status === 'active' || profile?.subscription_status === 'free') {
-        router.push('/app')
-        return
-      }
-
-      // キャンセルから戻ってきた場合は選択画面を表示
-      if (canceled) {
-        // 日本判定
-        const detectedJapan = detectJapan()
-        setIsJapan(detectedJapan)
-        setLoading(false)
-        return
-      }
-
-      // 日本かどうか自動判定し、プラン選択画面を表示（自動決済はしない）
-      const detectedJapan = detectJapan()
-      setIsJapan(detectedJapan)
-      setLoading(false)
     }
+    checkUser()
+    return () => { disposed = true }
+  }, [params, router])
 
-    checkAndRedirect()
-  }, [router, canceled])
-
-  // 日本判定（言語・タイムゾーン）
-  const detectJapan = (): boolean => {
-    // ブラウザ言語をチェック
-    const browserLang = navigator.language || (navigator as { userLanguage?: string }).userLanguage || ''
-    if (browserLang.startsWith('ja')) {
-      return true
-    }
-
-    // タイムゾーンをチェック
-    try {
-      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      if (timeZone === 'Asia/Tokyo') {
-        return true
-      }
-    } catch {
-      // タイムゾーン取得失敗
-    }
-
-    return false
-  }
-
-  const startCheckout = async (japan: boolean, plan: 'monthly' | 'annual' | 'masu' = 'monthly') => {
-    setLoading(true)
+  async function checkout() {
+    setPaying(true)
     setError('')
-
     try {
       const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isJapan: japan, plan }),
       })
-
       const data = await response.json()
-
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        setError(data.error || (language === 'ja' ? '決済ページの作成に失敗しました' : 'Failed to create checkout session'))
-        setLoading(false)
-      }
+      if (!response.ok || !data.url) throw new Error('checkout_failed')
+      window.location.assign(data.url)
     } catch {
-      setError(language === 'ja' ? 'エラーが発生しました' : 'An error occurred')
-      setLoading(false)
+      setError(ja ? '決済画面を開けませんでした。時間をおいてもう一度お試しいただくか、別のプランを選んでください。' : 'Could not open checkout. Try again in a moment or choose another plan.')
+      setPaying(false)
     }
   }
 
-  // ローディング中
-  if (loading && !canceled) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-4">
-        <div className="animate-spin w-8 h-8 border-2 border-[#c0c0c0] border-t-transparent rounded-full mb-4" />
-        <p className="text-zinc-400 text-sm">{t.redirectingToPayment}</p>
-      </div>
-    )
-  }
-
-  // キャンセル後 or エラー時の画面
-  return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
-      {/* Language Switcher */}
-      <div className="absolute top-4 right-4">
-        <StandaloneLanguageSwitcher
-          language={language}
-          onLanguageChange={setLanguage}
-        />
-      </div>
-
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white/10 backdrop-blur rounded-2xl border border-zinc-500/30 p-8">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-[#c0c0c0]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-[#c0c0c0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h1 className="text-2xl font-bold text-white mb-2">
-                {t.membershipTitle}
-              </h1>
-              <p className="text-zinc-400">
-                {t.membershipDesc}
-              </p>
-            </div>
-
-            {canceled && (
-              <div className="mb-6 p-3 bg-amber-500/20 border border-amber-500/30 rounded-lg text-amber-300 text-sm">
-                {t.paymentCanceled}
-              </div>
-            )}
-
-            {error && (
-              <div className="mb-6 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* 特典一覧 */}
-            <div className="mb-8 space-y-3">
-              <div className="flex items-center gap-3 text-zinc-300">
-                <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{t.benefit1}</span>
-              </div>
-              <div className="flex items-center gap-3 text-zinc-300">
-                <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{t.benefit2}</span>
-              </div>
-              <div className="flex items-center gap-3 text-zinc-300">
-                <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{t.benefit3}</span>
-              </div>
-              <div className="flex items-center gap-3 text-zinc-300">
-                <svg className="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{t.benefit4}</span>
-              </div>
-            </div>
-
-            {/* プラン選択 */}
-            {(() => {
-              const ja = language === 'ja'
-              const jp = isJapan ?? false
-              return (
-                <div className="space-y-3">
-                  {/* 月額 */}
-                  <button
-                    onClick={() => startCheckout(jp, 'monthly')}
-                    disabled={loading}
-                    className="w-full text-left rounded-xl border border-zinc-500/40 bg-white/5 p-4 hover:border-[#c0c0c0]/60 transition-colors disabled:opacity-50"
-                  >
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-white font-semibold">{ja ? '月額プラン' : 'Monthly'}</span>
-                      <span className="text-white font-bold">{jp ? '¥980' : '$10'}<span className="text-xs text-zinc-400 font-normal">{ja ? '/月' : '/mo'}</span></span>
-                    </div>
-                    <p className="text-xs text-zinc-400 mt-1">{ja ? 'いつでも解約できます' : 'Cancel anytime'}</p>
-                  </button>
-
-                  {/* 年額 */}
-                  <button
-                    onClick={() => startCheckout(jp, 'annual')}
-                    disabled={loading}
-                    className="w-full text-left rounded-xl border border-[#c0c0c0]/50 bg-gradient-to-br from-[#c0c0c0]/10 to-transparent p-4 hover:border-[#c0c0c0] transition-colors disabled:opacity-50 relative"
-                  >
-                    <span className="absolute -top-2 right-3 px-2 py-0.5 bg-[#c0c0c0] text-zinc-900 text-[10px] font-bold rounded-full">
-                      {ja ? '2ヶ月分お得' : '2 months free'}
-                    </span>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-white font-semibold">{ja ? '年額プラン' : 'Annual'}</span>
-                      <span className="text-white font-bold">{jp ? '¥9,800' : '$100'}<span className="text-xs text-zinc-400 font-normal">{ja ? '/年' : '/yr'}</span></span>
-                    </div>
-                    <p className="text-xs text-zinc-400 mt-1">{ja ? '月額より約17%お得' : 'Save ~17% vs monthly'}</p>
-                  </button>
-
-                  {/* 枡セットプラン（日本国内のみ） */}
-                  {jp && (
-                    <button
-                      onClick={() => startCheckout(jp, 'masu')}
-                      disabled={loading}
-                      className="w-full text-left rounded-xl border border-amber-500/50 bg-gradient-to-br from-amber-500/10 to-transparent p-4 hover:border-amber-400 transition-colors disabled:opacity-50"
-                    >
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-white font-semibold">🎁 {ja ? '枡セット付き（年額）' : 'Annual + Masu Set'}</span>
-                        <span className="text-amber-300 font-bold text-sm">{ja ? '詳細へ' : 'See price'}</span>
-                      </div>
-                      <p className="text-xs text-zinc-400 mt-1">
-                        {ja ? '年額会員＋入会特典で枡セットを発送（日本国内）' : 'Annual membership + a Masu set shipped to you (Japan only)'}
-                      </p>
-                    </button>
-                  )}
-                </div>
-              )
-            })()}
-
-            <p className="text-xs text-zinc-500 text-center mt-6">
-              {t.cancelAnytime}
-            </p>
-          </div>
-
-          {/* ログアウトリンク */}
-          <div className="mt-6 text-center">
-            <button
-              onClick={async () => {
-                const supabase = createClient()
-                await supabase.auth.signOut()
-                // router.push だとソフト遷移でミドルウェアに古いCookie状態が
-                // 残る場合があるため、確実にセッションを断ち切るためフルリロードする
-                window.location.href = '/'
-              }}
-              className="text-zinc-400 hover:text-white text-sm transition-colors"
-            >
-              {t.logout}
-            </button>
-          </div>
+  const price = (p: Plan) => p === 'masu' ? (ja ? '決済画面で確認' : 'See price at checkout') : japan ? p === 'annual' ? '¥9,800' : '¥980' : p === 'annual' ? '$100' : '$10'
+  return <main lang={language} className="min-h-screen bg-[#f8f7f0] text-[#243c32] px-5 py-8">
+    <div className="mx-auto max-w-xl">
+      <div className="flex items-center justify-between mb-10"><Link href="/#membership" className="flex items-center gap-2 text-xs"><ArrowLeft size={15} />{ja ? '参加プランに戻る' : 'Back to plans'}</Link><StandaloneLanguageSwitcher language={language} onLanguageChange={lang => { setLanguage(lang); localStorage.setItem('fomus-guild-language', lang) }} theme="light" /></div>
+      <p className="text-xs tracking-[.2em] mb-5">FOMUS GUILD / MEMBERSHIP</p>
+      <h1 className="text-3xl font-bold leading-relaxed">{ja ? 'もっと深く、ギルドを楽しもう。' : 'Go deeper into the guild.'}</h1>
+      <ol className="flex gap-3 text-xs my-6 text-stone-500"><li>{ja ? '01 メール認証' : '01 Verify email'}</li><li aria-current="step" className="font-bold text-[#243c32]">{ja ? '02 プラン確認' : '02 Review plan'}</li><li>{ja ? '03 お支払い' : '03 Payment'}</li></ol>
+      {checking ? <p role="status" className="py-14 text-center">{ja ? '会員情報を確認しています…' : 'Checking your membership…'}</p> : <>
+        {canceled && <p role="status" className="p-4 mb-5 rounded-lg bg-amber-100 text-amber-900 text-sm">{ja ? '決済は完了していません。プランを確認して、もう一度進めます。' : 'Checkout was not completed. Review your plan and try again.'}</p>}
+        <div className="rounded-xl border border-[#d1d8c8] bg-white p-6 sm:p-8">
+          <h2 className="font-bold text-lg">GUILD MEMBER</h2>
+          <ul className="space-y-3 text-sm my-5">{(ja ? ['ギルドマップでメンバー・MASU Hubを探す', '公開中のメンバーの場所・プロフィールを閲覧', 'クエスト・ポイント交換・会員証', '無料記事と、まっすーの有料限定記事'] : ['Find members and MASU Hubs on the guild map', 'View shared member locations and profiles', 'Quests, reward exchanges, and member card', 'Free and premium journal posts']).map(item => <li key={item} className="flex items-start gap-2"><Check size={17} className="shrink-0" />{item}</li>)}</ul>
+          <fieldset disabled={paying} className="disabled:opacity-60">
+            <label className="block text-xs font-semibold mb-6">{ja ? 'お住まいの地域' : 'Your region'}<select value={japan ? 'jp' : 'intl'} onChange={e => { setJapan(e.target.value === 'jp'); if (e.target.value !== 'jp' && plan === 'masu') setPlan('annual') }} className="mt-2 block w-full border border-stone-300 rounded-lg p-3 bg-white text-sm"><option value="jp">{ja ? '日本 / 日本円' : 'Japan / JPY'}</option><option value="intl">{ja ? '日本以外 / 米ドル' : 'Outside Japan / USD'}</option></select></label>
+            <legend className="sr-only">{ja ? 'お支払いプラン' : 'Billing plan'}</legend>
+            <div className="space-y-3">{(['monthly', 'annual'] as const).map(p => <label key={p} className={`flex gap-3 items-start cursor-pointer p-4 border rounded-lg ${plan === p ? 'border-[#243c32] bg-[#edf0e6]' : 'border-stone-200'}`}><input type="radio" name="plan" value={p} checked={plan === p} onChange={() => setPlan(p)} className="mt-1 accent-[#243c32]" /><span className="flex-1"><span className="flex justify-between gap-2 text-sm font-semibold"><span>{p === 'monthly' ? ja ? '月額プラン' : 'Monthly' : ja ? '年額プラン' : 'Annual'}</span><span>{price(p)}{p === 'monthly' ? ja ? '/月' : '/mo' : ja ? '/年' : '/yr'}</span></span><span className="block text-xs text-stone-500 mt-2">{p === 'monthly' ? ja ? '毎月のお支払い・いつでも解約可能' : 'Billed monthly. Cancel anytime.' : ja ? '年額一括払い・月払いより2ヶ月分お得' : 'Billed annually. Save two months.'}</span></span></label>)}</div>
+            {japan && <details className="mt-4" open={plan === 'masu' || undefined}><summary className="text-xs cursor-pointer text-stone-600">{ja ? '枡セット付き年額プランも見る' : 'Explore annual membership with a Masu set'}</summary><label className="flex gap-3 items-start border border-stone-200 rounded-lg p-4 mt-3 cursor-pointer"><input type="radio" name="plan" checked={plan === 'masu'} onChange={() => setPlan('masu')} className="mt-1 accent-[#243c32]" /><span className="text-sm">{ja ? '年額会員＋枡セット（日本国内発送）' : 'Annual + Masu set (Japan shipping only)'}<span className="block text-xs text-stone-500 mt-2">{ja ? '価格・配送情報は決済画面で確認してからお支払いください。' : 'Review price and shipping details at checkout before paying.'}</span></span></label></details>}
+          </fieldset>
+          {error && <p role="alert" className="text-red-800 bg-red-50 rounded-lg p-3 text-sm mt-5">{error}</p>}
+          <div className="border-t border-stone-200 mt-6 pt-5 flex justify-between text-sm"><span>{ja ? '選択中のプラン' : 'Selected plan'}</span><strong>{price(plan)}{plan !== 'masu' && (plan === 'annual' ? ja ? '/年' : '/yr' : ja ? '/月' : '/mo')}</strong></div>
+          <button onClick={checkout} disabled={paying || !verified} className="w-full flex justify-between items-center mt-5 bg-[#d6502c] hover:bg-[#b74021] text-white font-semibold text-sm rounded-lg p-4 disabled:opacity-50 disabled:cursor-not-allowed">{paying ? ja ? '決済画面を開いています…' : 'Opening checkout…' : ja ? 'Stripeの決済画面へ進む' : 'Continue to Stripe checkout'}<ArrowRight size={18} /></button>
+          <p className="text-xs text-stone-500 leading-relaxed mt-4">{ja ? '有料プランは自動更新です。最終的な請求額と利用できる支払い方法は、次の決済画面で確認できます。' : 'Paid plans renew automatically. Review the final amount and available payment methods on the next screen.'}</p>
+          <p className="text-xs text-stone-500 flex items-center gap-2 mt-3"><LockKeyhole size={13} />{ja ? '支払い情報はStripeの決済画面で入力します' : 'Payment details are entered on Stripe'}</p>
         </div>
-      </div>
+        <div className="text-center mt-7"><Link href="/app" className="text-sm underline underline-offset-4">{ja ? '今は無料で楽しむ' : 'Continue with free membership'}</Link></div>
+      </>}
     </div>
-  )
-}
-
-function SubscribeLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
-      <div className="animate-spin w-8 h-8 border-2 border-[#c0c0c0] border-t-transparent rounded-full" />
-    </div>
-  )
+  </main>
 }
 
 export default function SubscribePage() {
-  return (
-    <Suspense fallback={<SubscribeLoading />}>
-      <SubscribeForm />
-    </Suspense>
-  )
+  return <Suspense fallback={<main className="min-h-screen bg-[#f8f7f0] text-[#243c32] flex items-center justify-center" role="status">Loading…</main>}><SubscribeForm /></Suspense>
 }

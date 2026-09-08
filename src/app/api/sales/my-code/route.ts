@@ -1,3 +1,4 @@
+import { hasMemberAccess } from '@/lib/member-access'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
@@ -15,6 +16,7 @@ function generateCode(): string {
 }
 
 export async function GET() {
+  if (!await hasMemberAccess()) return NextResponse.json({ error: 'Paid membership required' }, { status: 403 })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

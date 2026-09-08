@@ -1,3 +1,4 @@
+import { hasMemberAccess } from '@/lib/member-access'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -5,6 +6,7 @@ const SHOP_BASE_URL = process.env.SHOP_BASE_URL || 'https://shop.fomus.jp'
 const SHOP_SSO_SECRET = process.env.SHOP_SSO_SECRET || ''
 
 export async function GET() {
+  if (!await hasMemberAccess()) return NextResponse.json({ error: 'Paid membership required' }, { status: 403 })
   if (!SHOP_SSO_SECRET) {
     return NextResponse.json({ error: 'SSO not configured' }, { status: 500 })
   }

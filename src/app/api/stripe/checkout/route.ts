@@ -40,9 +40,13 @@ export async function POST(request: NextRequest) {
     // プロファイルを取得
     const { data: profile } = await supabase
       .from('profiles')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, subscription_status')
       .eq('id', user.id)
       .single()
+
+    if (profile?.subscription_status === 'active' || profile?.subscription_status === 'free') {
+      return NextResponse.json({ error: 'Membership already has full access' }, { status: 409 })
+    }
 
     let customerId = profile?.stripe_customer_id
 
@@ -74,7 +78,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/pending?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/subscribe?canceled=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/auth/subscribe?canceled=true&plan=${plan}&region=${isJapan ? 'jp' : 'intl'}`,
       // 枡プランは発送先の住所と電話番号を収集（日本国内のみ）
       ...(plan === 'masu'
         ? {
