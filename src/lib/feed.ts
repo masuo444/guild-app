@@ -110,3 +110,23 @@ export function formatMonth(key: string, language: string): string {
   if (language === 'ja') return `${y}年${m}月`
   return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', { year: 'numeric', month: 'short', timeZone: 'UTC' })
 }
+
+/**
+ * 無料会員向けの冒頭プレビュー: 日付・あいさつ・冒頭段落と「最初の小見出し」までを返す。
+ * 見出しが無い記事は最初の3段落まで。文字は変えず、そこで切るだけ。
+ */
+export function makeTeaser(body: string): string {
+  const lines = body.replace(/\r\n/g, '\n').split('\n')
+  const headingAt = lines.findIndex((l) => isHeadingLine(l.trim()))
+  if (headingAt >= 0) return lines.slice(0, headingAt + 1).join('\n')
+  // 見出しが無い記事: 最初の4段落まで
+  let paragraphs = 0
+  let inPara = false
+  for (let i = 0; i < lines.length; i++) {
+    const s = lines[i].trim()
+    if (!s) { inPara = false; continue }
+    if (!inPara) { paragraphs++; inPara = true }
+    if (paragraphs > 4) return lines.slice(0, i).join('\n').trimEnd()
+  }
+  return lines.join('\n')
+}

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { hasFullAccess, ADMIN_EMAILS } from '@/lib/access'
 import { SubscriptionStatus } from '@/types/database'
-import { readingMinutes } from '@/lib/feed'
+import { makeTeaser, readingMinutes } from '@/lib/feed'
 import { ArticleClient, ArticlePost, NeighborPost } from './ArticleClient'
 
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,6 +28,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     .single()
   if (!row) notFound()
 
+  // 有料・特別会員以外（無料会員）は全記事「冒頭＋最初の見出しまで」のプレビューのみ
+  const teaser = !canViewPremium
   const locked = row.is_premium && !canViewPremium
 
   // 前後の記事（公開日順）
@@ -39,13 +41,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   const post: ArticlePost = {
     id: row.id,
     title: row.title,
-    body: locked ? '' : row.body,
+    body: locked ? '' : teaser ? makeTeaser(row.body) : row.body,
     image_url: locked ? null : row.image_url,
     is_premium: row.is_premium,
     published_at: row.published_at,
     category: row.category ?? null,
     minutes: readingMinutes(row.body),
     locked,
+    teaser,
   }
   const toNeighbor = (r: { id: string; title: string; published_at: string } | undefined): NeighborPost | null =>
     r ? { id: r.id, title: r.title, published_at: r.published_at } : null
