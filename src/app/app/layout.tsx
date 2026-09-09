@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { SUPER_ADMIN_EMAIL } from '@/config/admin'
 import { AppLayoutClient } from './AppLayoutClient'
@@ -22,7 +22,7 @@ export default async function AppLayout({
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, subscription_status, display_name, home_country, home_city')
+      .select('role, subscription_status, display_name, home_country, home_city, stripe_subscription_id')
       .eq('id', user.id)
       .single()
 
@@ -33,7 +33,18 @@ export default async function AppLayout({
     // マップ等の有料機能はページ側で access.ts のゲートにより制限する。
     // active/free/free_tier いずれでもない（inactive/past_due/canceled）場合のみ
     // アップグレード導線へ誘導する。
-    const subscriptionStatus = profile?.subscription_status
+    let subscriptionStatus = profile?.subscription_status
+
+    // 自己修復: 登録途中で切れて 'inactive'（トリガー初期値）のまま残った無料登録者は、
+    // 決済履歴が無い限り無料会員(free_tier)として扱う（課金画面に閉じ込めない）
+    if (!isAdmin && !isSuperAdmin && subscriptionStatus === 'inactive' && !profile?.stripe_subscription_id) {
+      const { error } = await createServiceClient()
+        .from('profiles')
+        .update({ subscription_status: 'free_tier', membership_status: 'active' })
+        .eq('id', user.id)
+        .is('stripe_subscription_id', null)
+      if (!error) subscriptionStatus = 'free_tier'
+    }
     readerOnly = !isAdmin && !isSuperAdmin && !hasFullAccess(subscriptionStatus || 'free_tier')
     const hasAccess = isAdmin || isSuperAdmin
       || subscriptionStatus === 'active'
