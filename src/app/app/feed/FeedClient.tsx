@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/i18n'
 import { createClient } from '@/lib/supabase/client'
 import { compressAndCropImage } from '@/lib/imageUtils'
 import { formatMonth, formatPostDate, monthKey, stripDatePrefix } from '@/lib/feed'
+import { SectionSwitch } from '@/components/archive/SectionSwitch'
 
 export interface FeedListItem {
   id: string
@@ -108,6 +109,8 @@ export function FeedClient({ posts, categories, isAdmin, userId, needsLocation =
               : `Almost daily notes from Fuefuki. ${posts.length} posts.`}
           </p>
         </div>
+
+        <SectionSwitch light={light} />
 
         {/* マップに載る導線（位置未設定の会員だけ・閉じられる） */}
         {needsLocation && !mapPromptHidden && (

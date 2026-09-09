@@ -126,3 +126,20 @@ body {
 .dismissButton {
   display: none !important;
 }
+
+/* 海外活動記録（HTML本文）の読みやすさ */
+.archive-body { font-size: 15px; line-height: 1.95; letter-spacing: 0.01em; }
+@media (min-width: 768px) { .archive-body { font-size: 16px; } }
+.archive-body p { margin: 0 0 1.25em; }
+.archive-body h1, .archive-body h2, .archive-body h3, .archive-body h4 { font-weight: 700; line-height: 1.4; margin: 2.2em 0 0.9em; padding-left: 0.75rem; border-left: 4px solid rgba(192,192,192,0.6); font-size: 1.15em; }
+.archive-body.light h1, .archive-body.light h2, .archive-body.light h3, .archive-body.light h4 { border-left-color: #f59e0b; }
+.archive-body hr { border: none; border-top: 1px solid rgba(128,128,128,0.35); margin: 2em 0; }
+.archive-body img { max-width: 100%; height: auto; border-radius: 14px; display: block; margin: 1.4em auto; }
+.archive-body figure { margin: 1.4em 0; }
+.archive-body figcaption { font-size: 0.8em; opacity: 0.65; text-align: center; margin-top: -0.6em; }
+.archive-body ul, .archive-body ol { padding-left: 1.4em; margin: 0 0 1.25em; }
+.archive-body li { margin: 0.3em 0; }
+.archive-body a { text-decoration: underline; text-underline-offset: 3px; color: #f59e0b; }
+.archive-body.light a { color: #b45309; }
+.archive-body blockquote { border-left: 3px solid rgba(128,128,128,0.4); padding-left: 1em; opacity: 0.85; margin: 1.2em 0; }
+.archive-body strong, .archive-body b { font-weight: 700; }
