@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -16,6 +16,8 @@ export interface ArticlePost {
   id: string
   title: string
   body: string
+  title_en?: string | null
+  body_en?: string | null
   image_url: string | null
   is_premium: boolean
   published_at: string
@@ -35,8 +37,14 @@ export function ArticleClient({ post, newer, older, isAdmin, categories }: {
   const { light, setLight } = useReadingTheme()
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [translating, setTranslating] = useState(false)
+  // 表示言語: UIが英語で英語版があれば英語。記事内で切替できる
+  const [lang, setLang] = useState<'ja' | 'en'>('ja')
+  useEffect(() => { setLang(language === 'en' && post.body_en ? 'en' : 'ja') }, [language, post.body_en])
+  const showEn = lang === 'en' && !!post.body_en
 
-  const title = stripDatePrefix(post.title)
+  const title = showEn && post.title_en ? post.title_en : stripDatePrefix(post.title)
+  const bodyText = showEn ? post.body_en! : post.body
   const muted = light ? 'text-zinc-500' : 'text-zinc-400'
 
   const togglePremium = async () => {
@@ -47,6 +55,13 @@ export function ArticleClient({ post, newer, older, isAdmin, categories }: {
     })
     setBusy(false)
     if (res.ok) router.refresh()
+  }
+  const translate = async () => {
+    setTranslating(true)
+    const res = await fetch(`/api/feed/${post.id}/translate`, { method: 'POST' })
+    setTranslating(false)
+    if (res.ok) router.refresh()
+    else { const d = await res.json().catch(() => ({})); alert(d.error || 'translation failed') }
   }
   const remove = async () => {
     if (!confirm(ja ? 'この投稿を削除しますか？' : 'Delete this post?')) return
@@ -78,7 +93,14 @@ export function ArticleClient({ post, newer, older, isAdmin, categories }: {
           <Link href="/app/feed" className={`text-sm ${muted} hover:underline`}>
             {ja ? '← 活動記録一覧' : '← All posts'}
           </Link>
-          <ThemeToggle light={light} setLight={setLight} ja={ja} />
+          <div className="flex items-center gap-2">
+            {post.body_en && (
+              <button onClick={() => setLang(showEn ? 'ja' : 'en')} className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${light ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white/10 text-zinc-200 border-zinc-500/40 hover:bg-white/20'}`}>
+                {showEn ? '日本語で読む' : 'Read in English'}
+              </button>
+            )}
+            <ThemeToggle light={light} setLight={setLight} ja={ja} />
+          </div>
         </div>
 
         {editing ? (
@@ -115,6 +137,9 @@ export function ArticleClient({ post, newer, older, isAdmin, categories }: {
                     {post.is_premium ? (ja ? '🔒 有料 → 無料にする' : '🔒 Paid → make free') : (ja ? '無料 → 有料にする' : 'Free → make paid')}
                   </button>
                   <button onClick={() => setEditing(true)} className={`${muted} hover:underline`}>{ja ? '編集' : 'Edit'}</button>
+                  <button onClick={translate} disabled={translating} className={`${muted} hover:underline disabled:opacity-50`}>
+                    {translating ? (ja ? '英訳中…' : 'Translating…') : post.body_en ? (ja ? '英語版を再生成' : 'Re-translate') : (ja ? '英語版を生成' : 'Generate English')}
+                  </button>
                   <button onClick={remove} className="text-red-400/80 hover:text-red-400">{ja ? '削除' : 'Delete'}</button>
                 </div>
               )}
@@ -131,14 +156,14 @@ export function ArticleClient({ post, newer, older, isAdmin, categories }: {
             ) : post.teaser ? (
               <>
                 <div className="relative">
-                  <ArticleBody body={post.body} light={light} />
+                  <ArticleBody body={bodyText} light={light} lang={showEn ? 'en' : 'ja'} />
                   <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t ${light ? 'from-white' : 'from-zinc-900'} to-transparent`} />
                 </div>
                 <Paywall light={light} ja={ja} returnTo={`/app/feed/${post.id}`} />
               </>
             ) : (
               <>
-                <ArticleBody body={post.body} light={light} />
+                <ArticleBody body={bodyText} light={light} lang={showEn ? 'en' : 'ja'} />
                 <PostSocial postId={post.id} light={light} />
               </>
             )}

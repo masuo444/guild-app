@@ -14,6 +14,8 @@ export interface FeedListItem {
   id: string
   title: string
   excerpt: string
+  title_en?: string | null
+  excerpt_en?: string | null
   minutes: number
   image_url: string | null
   is_premium: boolean
@@ -201,7 +203,8 @@ export function FeedClient({ posts, categories, isAdmin, userId, needsLocation =
 
 function PostCard({ post, language, light }: { post: FeedListItem; language: string; light: boolean }) {
   const ja = language === 'ja'
-  const title = stripDatePrefix(post.title)
+  const title = !ja && post.title_en ? post.title_en : stripDatePrefix(post.title)
+  const excerpt = !ja && post.excerpt_en ? post.excerpt_en : post.excerpt
   return (
     <Link
       href={`/app/feed/${post.id}`}
@@ -230,8 +233,8 @@ function PostCard({ post, language, light }: { post: FeedListItem; language: str
           <p className={`mt-2 text-sm ${light ? 'text-zinc-500' : 'text-zinc-400'}`}>
             {ja ? '有料会員になると読めます →' : 'Upgrade to read →'}
           </p>
-        ) : post.excerpt ? (
-          <p className={`mt-2 text-sm leading-relaxed line-clamp-2 ${light ? 'text-zinc-600' : 'text-zinc-400'}`}>{post.excerpt}</p>
+        ) : excerpt ? (
+          <p className={`mt-2 text-sm leading-relaxed line-clamp-2 ${light ? 'text-zinc-600' : 'text-zinc-400'}`}>{excerpt}</p>
         ) : null}
       </div>
     </Link>

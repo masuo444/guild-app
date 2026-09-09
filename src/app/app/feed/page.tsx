@@ -27,20 +27,22 @@ export default async function FeedPage() {
   type Row = {
     id: string; title: string; body: string; image_url: string | null
     is_premium: boolean; published_at: string; category?: string | null
+    title_en?: string | null; body_en?: string | null
   }
   let rawPosts: Row[] | null = null
   const withCat = await supabase
     .from('feed_posts')
-    .select('id, title, body, image_url, is_premium, published_at, category')
+    .select('id, title, body, image_url, is_premium, published_at, category, title_en, body_en')
     .order('published_at', { ascending: false })
     .limit(300)
   if (withCat.error) {
-    const withoutCat = await supabase
+    // 英語列（title_en/body_en）未作成のときのフォールバック
+    const withoutEn = await supabase
       .from('feed_posts')
-      .select('id, title, body, image_url, is_premium, published_at')
+      .select('id, title, body, image_url, is_premium, published_at, category')
       .order('published_at', { ascending: false })
       .limit(300)
-    rawPosts = (withoutCat.data as Row[]) ?? []
+    rawPosts = (withoutEn.data as Row[]) ?? []
   } else {
     rawPosts = (withCat.data as Row[]) ?? []
   }
@@ -52,6 +54,8 @@ export default async function FeedPage() {
       id: p.id,
       title: p.title,
       excerpt: locked ? '' : makeExcerpt(p.body),
+      title_en: p.title_en ?? null,
+      excerpt_en: locked || !p.body_en ? null : makeExcerpt(p.body_en),
       minutes: readingMinutes(p.body),
       image_url: locked ? null : p.image_url,
       is_premium: p.is_premium,

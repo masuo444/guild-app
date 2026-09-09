@@ -4,7 +4,7 @@ import { parseArticle } from '@/lib/feed'
  * 活動記録の本文を「読み物」として描画する。
  * 見出し・学びカード・段落・結びを分け、行間と文字幅を読書向けに揃える。
  */
-export function ArticleBody({ body, light }: { body: string; light: boolean }) {
+export function ArticleBody({ body, light, lang = 'ja' }: { body: string; light: boolean; lang?: 'ja' | 'en' }) {
   const blocks = parseArticle(body)
   const text = light ? 'text-zinc-800' : 'text-zinc-200'
   const muted = light ? 'text-zinc-500' : 'text-zinc-500'
@@ -33,7 +33,7 @@ export function ArticleBody({ body, light }: { body: string; light: boolean }) {
                   light ? 'bg-amber-50 border-amber-200 text-amber-950' : 'bg-amber-500/10 border-amber-500/25 text-amber-100'
                 }`}
               >
-                <p className={`text-[11px] font-semibold tracking-widest mb-1 ${light ? 'text-amber-700' : 'text-amber-300'}`}>💡 学び</p>
+                <p className={`text-[11px] font-semibold tracking-widest mb-1 ${light ? 'text-amber-700' : 'text-amber-300'}`}>{lang === 'en' ? '💡 Lesson' : '💡 学び'}</p>
                 <p className="text-sm md:text-[15px] leading-relaxed">{b.text}</p>
               </aside>
             )

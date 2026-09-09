@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ADMIN_EMAILS } from '@/lib/access'
 import { sendNewPostEmail } from '@/lib/post-email'
+import { translatePost } from '@/lib/translate-post'
+
+// 英訳（数十秒）＋メール配信を1リクエストで行うため実行時間上限を延ばす
+export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
   // 管理者認証
@@ -62,12 +66,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })
   }
 
+  // 英語版を自動生成（キー未設定・失敗時はスキップ。記事ページの「英語版を生成」で後からも可）
+  let title_en: string | null = null
+  let body_en: string | null = null
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const t = await translatePost({ title: title.trim(), body: postBody.trim() })
+      title_en = t.title_en
+      body_en = t.body_en
+      await serviceClient.from('feed_posts').update({ title_en, body_en, translated_at: new Date().toISOString() }).eq('id', post.id)
+    } catch (e) {
+      console.error('auto-translate error:', e)
+    }
+  }
+
   // 会員へメール配信（notify=false でスキップ）。失敗しても投稿自体は成功扱い。
   let sent = 0
   let failed = 0
   if (notify !== false) {
     try {
-      const r = await sendNewPostEmail({ id: post.id, title: title.trim(), body: postBody.trim() })
+      const r = await sendNewPostEmail({ id: post.id, title: title.trim(), body: postBody.trim(), title_en, body_en })
       sent = r.sent
       failed = r.failed
     } catch (e) {

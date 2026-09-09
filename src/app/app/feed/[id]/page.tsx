@@ -21,11 +21,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   const isAdmin = profile?.role === 'admin' || ADMIN_EMAILS.includes(user.email as typeof ADMIN_EMAILS[number])
   const canViewPremium = isAdmin || hasFullAccess(subscriptionStatus)
 
-  const { data: row } = await supabase
+  type Row = { id: string; title: string; body: string; image_url: string | null; is_premium: boolean; published_at: string; category: string | null; title_en?: string | null; body_en?: string | null }
+  let row: Row | null = null
+  const withEn = await supabase
     .from('feed_posts')
-    .select('id, title, body, image_url, is_premium, published_at, category')
+    .select('id, title, body, image_url, is_premium, published_at, category, title_en, body_en')
     .eq('id', id)
     .single()
+  if (withEn.error) {
+    // 英語列（title_en/body_en）未作成のときのフォールバック
+    const plain = await supabase.from('feed_posts').select('id, title, body, image_url, is_premium, published_at, category').eq('id', id).single()
+    row = (plain.data as Row | null) ?? null
+  } else {
+    row = withEn.data as Row
+  }
   if (!row) notFound()
 
   // 有料・特別会員以外（無料会員）は全記事「冒頭＋最初の見出しまで」のプレビューのみ
@@ -42,6 +51,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     id: row.id,
     title: row.title,
     body: locked ? '' : teaser ? makeTeaser(row.body) : row.body,
+    title_en: row.title_en ?? null,
+    body_en: locked || !row.body_en ? null : teaser ? makeTeaser(row.body_en) : row.body_en,
     image_url: locked ? null : row.image_url,
     is_premium: row.is_premium,
     published_at: row.published_at,

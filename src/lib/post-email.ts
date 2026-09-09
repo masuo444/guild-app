@@ -12,7 +12,7 @@ function escapeHtml(s: string): string {
  * （有料会員は全文、無料会員はプレビュー＋メンバー案内が記事ページで出る）。
  * 言語は profiles.language で JA/EN のヘッダー・ボタン文言だけ切り替える（本文は日本語のまま）。
  */
-export async function sendNewPostEmail(post: { id: string; title: string; body: string }): Promise<{ sent: number; failed: number }> {
+export async function sendNewPostEmail(post: { id: string; title: string; body: string; title_en?: string | null; body_en?: string | null }): Promise<{ sent: number; failed: number }> {
   if (!process.env.RESEND_API_KEY) return { sent: 0, failed: 0 }
   const resend = new Resend(process.env.RESEND_API_KEY)
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
@@ -33,11 +33,11 @@ export async function sendNewPostEmail(post: { id: string; title: string; body: 
     page++
   }
 
-  const title = stripDatePrefix(post.title)
-  const teaser = makeTeaser(post.body)
   const url = `${appUrl}/app/feed/${post.id}`
 
   const html = (lang: 'ja' | 'en') => {
+    const title = lang === 'en' && post.title_en ? post.title_en : stripDatePrefix(post.title)
+    const teaser = makeTeaser(lang === 'en' && post.body_en ? post.body_en : post.body)
     const cta = lang === 'en' ? 'Read the full post' : '続きを読む'
     const intro = lang === 'en' ? 'A new post from MaSU' : 'まっすーの新しい記事が届きました'
     const footer = lang === 'en'
@@ -65,10 +65,11 @@ export async function sendNewPostEmail(post: { id: string; title: string; body: 
   const results = await Promise.allSettled(
     users.filter((u) => u.email).map(async (u) => {
       const lang = langMap[u.id] || 'ja'
+      const subjectTitle = lang === 'en' && post.title_en ? post.title_en : stripDatePrefix(post.title)
       const { error } = await resend.emails.send({
         from: fromEmail,
         to: u.email!,
-        subject: `[FOMUS GUILD] ${title}`,
+        subject: `[FOMUS GUILD] ${subjectTitle}`,
         html: lang === 'en' ? htmlEn : htmlJa,
       })
       if (error) throw error

@@ -15,9 +15,9 @@ export type ArticleBlock =
   | { type: 'paragraph'; lines: string[] }
   | { type: 'closing'; text: string }
 
-const DATE_LINE = /^20\d{2}年\d{1,2}月\d{1,2}日。?$/
-const CLOSING_LINE = /^ではまた[！!。]?$/
-const LEARNING_PREFIX = /^💡\s*学び[：:]\s*/
+const DATE_LINE = /^(20\d{2}年\d{1,2}月\d{1,2}日。?|[A-Z][a-z]+ \d{1,2}, 20\d{2}\.?)$/
+const CLOSING_LINE = /^(ではまた[！!。]?|See you next time[!.]?)$/
+const LEARNING_PREFIX = /^💡\s*(学び|Lesson)[：:]\s*/
 // 絵文字（Extended_Pictographic）で始まる短い行を見出し扱い
 const EMOJI_START = /^\p{Extended_Pictographic}/u
 const HEADING_MAX = 70
@@ -78,7 +78,7 @@ export function makeExcerpt(body: string, max = 100): string {
   const blocks = parseArticle(body)
   const paras = blocks.filter((b): b is Extract<ArticleBlock, { type: 'paragraph' }> => b.type === 'paragraph')
   // 「どうも、まっすーです！…」のあいさつ段落は飛ばす
-  const candidate = paras.find((p) => !/^(どうも|はい、どうも|こんにちは|Hi|Hello)/.test(p.lines[0])) ?? paras[0]
+  const candidate = paras.find((p) => !/^(どうも|はい、どうも|こんにちは|Hi|Hello|Hey)/.test(p.lines[0])) ?? paras[0]
   const text = (candidate?.lines.join(' ') ?? '').replace(/\s+/g, ' ').trim()
   return text.length > max ? text.slice(0, max).replace(/[、。,.\s]+$/, '') + '…' : text
 }
