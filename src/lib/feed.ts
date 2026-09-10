@@ -20,7 +20,7 @@ const CLOSING_LINE = /^(ではまた[！!。]?|See you next time[!.]?)$/
 const LEARNING_PREFIX = /^💡\s*(学び|Lesson)[：:]\s*/
 // 絵文字（Extended_Pictographic）で始まる短い行を見出し扱い
 const EMOJI_START = /^\p{Extended_Pictographic}/u
-const HEADING_MAX = 70
+const HEADING_MAX = 110  // 英語見出しは長くなるため余裕を持たせる
 
 export function isHeadingLine(line: string): boolean {
   const s = line.trim()
