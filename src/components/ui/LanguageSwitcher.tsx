@@ -1,116 +1,84 @@
 'use client'
 
+import { Globe } from 'lucide-react'
 import { Language, useLanguage } from '@/lib/i18n'
 
-interface LanguageSwitcherProps {
-  className?: string
-  variant?: 'default' | 'compact'
-  theme?: 'dark' | 'light'
-}
+type Variant = 'default' | 'compact'
+type Theme = 'dark' | 'light'
 
-export function LanguageSwitcher({ className = '', variant = 'default', theme = 'dark' }: LanguageSwitcherProps) {
-  const { language, setLanguage } = useLanguage()
-
-  const handleChange = (lang: Language) => {
-    setLanguage(lang)
-  }
-
-  const isDark = theme === 'dark'
-
-  if (variant === 'compact') {
-    return (
-      <button
-        onClick={() => handleChange(language === 'ja' ? 'en' : 'ja')}
-        className={`px-2 py-1 text-sm font-medium rounded transition-colors ${
-          isDark ? 'hover:bg-white/10' : 'hover:bg-stone-200'
-        } ${className}`}
-      >
-        {language === 'ja' ? 'EN' : 'JP'}
-      </button>
-    )
-  }
-
-  return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      <button
-        onClick={() => handleChange('ja')}
-        className={`px-2 py-1 text-sm font-medium rounded transition-colors ${
-          language === 'ja'
-            ? isDark ? 'bg-white/20 text-white' : 'bg-stone-800 text-white'
-            : isDark ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-stone-400 hover:text-stone-800 hover:bg-stone-200'
-        }`}
-      >
-        JP
-      </button>
-      <span className={isDark ? 'text-zinc-600' : 'text-stone-300'}>/</span>
-      <button
-        onClick={() => handleChange('en')}
-        className={`px-2 py-1 text-sm font-medium rounded transition-colors ${
-          language === 'en'
-            ? isDark ? 'bg-white/20 text-white' : 'bg-stone-800 text-white'
-            : isDark ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-stone-400 hover:text-stone-800 hover:bg-stone-200'
-        }`}
-      >
-        EN
-      </button>
-    </div>
-  )
-}
-
-// Standalone version without context (for pages without LanguageProvider)
-interface StandaloneLanguageSwitcherProps {
+interface BaseProps {
   language: Language
   onLanguageChange: (lang: Language) => void
   className?: string
-  variant?: 'default' | 'compact'
-  theme?: 'dark' | 'light'
+  variant?: Variant
+  theme?: Theme
 }
 
-export function StandaloneLanguageSwitcher({
-  language,
-  onLanguageChange,
-  className = '',
-  variant = 'default',
-  theme = 'dark',
-}: StandaloneLanguageSwitcherProps) {
+/**
+ * 共通の言語切替UI（どのページでも同じ見た目）。
+ * default: [🌐 日本語 | EN] のピル。compact: 反対側の言語だけを出す小さなボタン。
+ */
+function SwitcherView({ language, onLanguageChange, className = '', variant = 'default', theme = 'dark' }: BaseProps) {
   const isDark = theme === 'dark'
+  const label = language === 'ja' ? '言語を切り替える' : 'Switch language'
 
   if (variant === 'compact') {
     return (
       <button
+        type="button"
         onClick={() => onLanguageChange(language === 'ja' ? 'en' : 'ja')}
-        className={`px-2 py-1 text-sm font-medium rounded transition-colors ${
-          isDark ? 'hover:bg-white/10' : 'hover:bg-stone-200'
+        aria-label={label}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${
+          isDark
+            ? 'border-zinc-500/40 bg-white/10 text-zinc-100 hover:bg-white/20'
+            : 'border-stone-300 bg-white text-stone-700 hover:bg-stone-100'
         } ${className}`}
       >
-        {language === 'ja' ? 'EN' : 'JP'}
+        <Globe size={13} strokeWidth={2} aria-hidden="true" />
+        {language === 'ja' ? 'EN' : '日本語'}
       </button>
     )
   }
 
+  const seg = (active: boolean) =>
+    `px-2.5 py-1 text-xs font-semibold rounded-full transition-colors ${
+      active
+        ? isDark ? 'bg-white text-zinc-900' : 'bg-stone-900 text-white'
+        : isDark ? 'text-zinc-300 hover:text-white' : 'text-stone-500 hover:text-stone-900'
+    }`
+
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      <button
-        onClick={() => onLanguageChange('ja')}
-        className={`px-2 py-1 text-sm font-medium rounded transition-colors ${
-          language === 'ja'
-            ? isDark ? 'bg-white/20 text-white' : 'bg-stone-800 text-white'
-            : isDark ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-stone-400 hover:text-stone-800 hover:bg-stone-200'
-        }`}
-      >
-        JP
+    <div
+      role="group"
+      aria-label={label}
+      className={`inline-flex items-center gap-0.5 rounded-full border p-0.5 ${
+        isDark ? 'border-zinc-500/40 bg-white/10' : 'border-stone-300 bg-white'
+      } ${className}`}
+    >
+      <Globe size={13} strokeWidth={2} aria-hidden="true" className={`ml-1.5 mr-0.5 ${isDark ? 'text-zinc-300' : 'text-stone-500'}`} />
+      <button type="button" onClick={() => onLanguageChange('ja')} aria-pressed={language === 'ja'} className={seg(language === 'ja')} lang="ja">
+        日本語
       </button>
-      <span className={isDark ? 'text-zinc-600' : 'text-stone-300'}>/</span>
-      <button
-        onClick={() => onLanguageChange('en')}
-        className={`px-2 py-1 text-sm font-medium rounded transition-colors ${
-          language === 'en'
-            ? isDark ? 'bg-white/20 text-white' : 'bg-stone-800 text-white'
-            : isDark ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-stone-400 hover:text-stone-800 hover:bg-stone-200'
-        }`}
-      >
+      <button type="button" onClick={() => onLanguageChange('en')} aria-pressed={language === 'en'} className={seg(language === 'en')} lang="en">
         EN
       </button>
     </div>
   )
+}
+
+interface LanguageSwitcherProps {
+  className?: string
+  variant?: Variant
+  theme?: Theme
+}
+
+/** LanguageProvider 配下で使う版（/app 内・ログイン後のページ） */
+export function LanguageSwitcher({ className = '', variant = 'default', theme = 'dark' }: LanguageSwitcherProps) {
+  const { language, setLanguage } = useLanguage()
+  return <SwitcherView language={language} onLanguageChange={setLanguage} className={className} variant={variant} theme={theme} />
+}
+
+/** Provider なしで使う版（トップ・ログイン・招待・ガイドなど、各ページが state を持つ場合） */
+export function StandaloneLanguageSwitcher(props: BaseProps) {
+  return <SwitcherView {...props} />
 }

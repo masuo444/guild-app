@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { useLanguage, LanguageProvider } from '@/lib/i18n'
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
 function PendingContent() {
   const router = useRouter()
@@ -162,6 +163,9 @@ function PendingContent() {
 export default function PendingPage() {
   return (
     <LanguageProvider>
+      <div className="fixed top-4 right-4 z-50">
+        <LanguageSwitcher theme="light" />
+      </div>
       <Suspense
         fallback={
           <div className="min-h-screen flex items-center justify-center bg-zinc-50">

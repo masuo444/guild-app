@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useLanguage, LanguageProvider } from '@/lib/i18n'
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 
 function UpdatePasswordContent() {
   const router = useRouter()
@@ -158,6 +159,9 @@ function UpdatePasswordContent() {
 export default function UpdatePasswordPage() {
   return (
     <LanguageProvider>
+      <div className="fixed top-4 right-4 z-50">
+        <LanguageSwitcher />
+      </div>
       <UpdatePasswordContent />
     </LanguageProvider>
   )

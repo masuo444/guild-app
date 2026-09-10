@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/lib/i18n'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 interface NavItem {
   label: string
@@ -14,7 +15,7 @@ interface NavItem {
 
 export function Navigation({ isAdmin = false, isSuperAdmin = false, readerOnly = false }: { isAdmin?: boolean; isSuperAdmin?: boolean; readerOnly?: boolean }) {
   const pathname = usePathname()
-  const { t, language } = useLanguage()
+  const { t, language, setLanguage } = useLanguage()
 
   const localizedNavItems: NavItem[] = [
     {
@@ -83,9 +84,12 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false, readerOnly =
 
   return (
     <nav data-bottom-nav className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-900/80 backdrop-blur border-t border-zinc-500/30 md:static md:border-t-0 md:border-r md:w-64 md:min-h-screen" aria-label="Main navigation">
-      {/* ロゴ（デスクトップのみ） */}
+      {/* ロゴ＋言語切替（デスクトップのみ） */}
       <div className="hidden md:block p-6 border-b border-zinc-500/30">
         <h1 className="text-xl font-bold text-white">FOMUS GUILD</h1>
+        <div className="mt-4">
+          <LanguageSwitcher />
+        </div>
       </div>
 
       {/* ナビゲーションリンク */}
@@ -119,6 +123,21 @@ export function Navigation({ isAdmin = false, isSuperAdmin = false, readerOnly =
             </li>
           )
         })}
+        {/* 言語切替（モバイルの下部バーのみ。デスクトップは上のロゴ横） */}
+        <li role="none" className="md:hidden">
+          <button
+            type="button"
+            onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
+            aria-label={language === 'ja' ? 'Switch to English' : '日本語に切り替える'}
+            className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-500/20 transition-colors touch-manipulation"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" strokeWidth={2} />
+              <path strokeLinecap="round" strokeWidth={2} d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" />
+            </svg>
+            <span className="text-xs font-medium">{language === 'ja' ? 'EN' : '日本語'}</span>
+          </button>
+        </li>
       </ul>
     </nav>
   )
