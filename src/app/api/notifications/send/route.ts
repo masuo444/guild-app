@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
           .filter((e): e is string => !!e)
 
         const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild-app.fomusglobal.com'
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
         const linkHtml = url
           ? `<p><a href="${appUrl}${url}" style="color: #c0c0c0;">詳細を見る</a></p>`
           : ''

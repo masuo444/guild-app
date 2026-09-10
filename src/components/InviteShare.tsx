@@ -50,7 +50,7 @@ export function InviteShare({ userId, compact = false }: { userId: string; compa
     load()
   }, [userId])
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://guild-app.fomusglobal.com'
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://guild.fomusglobal.com'
   const url = code ? `${origin}/invite/${code}` : ''
   const message = ja
     ? `FOMUS GUILDに招待します🍶\n日本の伝統工芸「枡」から世界とつながる文化コミュニティ。無料で参加できて、この招待からだと150ptの特典つき。\n${url}`

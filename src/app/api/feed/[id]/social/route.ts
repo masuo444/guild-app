@@ -70,7 +70,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     // 管理者にだけ知らせる（会員への通知は増やさない）
     const { data: post } = await createServiceClient().from('feed_posts').select('title').eq('id', id).single()
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild-app.fomusglobal.com'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
     notifyAdminMessage(`コメント: ${c.displayName}`, [`記事: ${post?.title ?? id}`, text, `${appUrl}/app/feed/${id}`]).catch(() => {})
     return NextResponse.json({ success: true, id: data.id })
   }

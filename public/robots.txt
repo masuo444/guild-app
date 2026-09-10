@@ -4,4 +4,4 @@ Disallow: /app/
 Disallow: /api/
 Disallow: /auth/
 
-Sitemap: https://guild-app.fomusglobal.com/sitemap.xml
+Sitemap: https://guild.fomusglobal.com/sitemap.xml

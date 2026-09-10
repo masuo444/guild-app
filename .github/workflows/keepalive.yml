@@ -19,7 +19,7 @@ jobs:
           set -euo pipefail
           for attempt in 1 2 3; do
             body=$(curl -sS -m 30 -H "Authorization: Bearer $CRON_SECRET" \
-              "https://guild-app.fomusglobal.com/api/cron/keepalive?source=github-actions" || true)
+              "https://guild.fomusglobal.com/api/cron/keepalive?source=github-actions" || true)
             echo "attempt $attempt: $body"
             if echo "$body" | grep -q '"ok":true'; then
               exit 0

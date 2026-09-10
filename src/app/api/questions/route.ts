@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase.from('member_questions').insert({ user_id: user.id, body: text }).select('id').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild-app.fomusglobal.com'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
   notifyAdminMessage(`質問: ${profile?.display_name || user.email}`, [text, `${appUrl}/app/admin`]).catch(() => {})
   return NextResponse.json({ success: true, id: data.id })
 }

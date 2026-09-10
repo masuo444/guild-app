@@ -18,7 +18,7 @@ function escapeHtml(s: string): string {
 }
 
 function buildEmailHtml(body: string, lang: 'ja' | 'en', subject: string): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild-app.fomusglobal.com'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
   // 本文中のURLをタップしやすいリンクに変換してからHTMLエスケープ・改行を反映
   // （プレーンテキストのメール本文にURLを書くだけで、モバイルメーラーの自動リンク化に頼らず確実にタップできるようにする）
   const escaped = escapeHtml(body)
