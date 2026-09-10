@@ -22,11 +22,16 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'FOMUS GUILD',
+    default: 'FOMUS GUILD | 枡から始まる、世界のつながり — Global MASU Community',
     template: '%s | FOMUS GUILD',
   },
-  description: 'FOMUS GUILD is the online community of the Masu brand FOMUS, where Masu communities around the world come together. Members-only salon posts from founder MaSU, now based in Fuefuki, Yamanashi, updated almost daily.',
-  keywords: ['FOMUS', 'GUILD', 'MASU', '枡', 'community', 'creators', 'Japanese culture', 'global'],
+  description: '枡ブランドFOMUSの公式オンラインコミュニティ「FOMUS GUILD」。世界中の枡コミュニティが集まり、代表まっすーの活動記と学びをほぼ毎日更新。無料で参加できます。FOMUS GUILD is the online community of the Masu brand FOMUS, with daily notes from founder MaSU in Fuefuki, Yamanashi.',
+  keywords: ['FOMUS', 'FOMUS GUILD', 'GUILD', 'MASU', '枡', 'まっすー', 'community', 'creators', 'Japanese culture', 'global', '笛吹市'],
+  alternates: {
+    canonical: '/',
+    languages: { ja: '/', en: '/' },
+  },
+  robots: { index: true, follow: true },
   authors: [{ name: 'FOMUS Global' }],
   creator: 'FOMUS Global',
   metadataBase: new URL(APP_URL),
@@ -76,7 +81,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="ja">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
       >
