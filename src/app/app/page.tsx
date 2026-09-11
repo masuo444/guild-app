@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-// ホームは「記事」。会員証・ポイント・招待はマイページに集約。
+// ログイン後の最初の画面はマイページ（会員証・ポイント・招待・質問箱）。記事はナビの「記事」から。
 export default function AppHome() {
-  redirect('/app/feed')
+  redirect('/app/profile')
 }

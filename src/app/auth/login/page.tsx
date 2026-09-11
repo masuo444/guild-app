@@ -202,10 +202,10 @@ function LoginForm() {
       // 招待なしの新規 → 無料会員プロフィール作成 → はじめの一歩へ
       try {
         const reg = await fetch('/api/auth/register-free', { method: 'POST' })
-        const next = redirectPath === '/app' ? '/app/feed' : redirectPath
-        window.location.href = reg.ok ? next : `/api/auth/callback?next=${encodeURIComponent(next)}`
+        // 行き先は /app に統一（/app 側がマイページへ振り分ける）
+        window.location.href = reg.ok ? redirectPath : `/api/auth/callback?next=${encodeURIComponent(redirectPath)}`
       } catch {
-        window.location.href = `/api/auth/callback?next=${encodeURIComponent(redirectPath === '/app' ? '/app/feed' : redirectPath)}`
+        window.location.href = `/api/auth/callback?next=${encodeURIComponent(redirectPath)}`
       }
     } catch {
       setError(c.errors.network)
