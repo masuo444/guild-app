@@ -18,17 +18,25 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
   const [savingCampaign, setSavingCampaign] = useState(false)
   const [campaignMsg, setCampaignMsg] = useState('')
 
+  // 件名と本文をまとめて1リクエストで英訳する（文脈が揃うので語調・固有名詞がブレない）
   const previewTranslate = async () => {
-    if (!subject.trim() && !body.trim()) return
+    if (!subject.trim() || !body.trim()) {
+      setMsg({ type: 'err', text: '件名と本文を入力してください' })
+      return
+    }
     setTranslating(true)
+    setMsg(null)
     try {
-      const [s, b] = await Promise.all([
-        fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: subject, from: 'ja', to: 'en' }) }).then(r => r.json()),
-        fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: body, from: 'ja', to: 'en' }) }).then(r => r.json()),
-      ])
-      setPreviewEn({ subject: s.translated || subject, body: b.translated || body })
-    } catch {
-      setMsg({ type: 'err', text: '英訳プレビューに失敗しました' })
+      const res = await fetch('/api/newsletter/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, body }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Failed')
+      setPreviewEn({ subject: d.subject, body: d.body })
+    } catch (e) {
+      setMsg({ type: 'err', text: `英訳プレビューに失敗しました: ${e instanceof Error ? e.message : ''}` })
     } finally {
       setTranslating(false)
     }
@@ -135,7 +143,7 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
 
         <div className="flex flex-wrap gap-2">
           <button onClick={previewTranslate} disabled={translating} className="px-4 py-2 border border-zinc-600 text-zinc-200 rounded-lg text-sm hover:bg-white/5 disabled:opacity-50">
-            {translating ? '英訳中…' : '英訳プレビュー'}
+            {translating ? '英訳中…（20秒ほど）' : '英訳プレビュー'}
           </button>
           <button onClick={() => send(true)} disabled={sending} className="px-4 py-2 border border-[#c0c0c0]/50 text-[#e5e5e5] rounded-lg text-sm hover:bg-white/5 disabled:opacity-50">
             {sending ? '送信中…' : '自分にテスト送信'}
@@ -150,7 +158,7 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
         {previewEn && (
           <div className="mt-2 rounded-xl border border-zinc-700/50 bg-white/5 p-4 space-y-2">
             <p className="text-xs text-zinc-400">
-              英語版（自動翻訳。ここを直すと、その英文がそのまま海外の会員に届きます）
+              英語版（AI翻訳の下書き。ここを直すと、その英文がそのまま海外の会員に届きます）
             </p>
             <input
               value={previewEn.subject}
@@ -166,7 +174,7 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
               placeholder="Body (English)"
             />
             <button onClick={() => setPreviewEn(null)} className="text-xs text-zinc-400 underline">
-              英語版を破棄して自動翻訳に戻す
+              英語版を破棄して送信時の自動翻訳に戻す
             </button>
           </div>
         )}

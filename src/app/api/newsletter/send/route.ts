@@ -4,6 +4,10 @@ import { Resend } from 'resend'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ADMIN_EMAILS } from '@/lib/access'
 import { translateJaToEn } from '@/lib/translate'
+import { translateNewsletter } from '@/lib/translate-newsletter'
+
+// Claude翻訳は数十秒かかることがあるので実行時間上限を延ばす
+export const maxDuration = 60
 
 let vapidInitialized = false
 function initVapid() {
@@ -135,16 +139,31 @@ export async function POST(request: NextRequest) {
   }
 
   // 英語版。管理画面で英文を渡された場合はそれを使い、無ければ自動翻訳する。
-  // （自動翻訳は固有名詞や署名を崩すことがあるため、手書きの英文を優先する）
+  // （手書き・手直しした英文が最優先。自動翻訳より人の判断を信用する）
   let subjectEn = subjectEnInput?.trim() || subject
   let messageEn = bodyEnInput?.trim() || message
   if (!subjectEnInput?.trim() || !bodyEnInput?.trim()) {
-    try {
-      if (!subjectEnInput?.trim()) subjectEn = await translateJaToEn(subject)
-      if (!bodyEnInput?.trim()) messageEn = await translateJaToEn(message)
-    } catch (e) {
-      console.error('Newsletter translation error:', e)
-      // 翻訳失敗時は日本語のまま送る（送信自体は継続）
+    // Claude で件名と本文をまとめて翻訳する（文脈が揃うので語調・固有名詞がブレない）。
+    // 鍵が無い・失敗した場合だけ、旧来の機械翻訳にフォールバックする。
+    let translated = false
+    if (process.env.ANTHROPIC_API_KEY) {
+      try {
+        const t = await translateNewsletter({ subject, body: message })
+        if (!subjectEnInput?.trim()) subjectEn = t.subject_en
+        if (!bodyEnInput?.trim()) messageEn = t.body_en
+        translated = true
+      } catch (e) {
+        console.error('Newsletter Claude translation error:', e)
+      }
+    }
+    if (!translated) {
+      try {
+        if (!subjectEnInput?.trim()) subjectEn = await translateJaToEn(subject)
+        if (!bodyEnInput?.trim()) messageEn = await translateJaToEn(message)
+      } catch (e) {
+        console.error('Newsletter fallback translation error:', e)
+        // 翻訳失敗時は日本語のまま送る（送信自体は継続）
+      }
     }
   }
 
