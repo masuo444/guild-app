@@ -17,6 +17,20 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
+/** 送信言語。'both' は日英併記（言語も国も未設定の会員向け） */
+type MailLang = 'ja' | 'en' | 'both'
+
+const JP_COUNTRY = /日本|japan|nippon|nihon|^jp$/i
+
+/** 本人の言語設定を最優先。未設定なら国から推測し、国も無ければ日英併記にする */
+export function resolveMailLang(language?: string | null, homeCountry?: string | null): MailLang {
+  if (language === 'en') return 'en'
+  if (language === 'ja') return 'ja'
+  const c = (homeCountry ?? '').trim()
+  if (!c) return 'both'
+  return JP_COUNTRY.test(c) ? 'ja' : 'en'
+}
+
 function buildEmailHtml(body: string, lang: 'ja' | 'en', subject: string): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
   // 本文中のURLをタップしやすいリンクに変換してからHTMLエスケープ・改行を反映
@@ -129,9 +143,11 @@ export async function POST(request: NextRequest) {
   const service = createServiceClient()
 
   // 言語マップ（profiles）
-  const { data: profiles } = await service.from('profiles').select('id, language')
-  const langMap: Record<string, 'ja' | 'en'> = {}
-  for (const p of profiles ?? []) langMap[p.id] = (p.language === 'en' ? 'en' : 'ja')
+  // language 未設定の会員が多いため、国から推測する。
+  // 日本 → 日本語、それ以外の国 → 英語、国も未設定 → 日英併記（'both'）。
+  const { data: profiles } = await service.from('profiles').select('id, language, home_country')
+  const langMap: Record<string, MailLang> = {}
+  for (const p of profiles ?? []) langMap[p.id] = resolveMailLang(p.language, p.home_country)
 
   // 全ユーザーのメール（auth）をページネーションで取得
   type AuthUser = { id: string; email?: string }
@@ -156,9 +172,10 @@ export async function POST(request: NextRequest) {
   let emailErrors: string[] = []
   if (resend) {
     const results = await Promise.allSettled(targets.filter(u => u.email).map(async (u) => {
-      const lang = langMap[u.id] || 'ja'
-      const subj = lang === 'en' ? subjectEn : subject
-      const html = buildEmailHtml(lang === 'en' ? messageEn : message, lang, subj)
+      const lang = langMap[u.id] || 'both'
+      const subj = lang === 'en' ? subjectEn : lang === 'ja' ? subject : `${subject} / ${subjectEn}`
+      const text = lang === 'en' ? messageEn : lang === 'ja' ? message : `${message}\n\n– – –\n\n${messageEn}`
+      const html = buildEmailHtml(text, lang === 'en' ? 'en' : 'ja', subj)
       const { error } = await resend.emails.send({ from: fromEmail, to: u.email!, subject: `[FOMUS GUILD] ${subj}`, html })
       if (error) throw error
     }))
@@ -179,10 +196,10 @@ export async function POST(request: NextRequest) {
     const { data: subs } = await subsQuery
     if (subs && subs.length) {
       const results = await Promise.allSettled(subs.map(async (sub) => {
-        const lang = langMap[sub.user_id] || 'ja'
+        const lang = langMap[sub.user_id] || 'both'
         const payload = JSON.stringify({
           title: lang === 'en' ? subjectEn : subject,
-          body: lang === 'en' ? 'Tap to read this week\'s newsletter.' : '今週のメルマガが届きました。タップして読む。',
+          body: lang === 'en' ? 'Tap to read this week\'s newsletter.' : '新しいお知らせが届きました。タップして読む。',
           url: '/app',
         })
         try {
