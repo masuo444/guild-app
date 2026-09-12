@@ -123,21 +123,29 @@ export async function POST(request: NextRequest) {
 
   let body
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
-  const { subject, body: message, sendPush = true, test = false } = body as {
+  const {
+    subject, body: message, sendPush = true, test = false,
+    subjectEn: subjectEnInput, bodyEn: bodyEnInput,
+  } = body as {
     subject?: string; body?: string; sendPush?: boolean; test?: boolean
+    subjectEn?: string; bodyEn?: string
   }
   if (!subject?.trim() || !message?.trim()) {
     return NextResponse.json({ error: 'subject and body are required' }, { status: 400 })
   }
 
-  // JA→EN 翻訳（英語ユーザー用）
-  let subjectEn = subject, messageEn = message
-  try {
-    subjectEn = await translateJaToEn(subject)
-    messageEn = await translateJaToEn(message)
-  } catch (e) {
-    console.error('Newsletter translation error:', e)
-    // 翻訳失敗時は日本語のまま送る（送信自体は継続）
+  // 英語版。管理画面で英文を渡された場合はそれを使い、無ければ自動翻訳する。
+  // （自動翻訳は固有名詞や署名を崩すことがあるため、手書きの英文を優先する）
+  let subjectEn = subjectEnInput?.trim() || subject
+  let messageEn = bodyEnInput?.trim() || message
+  if (!subjectEnInput?.trim() || !bodyEnInput?.trim()) {
+    try {
+      if (!subjectEnInput?.trim()) subjectEn = await translateJaToEn(subject)
+      if (!bodyEnInput?.trim()) messageEn = await translateJaToEn(message)
+    } catch (e) {
+      console.error('Newsletter translation error:', e)
+      // 翻訳失敗時は日本語のまま送る（送信自体は継続）
+    }
   }
 
   const service = createServiceClient()

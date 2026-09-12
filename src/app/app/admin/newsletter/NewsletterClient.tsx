@@ -46,7 +46,8 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
       const res = await fetch('/api/newsletter/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, body, test }),
+        // 英訳プレビューを開いて編集していれば、その英文をそのまま送る（自動翻訳より優先）
+        body: JSON.stringify({ subject, body, test, subjectEn: previewEn?.subject, bodyEn: previewEn?.body }),
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed')
@@ -147,10 +148,26 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
         {msg && <p className={`text-sm ${msg.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>}
 
         {previewEn && (
-          <div className="mt-2 rounded-xl border border-zinc-700/50 bg-white/5 p-4">
-            <p className="text-xs text-zinc-400 mb-2">英語版プレビュー（English preview）</p>
-            <p className="text-sm font-semibold text-white mb-1">{previewEn.subject}</p>
-            <p className="text-sm text-zinc-300 whitespace-pre-wrap">{previewEn.body}</p>
+          <div className="mt-2 rounded-xl border border-zinc-700/50 bg-white/5 p-4 space-y-2">
+            <p className="text-xs text-zinc-400">
+              英語版（自動翻訳。ここを直すと、その英文がそのまま海外の会員に届きます）
+            </p>
+            <input
+              value={previewEn.subject}
+              onChange={(e) => setPreviewEn({ ...previewEn, subject: e.target.value })}
+              className="w-full px-3 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white text-sm"
+              placeholder="Subject (English)"
+            />
+            <textarea
+              value={previewEn.body}
+              onChange={(e) => setPreviewEn({ ...previewEn, body: e.target.value })}
+              rows={10}
+              className="w-full px-3 py-2 bg-white/10 border border-zinc-500/30 rounded-lg text-white text-sm whitespace-pre-wrap"
+              placeholder="Body (English)"
+            />
+            <button onClick={() => setPreviewEn(null)} className="text-xs text-zinc-400 underline">
+              英語版を破棄して自動翻訳に戻す
+            </button>
           </div>
         )}
       </div>
