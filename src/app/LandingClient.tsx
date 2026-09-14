@@ -23,9 +23,9 @@ const COPY = {
     ],
     postsTitle: 'ギルドの日々を、少しだけ。', postsLead: '公開中の無料記事から。続きは無料参加後に読めます。',
     readMore: '無料で参加して続きを読む →', minutes: (m: number) => `約${m}分`,
-    freeItems: ['無料公開の活動記事を読む', '過去の無料記事を月別・カテゴリ別に探す'],
+    freeItems: ['海外活動記録485本を全文読む（セブ島・ヨーロッパ・中東ほか）', '日本語と英語を切り替えて読む', '無料公開の活動記事を読む'],
     paidLead: '無料プランのすべてに加えて',
-    paidItems: ['ギルドマップでメンバー・MASU Hubを探す', '公開中のメンバーの場所とプロフィールを見る', '記事へのコメント・まっすーへの質問・ポイント交換', 'まっすーの有料限定記事も読む'],
+    paidItems: ['ギルドマップでメンバー・MASU Hubを探す', '公開中のメンバーの場所とプロフィールを見る', '記事へのコメント・まっすーへの質問・ポイント交換', '笛吹市での“いま”の活動記録を全文読む'],
     guide: '使い方ガイド', footer: '運営：FOMUS / MaSU',
   },
   en: {
@@ -37,9 +37,9 @@ const COPY = {
     ],
     postsTitle: 'A little glimpse of guild life.', postsLead: 'Opening excerpts from free posts. Join for free to keep reading.',
     readMore: 'Join for free to read more →', minutes: (m: number) => `${m} min`,
-    freeItems: ['Read free journal posts', 'Browse free posts by month and category'],
+    freeItems: ['Read all 485 overseas journal posts in full (Cebu, Europe, the Middle East and more)', 'Switch between Japanese and English', 'Read the free journal posts'],
     paidLead: 'Everything in Free, plus',
-    paidItems: ['Explore members and MASU Hubs on the guild map', 'View shared member locations and profiles', 'Comments, questions to MaSU, and reward exchanges', 'Read MaSU’s premium posts, too'],
+    paidItems: ['Explore members and MASU Hubs on the guild map', 'View shared member locations and profiles', 'Comments, questions to MaSU, and reward exchanges', 'Read the full, current journal from Fuefuki'],
     guide: 'View guide', footer: 'Operated by FOMUS / MaSU',
   },
 }
@@ -102,7 +102,7 @@ export function LandingClient({ posts }: { posts: LandingPost[] }) {
 
         <section className="welcome wrap"><span className="welcome-symbol" aria-hidden="true">✳</span><div><p className="eyebrow">SMALL COMMUNITY, OPEN POSSIBILITIES.</p><h2>{ja ? 'まだ小さなギルド。だから、一緒につくれる。' : 'A small guild. Room for your ideas.'}</h2><p>{ja ? '完成された場所に入るより、これからの場所を一緒に育てる。記事を読む、コメントを残す、気になる企画に参加する。あなたらしい関わり方を見つけてください。' : 'Help shape a community that is still growing. Read a story, leave a comment, or join a project. Find your own way to be part of it.'}</p></div></section>
 
-        {posts.length > 0 && <section className="section wrap"><div className="section-heading"><div><p className="eyebrow">FIELD NOTES</p><h2>{c.postsTitle}</h2></div><p>{c.postsLead}</p></div><div className="posts-grid">{posts.map(p => <Link href={`/auth/login?redirect=${encodeURIComponent(`/app/feed/${p.id}`)}`} className="post-card" key={p.id}><p className="post-date">{formatPostDate(p.published_at, language)} · {c.minutes(p.minutes)}</p><h3>{stripDatePrefix(p.title)}</h3><p>{p.excerpt}</p><span>{c.readMore}</span></Link>)}</div></section>}
+        {posts.length > 0 && <section className="section wrap"><div className="section-heading"><div><p className="eyebrow">FIELD NOTES</p><h2>{c.postsTitle}</h2></div><p>{c.postsLead}</p></div><div className="posts-grid">{posts.map(p => <Link href={`/auth/login?redirect=${encodeURIComponent(`/app/feed/${p.id}`)}`} className="post-card" key={p.id}><p className="post-date">{formatPostDate(p.published_at, language)} · {c.minutes(p.minutes)}</p><h3>{stripDatePrefix(p.title)}</h3><p>{p.excerpt}</p><span>{c.readMore}</span></Link>)}</div><p className="posts-more"><Link href="/archive">{ja ? '登録なしで読める「海外活動記録」を見る →' : 'Read the overseas archive — no sign-up needed →'}</Link></p></section>}
 
         <section id="membership" className="membership section"><div className="wrap"><div className="section-heading"><div><p className="eyebrow">02 — FIND YOUR PLACE</p><h2>{ja ? <>まずは無料で。<br />もっと楽しみたくなったら。</> : <>Start for free.<br />Go deeper when you’re ready.</>}</h2></div><p>{ja ? '無理なく、自分に合った参加のかたちを。\n無料プランから、いつでもアップグレードできます。' : 'Choose the membership that fits you.\nUpgrade from free whenever you like.'}</p></div>
           <div className="plan-controls"><label>{ja ? 'お住まいの地域' : 'Your region'}<select value={japan ? 'jp' : 'intl'} onChange={e => setJapan(e.target.value === 'jp')}><option value="jp">{ja ? '日本 / JPY' : 'Japan / JPY'}</option><option value="intl">{ja ? '日本以外 / USD' : 'Outside Japan / USD'}</option></select></label><div className="billing-toggle"><button aria-pressed={!annual} onClick={() => setAnnual(false)}>{ja ? '月払い' : 'Monthly'}</button><button aria-pressed={annual} onClick={() => setAnnual(true)}>{ja ? '年払い · 2ヶ月分お得' : 'Annual · save 2 months'}</button></div></div>
