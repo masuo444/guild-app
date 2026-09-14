@@ -25,6 +25,16 @@ export function ProfileMenu({ isAdmin }: ProfileMenuProps) {
         </svg>
       ),
     },
+    {
+      href: '/app/sales',
+      title: t.menuSales,
+      desc: t.menuSalesDesc,
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l3-3a4 4 0 015.656 5.656l-1.5 1.5" />
+        </svg>
+      ),
+    },
     ...(isAdmin
       ? [{
           href: '/app/admin',

@@ -2,6 +2,7 @@ import { stripe } from '@/lib/stripe/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateMembershipId } from '@/lib/utils'
 import { notifyAdminMasuOrder } from '@/lib/notifications'
+import { getSetting } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -66,6 +67,29 @@ export async function POST(request: Request) {
             membership_id: membershipId,
           })
           .eq('id', userId)
+
+        // 紹介者へのアフィリエイト報酬（有料入会が成立した時だけ。無料登録では出さない）。
+        // 付与額は app_settings.referral_signup_points で変更できる。
+        if (profile?.invited_by) {
+          const { data: existing } = await supabase
+            .from('activity_logs')
+            .select('id')
+            .eq('user_id', profile.invited_by)
+            .eq('type', 'Referral Bonus')
+            .eq('note', userId)
+            .maybeSingle()
+
+          if (!existing) {
+            const points = parseInt((await getSetting('referral_signup_points')) || '1000', 10)
+            const { error: referralError } = await supabase.from('activity_logs').insert({
+              user_id: profile.invited_by,
+              type: 'Referral Bonus',
+              note: userId,
+              points: Number.isFinite(points) && points > 0 ? points : 1000,
+            })
+            if (referralError) console.error('Failed to insert referral bonus:', referralError)
+          }
+        }
 
         // 枡セットプランなら、まっすーに発送先を通知
         if (session.metadata?.plan === 'masu') {
