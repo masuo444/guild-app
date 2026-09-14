@@ -108,12 +108,6 @@ export function PwaInstallBanner() {
           </div>
         </div>
 
-        {/* Notification note */}
-        <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
-          <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full flex-shrink-0" />
-          {t.pwaInstallNotificationNote}
-        </p>
-
         {/* iOS Steps */}
         {isIos && showIosSteps && (
           <div className="mt-3 space-y-2 bg-zinc-900/50 rounded-lg p-3">

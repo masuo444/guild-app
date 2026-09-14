@@ -475,7 +475,6 @@ const translations = {
     // PWA Install Banner
     pwaInstallTitle: 'アプリをホーム画面に追加',
     pwaInstallDescription: 'ホーム画面に追加して、より快適にご利用いただけます',
-    pwaInstallNotificationNote: 'プッシュ通知はアプリをインストールすると受け取れます',
     pwaInstallButton: 'インストール',
     pwaInstallHowTo: '追加方法を見る',
     pwaInstallLater: 'あとで',
@@ -1073,7 +1072,6 @@ const translations = {
     // PWA Install Banner
     pwaInstallTitle: 'Add to Home Screen',
     pwaInstallDescription: 'Install the app for a better experience',
-    pwaInstallNotificationNote: 'Push notifications require the app to be installed',
     pwaInstallButton: 'Install',
     pwaInstallHowTo: 'How to Install',
     pwaInstallLater: 'Later',
