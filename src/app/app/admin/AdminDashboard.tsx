@@ -41,7 +41,7 @@ interface AdminDashboardProps {
   adminEmail: string
 }
 
-type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'exchange' | 'sales' | 'questions' | 'notifications'
+type Tab = 'invites' | 'members' | 'roles' | 'hubs' | 'exchange' | 'sales' | 'questions'
 
 const TAB_LABELS: Record<Tab, string> = {
   invites: '招待コード',
@@ -51,7 +51,6 @@ const TAB_LABELS: Record<Tab, string> = {
   exchange: '交換所',
   sales: '紹介実績',
   questions: '質問箱',
-  notifications: '通知',
 }
 
 const TAB_ICONS: Record<Tab, ReactNode> = {
@@ -90,11 +89,6 @@ const TAB_ICONS: Record<Tab, ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
-  notifications: (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </svg>
-  ),
 }
 
 export function AdminDashboard({ invites, members, hubs, memberPoints, customRoles, memberRoles, exchangeItems, exchangeOrders, questions, adminId, adminEmail }: AdminDashboardProps) {
@@ -131,7 +125,7 @@ export function AdminDashboard({ invites, members, hubs, memberPoints, customRol
 
       {/* タブナビゲーション */}
       <div className="flex gap-1 mb-6 p-1 bg-white/5 rounded-xl overflow-x-auto">
-        {(['invites', 'members', 'roles', 'hubs', 'exchange', 'sales', 'questions', 'notifications'] as Tab[]).map((tab) => (
+        {(['invites', 'members', 'roles', 'hubs', 'exchange', 'sales', 'questions'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -169,7 +163,6 @@ export function AdminDashboard({ invites, members, hubs, memberPoints, customRol
       {activeTab === 'exchange' && <ExchangeAdminTab items={exchangeItems} orders={exchangeOrders} adminId={adminId} />}
       {activeTab === 'sales' && <SalesAdminTab />}
       {activeTab === 'questions' && <QuestionsTab questions={questions} />}
-      {activeTab === 'notifications' && <NotificationsTab />}
     </div>
   )
 }
@@ -2390,160 +2383,6 @@ function SalesAdminTab() {
           )}
         </CardContent>
       </Card>
-    </div>
-  )
-}
-
-function NotificationsTab() {
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
-  const [url, setUrl] = useState('')
-  const [sendEmail, setSendEmail] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [result, setResult] = useState<{ sent: number; failed: number; emailSent: number; emailFailed: number } | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleSend = async () => {
-    setShowConfirm(false)
-    setSending(true)
-    setResult(null)
-    setError(null)
-
-    try {
-      const res = await fetch('/api/notifications/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body, url: url || undefined, sendEmail }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.error || '送信に失敗しました')
-        return
-      }
-
-      const data = await res.json()
-      setResult(data)
-      setTitle('')
-      setBody('')
-      setUrl('')
-      setSendEmail(false)
-    } catch {
-      setError('送信中にエラーが発生しました')
-    } finally {
-      setSending(false)
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-bold text-white">プッシュ通知を送信</h3>
-          <p className="text-sm text-zinc-400">全メンバーにブラウザプッシュ通知を送信します</p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">タイトル</label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="お知らせのタイトル"
-                maxLength={100}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">本文</label>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="お知らせの内容を入力..."
-                maxLength={500}
-                rows={4}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]/50 focus:border-transparent resize-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">リンクURL（任意）</label>
-              <Input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="/app/offers など"
-              />
-            </div>
-
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={sendEmail}
-                onChange={(e) => setSendEmail(e.target.checked)}
-                className="w-4 h-4 rounded border-white/20 bg-white/5 text-[#c0c0c0] focus:ring-[#c0c0c0]/50"
-              />
-              <span className="text-sm text-zinc-300">メールでも送信する</span>
-            </label>
-
-            <Button
-              onClick={() => setShowConfirm(true)}
-              disabled={!title.trim() || !body.trim() || sending}
-              className="w-full"
-            >
-              {sending ? '送信中...' : '通知を送信'}
-            </Button>
-
-            {result && (
-              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
-                <p className="text-green-400 text-sm font-medium">
-                  送信完了 — プッシュ: {result.sent}件成功{result.failed > 0 && `、${result.failed}件失敗`}
-                  {(result.emailSent > 0 || result.emailFailed > 0) && (
-                    <> / メール: {result.emailSent}件成功{result.emailFailed > 0 && `、${result.emailFailed}件失敗`}</>
-                  )}
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                <p className="text-red-400 text-sm font-medium">{error}</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 確認ダイアログ */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-800 rounded-2xl p-6 max-w-md w-full border border-white/10">
-            <h4 className="text-lg font-bold text-white mb-2">通知を送信しますか？</h4>
-            <p className="text-sm text-zinc-400 mb-4">
-              全メンバーに以下の通知が送信されます。
-            </p>
-            <div className="bg-white/5 rounded-xl p-4 mb-6">
-              <p className="text-white font-medium">{title}</p>
-              <p className="text-zinc-400 text-sm mt-1">{body}</p>
-              {url && <p className="text-zinc-500 text-xs mt-2">リンク: {url}</p>}
-              {sendEmail && <p className="text-zinc-500 text-xs mt-2">+ メール送信あり</p>}
-            </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => setShowConfirm(false)}
-                variant="secondary"
-                className="flex-1"
-              >
-                キャンセル
-              </Button>
-              <Button
-                onClick={handleSend}
-                className="flex-1"
-              >
-                送信する
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

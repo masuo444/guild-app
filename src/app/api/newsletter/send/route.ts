@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import webpush from 'web-push'
 import { Resend } from 'resend'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ADMIN_EMAILS } from '@/lib/access'
@@ -8,14 +7,6 @@ import { translateNewsletter } from '@/lib/translate-newsletter'
 
 // Claude翻訳は数十秒かかることがあるので実行時間上限を延ばす
 export const maxDuration = 60
-
-let vapidInitialized = false
-function initVapid() {
-  if (!vapidInitialized && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-    webpush.setVapidDetails('mailto:keisukendo414@gmail.com', process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY)
-    vapidInitialized = true
-  }
-}
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
@@ -115,8 +106,6 @@ function buildEmailHtml(body: string, lang: 'ja' | 'en', subject: string): strin
 }
 
 export async function POST(request: NextRequest) {
-  initVapid()
-
   // 管理者認証
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -128,10 +117,10 @@ export async function POST(request: NextRequest) {
   let body
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
   const {
-    subject, body: message, sendPush = true, test = false,
+    subject, body: message, test = false,
     subjectEn: subjectEnInput, bodyEn: bodyEnInput,
   } = body as {
-    subject?: string; body?: string; sendPush?: boolean; test?: boolean
+    subject?: string; body?: string; test?: boolean
     subjectEn?: string; bodyEn?: string
   }
   if (!subject?.trim() || !message?.trim()) {
@@ -215,32 +204,5 @@ export async function POST(request: NextRequest) {
     emailErrors = ['RESEND_API_KEY is not configured']
   }
 
-  // プッシュ（購読者のみ・言語別）
-  let pushSent = 0, pushFailed = 0
-  if (sendPush) {
-    let subsQuery = service.from('push_subscriptions').select('id, endpoint, p256dh, auth, user_id')
-    if (test) subsQuery = subsQuery.eq('user_id', user.id)
-    const { data: subs } = await subsQuery
-    if (subs && subs.length) {
-      const results = await Promise.allSettled(subs.map(async (sub) => {
-        const lang = langMap[sub.user_id] || 'both'
-        const payload = JSON.stringify({
-          title: lang === 'en' ? subjectEn : subject,
-          body: lang === 'en' ? 'Tap to read this week\'s newsletter.' : '新しいお知らせが届きました。タップして読む。',
-          url: '/app',
-        })
-        try {
-          await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload)
-        } catch (err) {
-          const code = (err as { statusCode?: number }).statusCode
-          if (code === 410 || code === 404) await service.from('push_subscriptions').delete().eq('id', sub.id)
-          throw err
-        }
-      }))
-      pushSent = results.filter(r => r.status === 'fulfilled').length
-      pushFailed = results.length - pushSent
-    }
-  }
-
-  return NextResponse.json({ success: true, test, emailSent, emailFailed, emailErrors, pushSent, pushFailed, subjectEn })
+  return NextResponse.json({ success: true, test, emailSent, emailFailed, emailErrors, subjectEn })
 }

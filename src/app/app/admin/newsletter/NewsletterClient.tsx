@@ -62,8 +62,8 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
       setMsg({
         type: 'ok',
         text: test
-          ? `テスト送信しました（自分宛）。メール ${d.emailSent}件 / プッシュ ${d.pushSent}件`
-          : `全員に送信しました。メール ${d.emailSent}件（失敗${d.emailFailed}）/ プッシュ ${d.pushSent}件`,
+          ? `テスト送信しました（自分宛）。メール ${d.emailSent}件`
+          : `全員に送信しました。メール ${d.emailSent}件（失敗${d.emailFailed}）`,
       })
     } catch (e) {
       setMsg({ type: 'err', text: e instanceof Error ? e.message : '送信に失敗しました' })
@@ -96,7 +96,7 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
       <div className="mb-6">
         <Link href="/app/admin" className="text-xs text-zinc-400 hover:text-white">← 管理画面へ戻る</Link>
         <h1 className="text-2xl font-bold text-white mt-2">週刊メルマガ</h1>
-        <p className="text-sm text-zinc-400 mt-1">日本語で書けば、英語ユーザーには自動で英訳して送ります。メールは全会員に、プッシュは通知ONの会員に届きます。</p>
+        <p className="text-sm text-zinc-400 mt-1">日本語で書けば、英語ユーザーには自動で英訳して送ります。全会員にメールで届きます。</p>
       </div>
 
       {/* ログインボーナス2倍キャンペーン */}
