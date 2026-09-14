@@ -23,9 +23,9 @@ const COPY = {
     ],
     postsTitle: 'ギルドの日々を、少しだけ。', postsLead: '公開中の無料記事から。続きは無料参加後に読めます。',
     readMore: '無料で参加して続きを読む →', minutes: (m: number) => `約${m}分`,
-    freeItems: ['海外活動記録485本を全文読む（セブ島・ヨーロッパ・中東ほか）', '日本語と英語を切り替えて読む', '無料公開の活動記事を読む'],
+    freeItems: ['登録なしで読める海外活動記録57本を全文読む', '無料公開の活動記事を読む', '日本語と英語を切り替えて読む'],
     paidLead: '無料プランのすべてに加えて',
-    paidItems: ['ギルドマップでメンバー・MASU Hubを探す', '公開中のメンバーの場所とプロフィールを見る', '記事へのコメント・まっすーへの質問・ポイント交換', '笛吹市での“いま”の活動記録を全文読む'],
+    paidItems: ['ギルドマップでメンバー・MASU Hubを探す', '公開中のメンバーの場所とプロフィールを見る', '記事へのコメント・まっすーへの質問・ポイント交換', '笛吹市での“いま”の活動記録と、海外活動記録485本を全文読む'],
     guide: '使い方ガイド', footer: '運営：FOMUS / MaSU',
   },
   en: {
@@ -37,9 +37,9 @@ const COPY = {
     ],
     postsTitle: 'A little glimpse of guild life.', postsLead: 'Opening excerpts from free posts. Join for free to keep reading.',
     readMore: 'Join for free to read more →', minutes: (m: number) => `${m} min`,
-    freeItems: ['Read all 485 overseas journal posts in full (Cebu, Europe, the Middle East and more)', 'Switch between Japanese and English', 'Read the free journal posts'],
+    freeItems: ['Read 57 open overseas journal posts in full', 'Read the free journal posts', 'Switch between Japanese and English'],
     paidLead: 'Everything in Free, plus',
-    paidItems: ['Explore members and MASU Hubs on the guild map', 'View shared member locations and profiles', 'Comments, questions to MaSU, and reward exchanges', 'Read the full, current journal from Fuefuki'],
+    paidItems: ['Explore members and MASU Hubs on the guild map', 'View shared member locations and profiles', 'Comments, questions to MaSU, and reward exchanges', 'Read the current Fuefuki journal and all 485 overseas posts in full'],
     guide: 'View guide', footer: 'Operated by FOMUS / MaSU',
   },
 }
