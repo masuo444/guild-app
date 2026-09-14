@@ -38,7 +38,7 @@ const SEP = '<<<BODY>>>'
 export async function translateNewsletter(input: { subject: string; body: string }): Promise<TranslatedNewsletter> {
   const client = new Anthropic()
   const stream = client.messages.stream({
-    model: 'claude-opus-5',
+    model: 'claude-sonnet-5',
     max_tokens: 16000,
     system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
     output_config: { effort: 'medium' },
