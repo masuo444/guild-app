@@ -12,17 +12,20 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-/** 送信言語。'both' は日英併記（言語も国も未設定の会員向け） */
-type MailLang = 'ja' | 'en' | 'both'
+type MailLang = 'ja' | 'en'
 
 const JP_COUNTRY = /日本|japan|nippon|nihon|^jp$/i
 
-/** 本人の言語設定を最優先。未設定なら国から推測し、国も無ければ日英併記にする */
+/**
+ * 本人の言語設定を最優先。未設定なら国から推測する。
+ * 国も未設定なら英語。会員の大半が海外在住で、日英併記は双方にとって読みにくいため
+ * （英語で届いた日本の会員には、フッターの一行で切り替え方を案内する）。
+ */
 export function resolveMailLang(language?: string | null, homeCountry?: string | null): MailLang {
   if (language === 'en') return 'en'
   if (language === 'ja') return 'ja'
   const c = (homeCountry ?? '').trim()
-  if (!c) return 'both'
+  if (!c) return 'en'
   return JP_COUNTRY.test(c) ? 'ja' : 'en'
 }
 
@@ -40,6 +43,10 @@ function buildEmailHtml(body: string, lang: 'ja' | 'en', subject: string): strin
   const footer = lang === 'en'
     ? 'You are receiving this because you are a FOMUS GUILD member.'
     : 'このメールは FOMUS GUILD 会員の方にお送りしています。'
+  // 言語未設定の会員には英語で送るため、日本語の方が読みやすい人向けに切替案内を添える
+  const langSwitchNote = lang === 'en'
+    ? '日本語で受け取りたい方は、アプリを開いて画面右上の言語切替を「日本語」にしてください。次回から日本語で届きます。'
+    : ''
   const preheader = escapeHtml(body).slice(0, 100)
 
   // モバイルメーラー(Gmail/Apple Mail等)で単一カラム・大きめタップ領域になるよう
@@ -94,6 +101,7 @@ function buildEmailHtml(body: string, lang: 'ja' | 'en', subject: string): strin
             <td style="padding:24px 24px 28px 24px;">
               <hr style="border:none; border-top:1px solid #eee; margin:0 0 16px 0;" />
               <p style="margin:0; color:#999; font-size:12px; line-height:1.6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${footer}</p>
+              ${langSwitchNote ? `<p style="margin:8px 0 0 0; color:#999; font-size:12px; line-height:1.6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Hiragino Sans',sans-serif;">${langSwitchNote}</p>` : ''}
             </td>
           </tr>
 
@@ -160,7 +168,7 @@ export async function POST(request: NextRequest) {
 
   // 言語マップ（profiles）
   // language 未設定の会員が多いため、国から推測する。
-  // 日本 → 日本語、それ以外の国 → 英語、国も未設定 → 日英併記（'both'）。
+  // 日本 → 日本語、それ以外の国 → 英語、国も未設定 → 英語。
   const { data: profiles } = await service.from('profiles').select('id, language, home_country')
   const langMap: Record<string, MailLang> = {}
   for (const p of profiles ?? []) langMap[p.id] = resolveMailLang(p.language, p.home_country)
@@ -188,10 +196,10 @@ export async function POST(request: NextRequest) {
   let emailErrors: string[] = []
   if (resend) {
     const results = await Promise.allSettled(targets.filter(u => u.email).map(async (u) => {
-      const lang = langMap[u.id] || 'both'
-      const subj = lang === 'en' ? subjectEn : lang === 'ja' ? subject : `${subject} / ${subjectEn}`
-      const text = lang === 'en' ? messageEn : lang === 'ja' ? message : `${message}\n\n– – –\n\n${messageEn}`
-      const html = buildEmailHtml(text, lang === 'en' ? 'en' : 'ja', subj)
+      const lang = langMap[u.id] || 'en'
+      const subj = lang === 'en' ? subjectEn : subject
+      const text = lang === 'en' ? messageEn : message
+      const html = buildEmailHtml(text, lang, subj)
       const { error } = await resend.emails.send({ from: fromEmail, to: u.email!, subject: `[FOMUS GUILD] ${subj}`, html })
       if (error) throw error
     }))
