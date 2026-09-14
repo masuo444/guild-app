@@ -7,7 +7,7 @@ import { ThemeToggle, useReadingTheme } from '@/app/app/feed/FeedClient'
 
 interface Region { key: string; ja: string; en: string; emoji: string; count: number; from: string; to: string; thumbnail: string | null }
 
-export function ArchiveHome({ regions, total }: { regions: Region[]; total: number }) {
+export function ArchiveHome({ regions, total, basePath = '/app/archive' }: { regions: Region[]; total: number; basePath?: string }) {
   const { language } = useLanguage()
   const ja = language === 'ja'
   const { light, setLight } = useReadingTheme()
@@ -24,7 +24,7 @@ export function ArchiveHome({ regions, total }: { regions: Region[]; total: numb
         <SectionSwitch light={light} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {regions.map((r) => (
-            <Link key={r.key} href={`/app/archive/${r.key}`} className={`flex gap-3 rounded-2xl border overflow-hidden transition-colors ${light ? 'bg-white border-zinc-200 hover:border-zinc-400' : 'bg-zinc-800/60 border-zinc-700/50 hover:border-zinc-500'}`}>
+            <Link key={r.key} href={`${basePath}/${r.key}`} className={`flex gap-3 rounded-2xl border overflow-hidden transition-colors ${light ? 'bg-white border-zinc-200 hover:border-zinc-400' : 'bg-zinc-800/60 border-zinc-700/50 hover:border-zinc-500'}`}>
               <div className="w-24 shrink-0 bg-zinc-900">
                 {r.thumbnail && <img src={r.thumbnail} alt="" className="w-full h-full object-cover" loading="lazy" />}
               </div>

@@ -60,6 +60,40 @@ export function getNeighbors(id: number): { prev: ArchiveListItem | null; next: 
   return { prev: i > 0 ? list[i - 1] : null, next: i >= 0 && i < list.length - 1 ? list[i + 1] : null }
 }
 
+/**
+ * ログイン不要で全文を公開する記事のID。
+ * 検索からの入口を作るための「見本」で、485本のうち各地域から選んだ57本。
+ * 英語版と画像があり本文が厚いものを、地域と時期が偏らないように並べた。
+ * 増やしたい時はここに id を足すだけでよい（公開ページもsitemapも自動で追従する）。
+ * 残りの記事は無料登録すれば全文読める。
+ */
+export const PUBLIC_ARCHIVE_IDS: ReadonlySet<number> = new Set([
+  1, 8, 20, 28, 33, 38, 52, 59, 86, 95, 99, 101, 105, 133, 145, 156, 165, 173, 179, 184, 193, 208, 212, 219, 231, 233, 240, 248, 254, 273, 287, 291, 298, 309, 312, 316, 321, 325, 332, 342, 353, 364, 400, 412, 420, 426, 432, 440, 456, 464, 471, 473, 474, 475, 480, 482, 483,
+])
+
+export function isPublicArticle(id: number): boolean {
+  return PUBLIC_ARCHIVE_IDS.has(id)
+}
+
+/** 公開記事だけ（sitemap・公開一覧用） */
+export function getPublicArticles(): ArchiveListItem[] {
+  return ALL.filter((a) => PUBLIC_ARCHIVE_IDS.has(a.id)).sort((a, b) => a.id - b.id).map(stripBody)
+}
+
+/** 地域ごとの公開記事 */
+export function getPublicArticlesByCategory(category: string): ArchiveListItem[] {
+  return getPublicArticles().filter((a) => a.category === category)
+}
+
+/** 公開記事を持つ地域の一覧（公開トップ用） */
+export function getPublicRegionSummaries() {
+  return REGIONS.map((r) => {
+    const items = ALL.filter((a) => a.category === r.key && PUBLIC_ARCHIVE_IDS.has(a.id))
+    const dates = items.map((a) => a.date).sort()
+    return { ...r, count: items.length, from: dates[0] ?? '', to: dates[dates.length - 1] ?? '', thumbnail: items.find((a) => a.thumbnail)?.thumbnail ?? null }
+  }).filter((r) => r.count > 0)
+}
+
 export function getNotes(): NoteArticle[] {
   return [...NOTES].sort((a, b) => (b.date || '').localeCompare(a.date || ''))
 }

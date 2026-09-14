@@ -6,7 +6,7 @@ import { useLanguage } from '@/lib/i18n'
 import type { ArchiveListItem } from '@/lib/archive'
 import { ThemeToggle, useReadingTheme } from '@/app/app/feed/FeedClient'
 
-export function ArchiveList({ region, items }: { region: { key: string; ja: string; en: string; emoji: string }; items: ArchiveListItem[] }) {
+export function ArchiveList({ region, items, basePath = '/app/archive' }: { region: { key: string; ja: string; en: string; emoji: string }; items: ArchiveListItem[]; basePath?: string }) {
   const { language } = useLanguage()
   const ja = language === 'ja'
   const { light, setLight } = useReadingTheme()
@@ -21,7 +21,7 @@ export function ArchiveList({ region, items }: { region: { key: string; ja: stri
     <div className={light ? 'bg-white min-h-screen' : ''}>
       <div className="p-4 md:p-8 max-w-2xl mx-auto pb-24">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <Link href="/app/archive" className={`text-sm ${muted} hover:underline`}>{ja ? '← 海外活動記録' : '← Overseas Archive'}</Link>
+          <Link href={basePath} className={`text-sm ${muted} hover:underline`}>{ja ? '← 海外活動記録' : '← Overseas Archive'}</Link>
           <ThemeToggle light={light} setLight={setLight} ja={ja} />
         </div>
         <h1 className={`text-2xl font-bold mb-1 ${light ? 'text-zinc-900' : 'text-white'}`}>{region.emoji} {ja ? region.ja : region.en}</h1>
@@ -33,7 +33,7 @@ export function ArchiveList({ region, items }: { region: { key: string; ja: stri
         />
         <div className="space-y-3">
           {visible.map((a) => (
-            <Link key={a.id} href={`/app/archive/post/${a.id}`} className={`flex gap-3 rounded-2xl border overflow-hidden transition-colors ${light ? 'bg-white border-zinc-200 hover:border-zinc-400' : 'bg-zinc-800/60 border-zinc-700/50 hover:border-zinc-500'}`}>
+            <Link key={a.id} href={`${basePath}/post/${a.id}`} className={`flex gap-3 rounded-2xl border overflow-hidden transition-colors ${light ? 'bg-white border-zinc-200 hover:border-zinc-400' : 'bg-zinc-800/60 border-zinc-700/50 hover:border-zinc-500'}`}>
               {a.thumbnail && (
                 <div className="w-24 sm:w-28 shrink-0 bg-zinc-900"><img src={a.thumbnail} alt="" className="w-full h-full object-cover" loading="lazy" /></div>
               )}
