@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getSuppressedEmails } from '@/lib/settings'
 import { ADMIN_EMAILS } from '@/lib/access'
 import { translateJaToEn } from '@/lib/translate'
 import { translateNewsletter } from '@/lib/translate-newsletter'
@@ -192,6 +193,11 @@ export async function POST(request: NextRequest) {
   let targets = test ? allUsers.filter(u => u.id === user.id) : allUsers
   if (onlyList?.length) targets = targets.filter(u => u.email && onlyList.includes(u.email.toLowerCase()))
 
+  // 配信停止リスト（bounce等）を除外。送り続けると送信ドメインの評価が落ちる
+  const suppressed = await getSuppressedEmails()
+  const suppressedCount = targets.filter(u => u.email && suppressed.has(u.email.toLowerCase())).length
+  if (suppressed.size) targets = targets.filter(u => !u.email || !suppressed.has(u.email.toLowerCase()))
+
   const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
@@ -248,6 +254,6 @@ export async function POST(request: NextRequest) {
   // 失敗した宛先を返す。呼び出し側は onlyEmails に渡して送り直せる。
   return NextResponse.json({
     success: true, test, emailSent, emailFailed,
-    emailErrors: emailErrors.slice(0, 5), failedEmails, sentEmails, subjectEn,
+    emailErrors: emailErrors.slice(0, 5), failedEmails, sentEmails, suppressedCount, subjectEn,
   })
 }

@@ -72,7 +72,7 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
           type: d.emailFailed ? 'err' : 'ok',
           text: test
             ? `テスト送信しました（自分宛）。メール ${d.emailSent}件`
-            : `全員に送信しました。メール ${d.emailSent}件（失敗${d.emailFailed}）${reason ? ` / ${reason}` : ''}`,
+            : `全員に送信しました。メール ${d.emailSent}件（失敗${d.emailFailed}）${d.suppressedCount ? ` / 配信停止${d.suppressedCount}件を除外` : ''}${reason ? ` / ${reason}` : ''}`,
         })
       }
     } catch (e) {

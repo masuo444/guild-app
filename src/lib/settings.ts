@@ -19,6 +19,25 @@ export async function setSetting(key: string, value: string): Promise<void> {
   )
 }
 
+export interface SuppressedEmail { email: string; reason: string; at?: string; note?: string }
+
+/**
+ * 配信停止リスト。bounce したアドレスに送り続けると送信ドメインの評価が下がり、
+ * 他の会員にも届きにくくなるため、メルマガ送信時にここのアドレスを除外する。
+ * app_settings.suppressed_emails に JSON 配列で持つ。
+ */
+export async function getSuppressedEmails(): Promise<Set<string>> {
+  const raw = await getSetting('suppressed_emails')
+  if (!raw) return new Set()
+  try {
+    const list = JSON.parse(raw) as SuppressedEmail[]
+    return new Set(list.map((x) => (x.email || '').trim().toLowerCase()).filter(Boolean))
+  } catch {
+    console.error('suppressed_emails のJSONが壊れています')
+    return new Set()
+  }
+}
+
 /**
  * 現在有効なログインボーナス倍率を返す。
  * campaign_until が設定されていて、その日付を過ぎていれば 1 に戻す。
