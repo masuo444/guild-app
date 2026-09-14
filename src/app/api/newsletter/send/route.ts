@@ -126,10 +126,10 @@ export async function POST(request: NextRequest) {
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
   const {
     subject, body: message, test = false,
-    subjectEn: subjectEnInput, bodyEn: bodyEnInput,
+    subjectEn: subjectEnInput, bodyEn: bodyEnInput, onlyEmails,
   } = body as {
     subject?: string; body?: string; test?: boolean
-    subjectEn?: string; bodyEn?: string
+    subjectEn?: string; bodyEn?: string; onlyEmails?: string[]
   }
   if (!subject?.trim() || !message?.trim()) {
     return NextResponse.json({ error: 'subject and body are required' }, { status: 400 })
@@ -186,31 +186,68 @@ export async function POST(request: NextRequest) {
     page++
   }
 
-  // テスト送信は管理者本人のみ
-  const targets = test ? allUsers.filter(u => u.id === user.id) : allUsers
+  // 送信先。テストは管理者本人のみ。onlyEmails が来ていればその宛先だけに絞る
+  // （レート制限で落ちた分だけを送り直すため。既に届いた人に二重で送らない）
+  const onlyList = onlyEmails?.map((e) => e.trim().toLowerCase()).filter(Boolean)
+  let targets = test ? allUsers.filter(u => u.id === user.id) : allUsers
+  if (onlyList?.length) targets = targets.filter(u => u.email && onlyList.includes(u.email.toLowerCase()))
 
   const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
   let emailSent = 0, emailFailed = 0
   let emailErrors: string[] = []
+  const failedEmails: string[] = []
+  const sentEmails: string[] = []
   if (resend) {
-    const results = await Promise.allSettled(targets.filter(u => u.email).map(async (u) => {
-      const lang = langMap[u.id] || 'en'
+    const recipients = targets.filter((u): u is AuthUser & { email: string } => !!u.email)
+
+    // Resend は 10 リクエスト/秒。一斉に投げると大半が429で落ちるので、
+    // 少しずつ送る。429 は一度だけ間を置いて送り直す。
+    const CHUNK = 5
+    const GAP_MS = 700
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+    const sendOne = async (email: string, userId: string) => {
+      const lang = langMap[userId] || 'en'
       const subj = lang === 'en' ? subjectEn : subject
       const text = lang === 'en' ? messageEn : message
       const html = buildEmailHtml(text, lang, subj)
-      const { error } = await resend.emails.send({ from: fromEmail, to: u.email!, subject: `[FOMUS GUILD] ${subj}`, html })
+      const { error } = await resend.emails.send({ from: fromEmail, to: email, subject: `[FOMUS GUILD] ${subj}`, html })
       if (error) throw error
-    }))
-    emailSent = results.filter(r => r.status === 'fulfilled').length
-    emailFailed = results.length - emailSent
-    emailErrors = results
-      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-      .map((r) => (r.reason instanceof Error ? r.reason.message : JSON.stringify(r.reason)))
+    }
+
+    for (let i = 0; i < recipients.length; i += CHUNK) {
+      const chunk = recipients.slice(i, i + CHUNK)
+      const results = await Promise.allSettled(chunk.map(async (u) => {
+        try {
+          await sendOne(u.email, u.id)
+        } catch (e) {
+          // レート制限だけは一度だけ待って再挑戦する
+          const code = (e as { statusCode?: number })?.statusCode
+          if (code !== 429) throw e
+          await sleep(1200)
+          await sendOne(u.email, u.id)
+        }
+        return u.email
+      }))
+      results.forEach((r, idx) => {
+        if (r.status === 'fulfilled') { emailSent++; sentEmails.push(chunk[idx].email) }
+        else {
+          emailFailed++
+          failedEmails.push(chunk[idx].email)
+          emailErrors.push(r.reason instanceof Error ? r.reason.message : JSON.stringify(r.reason))
+        }
+      })
+      if (i + CHUNK < recipients.length) await sleep(GAP_MS)
+    }
   } else if (!process.env.RESEND_API_KEY) {
     emailErrors = ['RESEND_API_KEY is not configured']
   }
 
-  return NextResponse.json({ success: true, test, emailSent, emailFailed, emailErrors, subjectEn })
+  // 失敗した宛先を返す。呼び出し側は onlyEmails に渡して送り直せる。
+  return NextResponse.json({
+    success: true, test, emailSent, emailFailed,
+    emailErrors: emailErrors.slice(0, 5), failedEmails, sentEmails, subjectEn,
+  })
 }
