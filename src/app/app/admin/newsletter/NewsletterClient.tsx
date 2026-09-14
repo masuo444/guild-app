@@ -59,12 +59,22 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Failed')
-      setMsg({
-        type: 'ok',
-        text: test
-          ? `テスト送信しました（自分宛）。メール ${d.emailSent}件`
-          : `全員に送信しました。メール ${d.emailSent}件（失敗${d.emailFailed}）`,
-      })
+      // APIは送信0件でも success を返すので、実際に届いたかで判定する。
+      // （Resendの鍵切れ等で全滅していても「送信しました」と出るのを防ぐ）
+      const reason = (d.emailErrors ?? [])[0]
+      if (!d.emailSent) {
+        setMsg({
+          type: 'err',
+          text: `1通も送信できませんでした（失敗${d.emailFailed ?? 0}件）${reason ? `: ${reason}` : ''}`,
+        })
+      } else {
+        setMsg({
+          type: d.emailFailed ? 'err' : 'ok',
+          text: test
+            ? `テスト送信しました（自分宛）。メール ${d.emailSent}件`
+            : `全員に送信しました。メール ${d.emailSent}件（失敗${d.emailFailed}）${reason ? ` / ${reason}` : ''}`,
+        })
+      }
     } catch (e) {
       setMsg({ type: 'err', text: e instanceof Error ? e.message : '送信に失敗しました' })
     } finally {
