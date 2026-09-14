@@ -37,7 +37,7 @@ function Header() {
 
 export function PublicArchiveShell({ children }: { children: React.ReactNode }) {
   return (
-    <LanguageProvider>
+    <LanguageProvider initialLanguage="ja" eager>
       <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900">
         <Header />
         <main>{children}</main>

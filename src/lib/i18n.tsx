@@ -1249,8 +1249,13 @@ function syncLanguageToProfile(lang: Language) {
   }
 }
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('en')
+/**
+ * @param initialLanguage サーバー描画時に使う言語。
+ * @param eager 読み込み前でも children を描画する。公開ページ（検索に出すページ）では必須。
+ *   既定の挙動（読み込むまで null）だとHTMLが空になり、クローラーに白紙が見える。
+ */
+export function LanguageProvider({ children, initialLanguage = 'en', eager = false }: { children: ReactNode; initialLanguage?: Language; eager?: boolean }) {
+  const [language, setLanguageState] = useState<Language>(initialLanguage)
   const [isLoaded, setIsLoaded] = useState(false)
 
   // Load language from localStorage on mount
@@ -1272,8 +1277,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = translations[language]
 
-  // Prevent flash of wrong language
-  if (!isLoaded) {
+  // Prevent flash of wrong language（公開ページは eager=true で描画を止めない）
+  if (!isLoaded && !eager) {
     return null
   }
 

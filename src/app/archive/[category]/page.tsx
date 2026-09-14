@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
   if (!region) return {}
   const count = getPublicArticlesByCategory(category).length
   return {
-    title: `${region.ja}での活動記録 | FOMUS GUILD`,
+    title: `${region.ja}での活動記録`,
     description: `枡を持って${region.ja}を歩いた記録を${count}本公開しています。現地での出会い、日本文化の伝え方、暮らしの記録。`,
     alternates: { canonical: `${APP_URL}/archive/${category}` },
     openGraph: { title: `${region.ja}での活動記録`, url: `${APP_URL}/archive/${category}`, type: 'website' },

@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!article || !isPublicArticle(article.id)) return {}
   const desc = (article.excerpt || '').slice(0, 150)
   return {
-    title: `${article.title} | FOMUS GUILD`,
+    title: `${article.title}`,
     description: desc,
     alternates: { canonical: `${APP_URL}/archive/post/${article.id}` },
     openGraph: {
