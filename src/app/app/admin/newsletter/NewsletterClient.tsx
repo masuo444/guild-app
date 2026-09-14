@@ -145,6 +145,11 @@ export function NewsletterClient({ initialMultiplier, initialUntil }: { initialM
           <button onClick={previewTranslate} disabled={translating} className="px-4 py-2 border border-zinc-600 text-zinc-200 rounded-lg text-sm hover:bg-white/5 disabled:opacity-50">
             {translating ? '英訳中…（20秒ほど）' : '英訳プレビュー'}
           </button>
+          {!previewEn && (
+            <button onClick={() => setPreviewEn({ subject: '', body: '' })} className="px-4 py-2 border border-zinc-600 text-zinc-200 rounded-lg text-sm hover:bg-white/5">
+              英語版を自分で貼る
+            </button>
+          )}
           <button onClick={() => send(true)} disabled={sending} className="px-4 py-2 border border-[#c0c0c0]/50 text-[#e5e5e5] rounded-lg text-sm hover:bg-white/5 disabled:opacity-50">
             {sending ? '送信中…' : '自分にテスト送信'}
           </button>
