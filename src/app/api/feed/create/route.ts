@@ -33,13 +33,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { title, body: postBody, category, imageUrl, isPremium, notify } = body as {
+  const { title, body: postBody, category, imageUrl, isPremium, notify, publishedAt } = body as {
     title?: string
     body?: string
     category?: string | null
     imageUrl?: string | null
     isPremium?: boolean
     notify?: boolean
+    /** 記事の日付(YYYY-MM-DD)。過去分をまとめて取り込む時に使う。未指定なら既定値（現在時刻） */
+    publishedAt?: string | null
   }
 
   if (!title?.trim() || !postBody?.trim()) {
@@ -57,6 +59,9 @@ export async function POST(request: NextRequest) {
       category: category?.trim() || null,
       image_url: imageUrl?.trim() || null,
       is_premium: !!isPremium,
+      ...(publishedAt && /^\d{4}-\d{2}-\d{2}$/.test(publishedAt)
+        ? { published_at: `${publishedAt}T00:00:00+00:00` }
+        : {}),
     })
     .select('id')
     .single()

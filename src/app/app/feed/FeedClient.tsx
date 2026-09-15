@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
+import { parsePastedPost } from '@/lib/import-post'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/lib/i18n'
@@ -249,6 +250,10 @@ function Composer({ userId, categories, onPosted }: { userId: string; categories
   const [category, setCategory] = useState(categories[0] ?? DEFAULT_CATEGORY)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [isPremium, setIsPremium] = useState(false)
+  // Gemini で書いた記事を貼り付けて取り込むための作業欄
+  const [paste, setPaste] = useState('')
+  const [publishedAt, setPublishedAt] = useState('')
+  const [importNote, setImportNote] = useState('')
   const [notify, setNotify] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -291,13 +296,13 @@ function Composer({ userId, categories, onPosted }: { userId: string; categories
       const res = await fetch('/api/feed/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body, category: category.trim() || null, imageUrl, isPremium, notify }),
+        body: JSON.stringify({ title, body, category: category.trim() || null, imageUrl, isPremium, notify, publishedAt: publishedAt || null }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error || 'Failed')
       }
-      setTitle(''); setBody(''); setImageUrl(null); setIsPremium(false); setNotify(true); setOpen(false)
+      setTitle(''); setBody(''); setImageUrl(null); setIsPremium(false); setNotify(true); setPaste(''); setPublishedAt(''); setImportNote(''); setOpen(false)
       onPosted()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed')
@@ -317,10 +322,53 @@ function Composer({ userId, categories, onPosted }: { userId: string; categories
     )
   }
 
+  /** 貼り付けたGemini出力から、日付・タイトル候補・本文を取り出して各欄に入れる */
+  const handleImport = () => {
+    const r = parsePastedPost(paste)
+    if (!r.body.trim()) { setImportNote(ja ? '本文が空です' : 'Nothing to import'); return }
+    setBody(r.body)
+    if (r.date) setPublishedAt(r.date)
+    if (r.titleSuggestion && !title.trim()) setTitle(r.titleSuggestion)
+    if (!category.trim()) setCategory(DEFAULT_CATEGORY)
+    setPaste('')
+    setImportNote(
+      ja
+        ? `取り込みました。${r.date ? `日付 ${r.date}` : '日付が読めませんでした'}／見出し${r.headings.length}件${r.titleSuggestion ? '。タイトルは候補なので必要なら直してください' : ''}`
+        : `Imported. ${r.date ?? 'no date found'} / ${r.headings.length} headings`
+    )
+  }
+
   const input = 'w-full px-3 py-2.5 bg-white/5 border border-zinc-600 rounded-lg text-white placeholder-zinc-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#c0c0c0]'
 
   return (
     <div className="mb-6 rounded-2xl bg-zinc-800/80 border border-zinc-700 p-5 space-y-3">
+      {/* Gemini で書いた記事をそのまま貼って取り込む */}
+      <details className="rounded-lg border border-zinc-700 bg-white/5">
+        <summary className="px-3 py-2 text-sm text-zinc-200 cursor-pointer select-none">
+          {ja ? 'Geminiで書いた記事を貼り付けて取り込む' : 'Import a post written in Gemini'}
+        </summary>
+        <div className="p-3 pt-0 space-y-2">
+          <textarea
+            value={paste}
+            onChange={(e) => setPaste(e.target.value)}
+            placeholder={ja ? 'Geminiの出力をそのまま貼り付け（1行目の「2026年9月13日。」から末尾まで）' : 'Paste the Gemini output'}
+            rows={5}
+            className={`${input} resize-y leading-relaxed`}
+          />
+          <div className="flex items-center gap-2">
+            <button onClick={handleImport} disabled={!paste.trim()} className="px-3 py-1.5 rounded-lg bg-[#c0c0c0] text-zinc-900 text-sm font-medium disabled:opacity-40">
+              {ja ? '取り込む' : 'Import'}
+            </button>
+            {importNote && <span className="text-xs text-zinc-400">{importNote}</span>}
+          </div>
+        </div>
+      </details>
+
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-zinc-400 whitespace-nowrap">{ja ? '記事の日付' : 'Date'}</label>
+        <input type="date" value={publishedAt} onChange={(e) => setPublishedAt(e.target.value)} className={input} />
+      </div>
+
       <input type="text" list="feed-categories-composer" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={ja ? '枠組み（例: 笛吹市活動記録）' : 'Category'} className={input} />
       <datalist id="feed-categories-composer">
         {categories.map((c) => <option key={c} value={c} />)}
