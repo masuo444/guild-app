@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ADMIN_EMAILS } from '@/lib/access'
-import { sendNewPostEmail } from '@/lib/post-email'
 import { translatePost } from '@/lib/translate-post'
 
-// 英訳（数十秒）＋メール配信を1リクエストで行うため実行時間上限を延ばす
+// 英訳に数十秒かかるため実行時間上限を延ばす
 export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
@@ -33,13 +32,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { title, body: postBody, category, imageUrl, isPremium, notify, publishedAt } = body as {
+  const { title, body: postBody, category, imageUrl, isPremium, publishedAt } = body as {
     title?: string
     body?: string
     category?: string | null
     imageUrl?: string | null
     isPremium?: boolean
-    notify?: boolean
     /** 記事の日付(YYYY-MM-DD)。過去分をまとめて取り込む時に使う。未指定なら既定値（現在時刻） */
     publishedAt?: string | null
   }
@@ -85,18 +83,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 会員へメール配信（notify=false でスキップ）。失敗しても投稿自体は成功扱い。
-  let sent = 0
-  let failed = 0
-  if (notify !== false) {
-    try {
-      const r = await sendNewPostEmail({ id: post.id, title: title.trim(), body: postBody.trim(), title_en, body_en })
-      sent = r.sent
-      failed = r.failed
-    } catch (e) {
-      console.error('New post email error:', e)
-    }
-  }
-
-  return NextResponse.json({ success: true, postId: post.id, sent, failed })
+  // 記事ごとのメール配信は行わない。会員への連絡は週1回のメルマガに集約する。
+  return NextResponse.json({ success: true, postId: post.id })
 }

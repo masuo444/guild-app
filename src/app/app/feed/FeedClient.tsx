@@ -254,7 +254,6 @@ function Composer({ userId, categories, onPosted }: { userId: string; categories
   const [paste, setPaste] = useState('')
   const [publishedAt, setPublishedAt] = useState('')
   const [importNote, setImportNote] = useState('')
-  const [notify, setNotify] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -296,13 +295,13 @@ function Composer({ userId, categories, onPosted }: { userId: string; categories
       const res = await fetch('/api/feed/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body, category: category.trim() || null, imageUrl, isPremium, notify, publishedAt: publishedAt || null }),
+        body: JSON.stringify({ title, body, category: category.trim() || null, imageUrl, isPremium, publishedAt: publishedAt || null }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         throw new Error(d.error || 'Failed')
       }
-      setTitle(''); setBody(''); setImageUrl(null); setIsPremium(false); setNotify(true); setPaste(''); setPublishedAt(''); setImportNote(''); setOpen(false)
+      setTitle(''); setBody(''); setImageUrl(null); setIsPremium(false); setPaste(''); setPublishedAt(''); setImportNote(''); setOpen(false)
       onPosted()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed')
@@ -394,10 +393,6 @@ function Composer({ userId, categories, onPosted }: { userId: string; categories
         <label className="inline-flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
           <input type="checkbox" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} />
           {ja ? '有料会員限定' : 'Members only'}
-        </label>
-        <label className="inline-flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-          {ja ? '会員にメールで配信する' : 'Email members'}
         </label>
       </div>
 
