@@ -39,8 +39,10 @@ export function parsePastedPost(raw: string): ParsedPost {
   for (const l of lines) {
     const m = l.match(HEADING_RE)
     // 「💡 学び：」は締めのカードなので見出し候補から外す
-    if (m && !/^💡/.test(l.trim()) && m[2].trim().length >= 4 && m[2].trim().length <= 60) {
-      headings.push(m[2].trim())
+    // 🏛️ のように異体字セレクタ(U+FE0F)が続く絵文字があるので、見出し側から取り除く
+    const text = m ? m[2].replace(/^[\uFE0E\uFE0F\u200D\s]+/, '').trim() : ''
+    if (m && !/^💡/.test(l.trim()) && text.length >= 4 && text.length <= 60) {
+      headings.push(text)
     }
   }
 
