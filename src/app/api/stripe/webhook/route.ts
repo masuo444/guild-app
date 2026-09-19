@@ -118,7 +118,8 @@ export async function POST(request: Request) {
 
         if (!userId) break
 
-        const status = subscription.status === 'active' ? 'active' : 'inactive'
+        // お試し期間中（trialing）も有料会員として扱う
+        const status = subscription.status === 'active' || subscription.status === 'trialing' ? 'active' : 'inactive'
 
         await supabase
           .from('profiles')
