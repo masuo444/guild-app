@@ -4,7 +4,7 @@ import { getPublicArticlesByCategory, REGIONS } from '@/lib/archive'
 import { ArchiveList } from '@/components/archive/ArchiveList'
 import { PublicArchiveCta } from '@/components/archive/PublicArchiveCta'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomus.jp'
 
 export function generateStaticParams() {
   return REGIONS.map((r) => ({ category: r.key }))

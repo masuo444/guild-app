@@ -4,7 +4,7 @@ import { getArticle, getNeighbors, isPublicArticle, getPublicArticles, REGIONS }
 import { ArchiveArticleView } from '@/components/archive/ArchiveArticleView'
 import { PublicArchiveCta } from '@/components/archive/PublicArchiveCta'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomus.jp'
 
 export function generateStaticParams() {
   return getPublicArticles().map((a) => ({ id: String(a.id) }))

@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomus.jp'
 
 export const viewport: Viewport = {
   themeColor: '#18181b',

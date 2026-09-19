@@ -3,7 +3,7 @@ import { getPublicRegionSummaries, getPublicArticles } from '@/lib/archive'
 import { ArchiveHome } from '@/components/archive/ArchiveHome'
 import { PublicArchiveCta } from '@/components/archive/PublicArchiveCta'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomus.jp'
 
 export const metadata: Metadata = {
   title: '海外活動記録 — 枡を持って世界を歩いた記録',

@@ -20,14 +20,15 @@ const nextConfig: NextConfig = {
   },
   // 「参加」「ログイン」の短いURL（ランディング・SNS・口頭案内用）
   redirects: async () => [
-    // 正式ドメインは guild.fomusglobal.com。旧 guild-app.* は恒久リダイレクト。
-    // /api は除外（Stripe Webhook・cron・ショップ連携は旧URLのまま動き続ける）
-    {
+    // 正式ドメインは guild.fomus.jp（2026-09 に guild.fomusglobal.com から移行）。
+    // 旧ドメインのページは恒久リダイレクト。/api は除外し、Stripe Webhook・cron・
+    // ショップ連携は旧URLでも動き続けるようにしている（旧ドメインを手放す前に連携先を更新すること）
+    ...['guild.fomusglobal.com', 'guild-app.fomusglobal.com'].map((host) => ({
       source: '/:path((?!api/).*)',
-      has: [{ type: 'host', value: 'guild-app.fomusglobal.com' }],
-      destination: 'https://guild.fomusglobal.com/:path',
+      has: [{ type: 'host' as const, value: host }],
+      destination: 'https://guild.fomus.jp/:path',
       permanent: true,
-    },
+    })),
     // 旧・紹介サイト（静的HTML）のURLをトップへ
     { source: '/index.html', destination: '/', permanent: true },
     { source: '/index_en.html', destination: '/', permanent: true },

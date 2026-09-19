@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { getPublicArticles, getPublicRegionSummaries } from '@/lib/archive'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomusglobal.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://guild.fomus.jp'
 
 // robots.txt が参照する sitemap。ログイン不要で見られる公開ページだけを載せる
 export default function sitemap(): MetadataRoute.Sitemap {
