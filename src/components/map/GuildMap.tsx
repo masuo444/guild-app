@@ -214,17 +214,40 @@ function MapMarkersWhenReady(props: MapMarkersProps) {
   useEffect(() => {
     if (!map) return
 
-    let cancelled = false
-    const markReady = () => {
-      if (!cancelled) setReadyMap(map)
-    }
-    // idle / tilesloaded は地図が実際に描画されてから飛ぶ。
-    // 地図が初期化できないまま（Maps 側のエラー等）なら飛ばないので、
-    // マーカーは載らず、ページが落ちる代わりに地図だけ空になる
-    const listeners = ['idle', 'tilesloaded'].map((event) => map.addListener(event, markReady))
-    return () => {
-      cancelled = true
+    let done = false
+    let timer: number | undefined = undefined
+    let listeners: google.maps.MapsEventListener[] = []
+    let tries = 0
+
+    const stopWatching = () => {
+      if (timer !== undefined) window.clearInterval(timer)
       listeners.forEach((listener) => listener.remove())
+      listeners = []
+    }
+
+    const check = () => {
+      if (done) return
+      // idle が飛んでも地図の中身ができていないことがあるので、
+      // Maps 本体が描画した .gm-style が入るまで待つ。
+      // ここを待たずにマーカーを付けると、Maps 内部が未設定の div に対して
+      // getRootNode を読んで例外を投げ、マップページごと落ちる
+      const div = map.getDiv?.() as HTMLElement | undefined
+      if (!div || !div.querySelector('.gm-style')) {
+        // 地図が出せないまま（Maps 側のエラー等）なら 60 秒で監視をやめる。
+        // マーカーは載らず、地図だけ空のまま他のUIは使える
+        if (++tries > 120) stopWatching()
+        return
+      }
+      done = true
+      stopWatching()
+      setReadyMap(map)
+    }
+
+    listeners = ['idle', 'tilesloaded'].map((event) => map.addListener(event, check))
+    timer = window.setInterval(check, 500)
+    return () => {
+      done = true
+      stopWatching()
     }
   }, [map])
 
