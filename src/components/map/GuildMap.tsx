@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { APIProvider, Map, Marker, AdvancedMarker, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
+import { GoogleMapView, HtmlMarker } from '@/components/map/GoogleMapView'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -94,12 +94,14 @@ function applyAllCoordinateOffsets(
   return { members: resultMembers, hubs: resultHubs, pending: resultPending }
 }
 
-// Map ID for AdvancedMarker (required for custom HTML markers)
-// DEMO_MAP_ID is a built-in Google Maps ID that enables AdvancedMarker
+// HTML マーカーには Map ID が必要。本番は Google Cloud で作成した ID を環境変数で渡す
+// （DEMO_MAP_ID は Google の開発用サンプルで、ローカル確認用のフォールバック）
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'
 
-// 毎回新しいオブジェクトを渡すと、再描画のたびに地図のオプションが再適用される
-const MAP_STYLE = { width: '100%', height: '100%' }
+const DEFAULT_CENTER = { lat: 35.6762, lng: 139.6503 }
+const DEFAULT_ZOOM = 3
+const INLINE_MAP_OPTIONS: google.maps.MapOptions = { gestureHandling: 'greedy' }
+const FULLSCREEN_MAP_OPTIONS: google.maps.MapOptions = { gestureHandling: 'greedy', disableDefaultUI: true }
 
 interface MemberRole {
   role_id: string
@@ -175,9 +177,7 @@ function CircleMarker({ color, label }: { color: string; label?: string }) {
   )
 }
 
-// Inner component for rendering map markers
-// With MAP_ID: uses AdvancedMarker (HTML/CSS rendering, profile images, colored pins)
-// Without MAP_ID: uses regular Marker with NO icon prop (default red pin, "?" is impossible)
+// 地図上のマーカー（メンバー＝緑、拠点＝オレンジ、招待中＝紫）
 interface MapMarkersProps {
   showMembers: boolean
   showHubs: boolean
@@ -205,70 +205,6 @@ function MapUnavailable({ language }: { language: 'ja' | 'en' }) {
   )
 }
 
-// 地図の描画準備ができるまでマーカーを載せない。
-// Maps JS の地図は非同期に初期化され、終わるまで内部の getDiv() が undefined を返す。
-// その状態で AdvancedMarker を付けると Maps 内部が getRootNode を読んで例外を投げ、
-// React のエラー境界まで伝わってマップページごと落ちる（2026-09 に発生）。
-function MapMarkersWhenReady(props: MapMarkersProps) {
-  const map = useMap()
-  const markerLibrary = useMapsLibrary('marker')
-  // 「どの地図にマーカーを載せられるか」を持つ。地図が作り直されたらまた待ちに戻る
-  const [readyMap, setReadyMap] = useState<google.maps.Map | null>(null)
-
-  useEffect(() => {
-    if (!map || !markerLibrary) return
-
-    let done = false
-    let timer: number | undefined = undefined
-    let listeners: google.maps.MapsEventListener[] = []
-    let tries = 0
-
-    const stopWatching = () => {
-      if (timer !== undefined) window.clearInterval(timer)
-      listeners.forEach((listener) => listener.remove())
-      listeners = []
-    }
-
-    // 空のマーカーを一度だけ試しに載せてみて、通れば本番のマーカーを描画する。
-    // Maps の地図は初期化が終わるまで内部の div を持たず、その状態でマーカーを
-    // 付けると Maps 内部が getRootNode を読んで例外を投げ、マップページごと落ちる。
-    // idle や .gm-style の有無では判定しきれなかったので、実際の操作で確かめる
-    const canAttachMarker = () => {
-      try {
-        const probe = new markerLibrary.AdvancedMarkerElement()
-        probe.map = map
-        probe.map = null
-        return true
-      } catch {
-        return false
-      }
-    }
-
-    const check = () => {
-      if (done) return
-      if (!canAttachMarker()) {
-        // 地図が出せないまま（Maps 側のエラー等）なら 60 秒で監視をやめる。
-        // マーカーは載らず、地図だけ空のまま他のUIは使える
-        if (++tries > 120) stopWatching()
-        return
-      }
-      done = true
-      stopWatching()
-      setReadyMap(map)
-    }
-
-    listeners = ['idle', 'tilesloaded'].map((event) => map.addListener(event, check))
-    timer = window.setInterval(check, 500)
-    return () => {
-      done = true
-      stopWatching()
-    }
-  }, [map, markerLibrary])
-
-  if (!map || readyMap !== map) return null
-  return <MapMarkers {...props} />
-}
-
 function MapMarkers({
   showMembers,
   showHubs,
@@ -278,84 +214,48 @@ function MapMarkers({
   filteredPending,
   onMarkerClick,
 }: MapMarkersProps) {
-  // If MAP_ID is set, use AdvancedMarker for custom styled markers
-  if (MAP_ID) {
-    return (
-      <>
-        {showMembers &&
-          filteredMembers.map((member) => (
-            <AdvancedMarker
-              key={member.id}
-              position={{ lat: member.offsetLat, lng: member.offsetLng }}
-              onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
-              title={member.display_name || 'Member'}
-            >
-              {member.avatar_url ? (
-                <ImageMarker src={member.avatar_url} name={member.display_name || 'M'} color="#22c55e" />
-              ) : (
-                <CircleMarker color="#22c55e" />
-              )}
-            </AdvancedMarker>
-          ))}
-        {showHubs &&
-          filteredHubs.map((hub) => (
-            <AdvancedMarker
-              key={hub.id}
-              position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
-              onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
-              title={hub.name}
-            >
-              {hub.image_url ? (
-                <ImageMarker src={hub.image_url} name={hub.name} color="#f97316" />
-              ) : (
-                <CircleMarker color="#f97316" />
-              )}
-            </AdvancedMarker>
-          ))}
-        {showPending &&
-          filteredPending.map((invite) => (
-            <AdvancedMarker
-              key={`pending-${invite.id}`}
-              position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
-              onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
-              title={invite.target_name || 'Pending'}
-            >
-              <CircleMarker color="#a855f7" />
-            </AdvancedMarker>
-          ))}
-      </>
-    )
-  }
-
-  // Fallback: no MAP_ID — use regular Marker WITHOUT icon (default Google pin, NEVER shows "?")
   return (
     <>
       {showMembers &&
         filteredMembers.map((member) => (
-          <Marker
+          <HtmlMarker
             key={member.id}
             position={{ lat: member.offsetLat, lng: member.offsetLng }}
             onClick={() => onMarkerClick('member', member, member.offsetLat, member.offsetLng)}
             title={member.display_name || 'Member'}
-          />
+          >
+            {member.avatar_url ? (
+              <ImageMarker src={member.avatar_url} name={member.display_name || 'M'} color="#22c55e" />
+            ) : (
+              <CircleMarker color="#22c55e" />
+            )}
+          </HtmlMarker>
         ))}
       {showHubs &&
         filteredHubs.map((hub) => (
-          <Marker
+          <HtmlMarker
             key={hub.id}
             position={{ lat: hub.offsetLat, lng: hub.offsetLng }}
             onClick={() => onMarkerClick('hub', hub, hub.offsetLat, hub.offsetLng)}
             title={hub.name}
-          />
+          >
+            {hub.image_url ? (
+              <ImageMarker src={hub.image_url} name={hub.name} color="#f97316" />
+            ) : (
+              <CircleMarker color="#f97316" />
+            )}
+          </HtmlMarker>
         ))}
       {showPending &&
         filteredPending.map((invite) => (
-          <Marker
+          <HtmlMarker
             key={`pending-${invite.id}`}
             position={{ lat: invite.offsetLat, lng: invite.offsetLng }}
             onClick={() => onMarkerClick('pending', invite, invite.offsetLat, invite.offsetLng)}
             title={invite.target_name || 'Pending'}
-          />
+          >
+            <CircleMarker color="#a855f7" />
+          </HtmlMarker>
         ))}
     </>
   )
@@ -480,31 +380,27 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
         {/* Map takes full screen */}
         <div className="absolute inset-0">
           <ErrorBoundary fallback={<MapUnavailable language={language} />}>
-            <APIProvider apiKey={apiKey} language={language} key={`map-fs-${language}`}>
-              <Map
-                defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
-                defaultZoom={3}
-                mapId={MAP_ID || undefined}
-                style={MAP_STYLE}
-                gestureHandling="greedy"
-                disableDefaultUI={true}
-                zoomControl={false}
-                mapTypeControl={false}
-                streetViewControl={false}
-                fullscreenControl={false}
-                onTilesLoaded={(e) => { fullscreenMapRef.current = (e as unknown as { map: google.maps.Map }).map }}
-              >
-                <MapMarkersWhenReady
-                  showMembers={showMembers}
-                  showHubs={showHubs}
-                  showPending={showPending}
-                  filteredMembers={filteredMembers}
-                  filteredHubs={filteredHubs}
-                  filteredPending={filteredPending}
-                  onMarkerClick={handleMarkerClick}
-                />
-              </Map>
-            </APIProvider>
+            <GoogleMapView
+              apiKey={apiKey}
+              language={language}
+              mapId={MAP_ID}
+              center={DEFAULT_CENTER}
+              zoom={DEFAULT_ZOOM}
+              options={FULLSCREEN_MAP_OPTIONS}
+              className="w-full h-full"
+              onReady={(map) => { fullscreenMapRef.current = map }}
+              onError={() => setMapError(true)}
+            >
+              <MapMarkers
+                showMembers={showMembers}
+                showHubs={showHubs}
+                showPending={showPending}
+                filteredMembers={filteredMembers}
+                filteredHubs={filteredHubs}
+                filteredPending={filteredPending}
+                onMarkerClick={handleMarkerClick}
+              />
+            </GoogleMapView>
           </ErrorBoundary>
         </div>
 
@@ -752,26 +648,27 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
       <div className="relative">
         <div className="w-full h-[400px] sm:h-[500px] rounded-xl overflow-hidden shadow-lg border border-zinc-500/30">
           <ErrorBoundary fallback={<MapUnavailable language={language} />}>
-            <APIProvider apiKey={apiKey} language={language} key={`map-${language}`}>
-              <Map
-                defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
-                defaultZoom={3}
-                mapId={MAP_ID || undefined}
-                style={MAP_STYLE}
-                gestureHandling="greedy"
-                onTilesLoaded={(e) => { mapRef.current = (e as unknown as { map: google.maps.Map }).map }}
-              >
-                <MapMarkersWhenReady
-                  showMembers={showMembers}
-                  showHubs={showHubs}
-                  showPending={showPending}
-                  filteredMembers={filteredMembers}
-                  filteredHubs={filteredHubs}
-                  filteredPending={filteredPending}
-                  onMarkerClick={handleMarkerClick}
-                />
-              </Map>
-            </APIProvider>
+            <GoogleMapView
+              apiKey={apiKey}
+              language={language}
+              mapId={MAP_ID}
+              center={DEFAULT_CENTER}
+              zoom={DEFAULT_ZOOM}
+              options={INLINE_MAP_OPTIONS}
+              className="w-full h-full"
+              onReady={(map) => { mapRef.current = map }}
+              onError={() => setMapError(true)}
+            >
+              <MapMarkers
+                showMembers={showMembers}
+                showHubs={showHubs}
+                showPending={showPending}
+                filteredMembers={filteredMembers}
+                filteredHubs={filteredHubs}
+                filteredPending={filteredPending}
+                onMarkerClick={handleMarkerClick}
+              />
+            </GoogleMapView>
           </ErrorBoundary>
         </div>
 

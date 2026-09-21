@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { compressAndCropImage, formatFileSize } from '@/lib/imageUtils'
 import { generateInviteCode, getInviteMaxUses } from '@/lib/utils'
-import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { GoogleMapView, HtmlMarker } from '@/components/map/GoogleMapView'
 import { useLanguage } from '@/lib/i18n'
 import { InviteShare } from '@/components/InviteShare'
 
@@ -469,37 +469,27 @@ export function ProfileForm({ profile, email, renewalCount }: ProfileFormProps) 
                     : t.setPinDesc}
                 </p>
                 <div className="w-full h-[400px] rounded-lg overflow-hidden border border-zinc-500/30">
-                  <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
-                    <GoogleMap
-                      defaultCenter={formData.lat !== 0 || formData.lng !== 0 ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
-                      defaultZoom={formData.lat !== 0 || formData.lng !== 0 ? 12 : 3}
-                      mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'}
-                      style={{ width: '100%', height: '100%' }}
-                      gestureHandling="greedy"
-                      disableDefaultUI={false}
-                      zoomControl={true}
-                      fullscreenControl={false}
-                      streetViewControl={false}
-                      mapTypeControl={false}
-                      clickableIcons={false}
-                      onClick={(e) => {
-                        const latLng = e.detail?.latLng
-                        if (latLng) {
-                          const lat = typeof latLng.lat === 'function' ? (latLng.lat as () => number)() : latLng.lat
-                          const lng = typeof latLng.lng === 'function' ? (latLng.lng as () => number)() : latLng.lng
-                          if (typeof lat === 'number' && typeof lng === 'number') {
-                            setFormData(prev => ({ ...prev, lat, lng }))
-                          }
-                        }
-                      }}
-                    >
-                      {(formData.lat !== 0 || formData.lng !== 0) && (
-                        <AdvancedMarker
-                          position={{ lat: formData.lat, lng: formData.lng }}
-                        />
-                      )}
-                    </GoogleMap>
-                  </APIProvider>
+                  <GoogleMapView
+                    apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+                    language={language}
+                    mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'}
+                    center={formData.lat !== 0 || formData.lng !== 0 ? { lat: formData.lat, lng: formData.lng } : { lat: 35.6762, lng: 139.6503 }}
+                    zoom={formData.lat !== 0 || formData.lng !== 0 ? 12 : 3}
+                    options={{
+                      gestureHandling: 'greedy',
+                      zoomControl: true,
+                      fullscreenControl: false,
+                      streetViewControl: false,
+                      mapTypeControl: false,
+                      clickableIcons: false,
+                    }}
+                    className="w-full h-full"
+                    onClick={({ lat, lng }) => setFormData(prev => ({ ...prev, lat, lng }))}
+                  >
+                    {(formData.lat !== 0 || formData.lng !== 0) && (
+                      <HtmlMarker position={{ lat: formData.lat, lng: formData.lng }} />
+                    )}
+                  </GoogleMapView>
                 </div>
               </div>
             )}
