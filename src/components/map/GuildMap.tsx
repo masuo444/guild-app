@@ -98,6 +98,9 @@ function applyAllCoordinateOffsets(
 // DEMO_MAP_ID is a built-in Google Maps ID that enables AdvancedMarker
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'
 
+// 毎回新しいオブジェクトを渡すと、再描画のたびに地図のオプションが再適用される
+const MAP_STYLE = { width: '100%', height: '100%' }
+
 interface MemberRole {
   role_id: string
   role: CustomRole
@@ -361,7 +364,6 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const [selected, setSelected] = useState<SelectedItem | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [zoomLevel, setZoomLevel] = useState(3)
   const [mapError, setMapError] = useState(false)
   const mapRef = useRef<google.maps.Map | null>(null)
   const fullscreenMapRef = useRef<google.maps.Map | null>(null)
@@ -472,14 +474,13 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
                 defaultZoom={3}
                 mapId={MAP_ID || undefined}
-                style={{ width: '100%', height: '100%' }}
+                style={MAP_STYLE}
                 gestureHandling="greedy"
                 disableDefaultUI={true}
                 zoomControl={false}
                 mapTypeControl={false}
                 streetViewControl={false}
                 fullscreenControl={false}
-                onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
                 onTilesLoaded={(e) => { fullscreenMapRef.current = (e as unknown as { map: google.maps.Map }).map }}
               >
                 <MapMarkersWhenReady
@@ -745,9 +746,8 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
                 defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
                 defaultZoom={3}
                 mapId={MAP_ID || undefined}
-                style={{ width: '100%', height: '100%' }}
+                style={MAP_STYLE}
                 gestureHandling="greedy"
-                onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
                 onTilesLoaded={(e) => { mapRef.current = (e as unknown as { map: google.maps.Map }).map }}
               >
                 <MapMarkersWhenReady
