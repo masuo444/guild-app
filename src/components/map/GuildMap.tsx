@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { APIProvider, Map, Marker, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, Marker, AdvancedMarker, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -211,11 +211,12 @@ function MapUnavailable({ language }: { language: 'ja' | 'en' }) {
 // React のエラー境界まで伝わってマップページごと落ちる（2026-09 に発生）。
 function MapMarkersWhenReady(props: MapMarkersProps) {
   const map = useMap()
-  // 「どの地図が描画を終えたか」を持つ。地図が作り直されたら自動的にまた待ちに戻る
+  const markerLibrary = useMapsLibrary('marker')
+  // 「どの地図にマーカーを載せられるか」を持つ。地図が作り直されたらまた待ちに戻る
   const [readyMap, setReadyMap] = useState<google.maps.Map | null>(null)
 
   useEffect(() => {
-    if (!map) return
+    if (!map || !markerLibrary) return
 
     let done = false
     let timer: number | undefined = undefined
@@ -228,14 +229,24 @@ function MapMarkersWhenReady(props: MapMarkersProps) {
       listeners = []
     }
 
+    // 空のマーカーを一度だけ試しに載せてみて、通れば本番のマーカーを描画する。
+    // Maps の地図は初期化が終わるまで内部の div を持たず、その状態でマーカーを
+    // 付けると Maps 内部が getRootNode を読んで例外を投げ、マップページごと落ちる。
+    // idle や .gm-style の有無では判定しきれなかったので、実際の操作で確かめる
+    const canAttachMarker = () => {
+      try {
+        const probe = new markerLibrary.AdvancedMarkerElement()
+        probe.map = map
+        probe.map = null
+        return true
+      } catch {
+        return false
+      }
+    }
+
     const check = () => {
       if (done) return
-      // idle が飛んでも地図の中身ができていないことがあるので、
-      // Maps 本体が描画した .gm-style が入るまで待つ。
-      // ここを待たずにマーカーを付けると、Maps 内部が未設定の div に対して
-      // getRootNode を読んで例外を投げ、マップページごと落ちる
-      const div = map.getDiv?.() as HTMLElement | undefined
-      if (!div || !div.querySelector('.gm-style')) {
+      if (!canAttachMarker()) {
         // 地図が出せないまま（Maps 側のエラー等）なら 60 秒で監視をやめる。
         // マーカーは載らず、地図だけ空のまま他のUIは使える
         if (++tries > 120) stopWatching()
@@ -252,7 +263,7 @@ function MapMarkersWhenReady(props: MapMarkersProps) {
       done = true
       stopWatching()
     }
-  }, [map])
+  }, [map, markerLibrary])
 
   if (!map || readyMap !== map) return null
   return <MapMarkers {...props} />
