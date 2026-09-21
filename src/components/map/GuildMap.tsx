@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { APIProvider, Map, Marker, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, Marker, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
 import { MasuHub, CustomRole, RoleColor, ROLE_COLOR_OPTIONS } from '@/types/database'
 import { useLanguage } from '@/lib/i18n'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 // Pending invite data for map markers
 interface PendingInviteMapData {
@@ -174,6 +175,63 @@ function CircleMarker({ color, label }: { color: string; label?: string }) {
 // Inner component for rendering map markers
 // With MAP_ID: uses AdvancedMarker (HTML/CSS rendering, profile images, colored pins)
 // Without MAP_ID: uses regular Marker with NO icon prop (default red pin, "?" is impossible)
+interface MapMarkersProps {
+  showMembers: boolean
+  showHubs: boolean
+  showPending: boolean
+  filteredMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[]
+  filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
+  filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
+  onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
+}
+
+// 地図が出せないときの代替表示。エラー境界の fallback にも使う
+function MapUnavailable({ language }: { language: 'ja' | 'en' }) {
+  return (
+    <div className="w-full h-[500px] bg-white/10 backdrop-blur rounded-xl flex flex-col items-center justify-center border border-zinc-500/30 gap-3">
+      <svg className="w-12 h-12 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+      </svg>
+      <p className="text-zinc-300 text-sm">
+        {language === 'ja' ? 'マップを読み込めませんでした' : 'Map could not be loaded'}
+      </p>
+      <p className="text-zinc-500 text-xs">
+        {language === 'ja' ? 'しばらくしてからもう一度お試しください' : 'Please try again later'}
+      </p>
+    </div>
+  )
+}
+
+// 地図の描画準備ができるまでマーカーを載せない。
+// Maps JS の地図は非同期に初期化され、終わるまで内部の getDiv() が undefined を返す。
+// その状態で AdvancedMarker を付けると Maps 内部が getRootNode を読んで例外を投げ、
+// React のエラー境界まで伝わってマップページごと落ちる（2026-09 に発生）。
+function MapMarkersWhenReady(props: MapMarkersProps) {
+  const map = useMap()
+  // 「どの地図が描画を終えたか」を持つ。地図が作り直されたら自動的にまた待ちに戻る
+  const [readyMap, setReadyMap] = useState<google.maps.Map | null>(null)
+
+  useEffect(() => {
+    if (!map) return
+
+    let cancelled = false
+    const markReady = () => {
+      if (!cancelled) setReadyMap(map)
+    }
+    // idle / tilesloaded は地図が実際に描画されてから飛ぶ。
+    // 地図が初期化できないまま（Maps 側のエラー等）なら飛ばないので、
+    // マーカーは載らず、ページが落ちる代わりに地図だけ空になる
+    const listeners = ['idle', 'tilesloaded'].map((event) => map.addListener(event, markReady))
+    return () => {
+      cancelled = true
+      listeners.forEach((listener) => listener.remove())
+    }
+  }, [map])
+
+  if (!map || readyMap !== map) return null
+  return <MapMarkers {...props} />
+}
+
 function MapMarkers({
   showMembers,
   showHubs,
@@ -182,15 +240,7 @@ function MapMarkers({
   filteredHubs,
   filteredPending,
   onMarkerClick,
-}: {
-  showMembers: boolean
-  showHubs: boolean
-  showPending: boolean
-  filteredMembers: (MemberMapData & { offsetLat: number; offsetLng: number })[]
-  filteredHubs: (MasuHub & { offsetLat: number; offsetLng: number })[]
-  filteredPending: (PendingInviteMapData & { offsetLat: number; offsetLng: number })[]
-  onMarkerClick: (type: MarkerType, data: MemberMapData | MasuHub | PendingInviteMapData, lat: number, lng: number) => void
-}) {
+}: MapMarkersProps) {
   // If MAP_ID is set, use AdvancedMarker for custom styled markers
   if (MAP_ID) {
     return (
@@ -384,19 +434,7 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   if (!apiKey || mapError) {
-    return (
-      <div className="w-full h-[500px] bg-white/10 backdrop-blur rounded-xl flex flex-col items-center justify-center border border-zinc-500/30 gap-3">
-        <svg className="w-12 h-12 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-        </svg>
-        <p className="text-zinc-300 text-sm">
-          {language === 'ja' ? 'マップを読み込めませんでした' : 'Map could not be loaded'}
-        </p>
-        <p className="text-zinc-500 text-xs">
-          {language === 'ja' ? 'しばらくしてからもう一度お試しください' : 'Please try again later'}
-        </p>
-      </div>
-    )
+    return <MapUnavailable language={language} />
   }
 
   // Fullscreen mode - Google Maps style UI
@@ -405,32 +443,34 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
       <div className="fixed inset-0 z-[9999] bg-zinc-900">
         {/* Map takes full screen */}
         <div className="absolute inset-0">
-          <APIProvider apiKey={apiKey} language={language} key={`map-fs-${language}`}>
-            <Map
-              defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
-              defaultZoom={3}
-              mapId={MAP_ID || undefined}
-              style={{ width: '100%', height: '100%' }}
-              gestureHandling="greedy"
-              disableDefaultUI={true}
-              zoomControl={false}
-              mapTypeControl={false}
-              streetViewControl={false}
-              fullscreenControl={false}
-              onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
-              onTilesLoaded={(e) => { fullscreenMapRef.current = (e as unknown as { map: google.maps.Map }).map }}
-            >
-              <MapMarkers
-                showMembers={showMembers}
-                showHubs={showHubs}
-                showPending={showPending}
-                filteredMembers={filteredMembers}
-                filteredHubs={filteredHubs}
-                filteredPending={filteredPending}
-                onMarkerClick={handleMarkerClick}
-              />
-            </Map>
-          </APIProvider>
+          <ErrorBoundary fallback={<MapUnavailable language={language} />}>
+            <APIProvider apiKey={apiKey} language={language} key={`map-fs-${language}`}>
+              <Map
+                defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
+                defaultZoom={3}
+                mapId={MAP_ID || undefined}
+                style={{ width: '100%', height: '100%' }}
+                gestureHandling="greedy"
+                disableDefaultUI={true}
+                zoomControl={false}
+                mapTypeControl={false}
+                streetViewControl={false}
+                fullscreenControl={false}
+                onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
+                onTilesLoaded={(e) => { fullscreenMapRef.current = (e as unknown as { map: google.maps.Map }).map }}
+              >
+                <MapMarkersWhenReady
+                  showMembers={showMembers}
+                  showHubs={showHubs}
+                  showPending={showPending}
+                  filteredMembers={filteredMembers}
+                  filteredHubs={filteredHubs}
+                  filteredPending={filteredPending}
+                  onMarkerClick={handleMarkerClick}
+                />
+              </Map>
+            </APIProvider>
+          </ErrorBoundary>
         </div>
 
         {/* Top overlay - Search bar */}
@@ -676,27 +716,29 @@ export function GuildMap({ members, hubs, pendingInvites = [], userId, canViewMe
       {/* Map container with expand hint on mobile */}
       <div className="relative">
         <div className="w-full h-[400px] sm:h-[500px] rounded-xl overflow-hidden shadow-lg border border-zinc-500/30">
-          <APIProvider apiKey={apiKey} language={language} key={`map-${language}`}>
-            <Map
-              defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
-              defaultZoom={3}
-              mapId={MAP_ID || undefined}
-              style={{ width: '100%', height: '100%' }}
-              gestureHandling="greedy"
-              onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
-              onTilesLoaded={(e) => { mapRef.current = (e as unknown as { map: google.maps.Map }).map }}
-            >
-              <MapMarkers
-                showMembers={showMembers}
-                showHubs={showHubs}
-                showPending={showPending}
-                filteredMembers={filteredMembers}
-                filteredHubs={filteredHubs}
-                filteredPending={filteredPending}
-                onMarkerClick={handleMarkerClick}
-              />
-            </Map>
-          </APIProvider>
+          <ErrorBoundary fallback={<MapUnavailable language={language} />}>
+            <APIProvider apiKey={apiKey} language={language} key={`map-${language}`}>
+              <Map
+                defaultCenter={{ lat: 35.6762, lng: 139.6503 }}
+                defaultZoom={3}
+                mapId={MAP_ID || undefined}
+                style={{ width: '100%', height: '100%' }}
+                gestureHandling="greedy"
+                onCameraChanged={(e) => setZoomLevel(Math.round(e.detail.zoom))}
+                onTilesLoaded={(e) => { mapRef.current = (e as unknown as { map: google.maps.Map }).map }}
+              >
+                <MapMarkersWhenReady
+                  showMembers={showMembers}
+                  showHubs={showHubs}
+                  showPending={showPending}
+                  filteredMembers={filteredMembers}
+                  filteredHubs={filteredHubs}
+                  filteredPending={filteredPending}
+                  onMarkerClick={handleMarkerClick}
+                />
+              </Map>
+            </APIProvider>
+          </ErrorBoundary>
         </div>
 
         {/* Expand hint on mobile */}
